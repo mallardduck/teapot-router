@@ -14,7 +14,14 @@ type Dispatcher struct {
 }
 
 func (d *Dispatcher) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Routes are already sorted by specificity (most specific first)
+	// Fast path: single route with no query matchers (common case)
+	// This avoids the overhead of iteration and query matching for simple routes
+	if len(d.Routes) == 1 && len(d.Routes[0].QueryMatchers) == 0 {
+		d.executeRoute(w, r, d.Routes[0])
+		return
+	}
+
+	// Full path: multiple routes or query multiplexing
 	for _, rt := range d.Routes {
 		if d.matchesQuery(r, rt) {
 			d.executeRoute(w, r, rt)

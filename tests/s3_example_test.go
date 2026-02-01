@@ -19,11 +19,7 @@ func TestS3StyleAPI(t *testing.T) {
 
 	// Bucket operations
 	r.NamedGroup("/{bucket}", "bucket", func(r *teapot.Router) {
-		// Basic bucket operations
-		r.PUT("", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("CREATE_BUCKET"))
-		}).Name("create").Action("s3:CreateBucket")
-
+		// Basic bucket operations (no query multiplexing - use standard methods)
 		r.DELETE("", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("DELETE_BUCKET"))
 		}).Name("delete").Action("s3:DeleteBucket")
@@ -32,39 +28,35 @@ func TestS3StyleAPI(t *testing.T) {
 			w.WriteHeader(200)
 		}).Name("head").Action("s3:HeadBucket")
 
-		r.GET("", func(w http.ResponseWriter, r *http.Request) {
+		// Query-based bucket operations (S3's special sauce!) - use QueryGET/QueryPUT
+		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("LIST_OBJECTS"))
 		}).Name("list").Action("s3:ListBucket")
 
-		// Query-based bucket operations (S3's special sauce!)
-		r.GET("", func(w http.ResponseWriter, r *http.Request) {
+		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("GET_BUCKET_ACL"))
 		}).Name("acl.get").Action("s3:GetBucketAcl").Query("acl")
 
-		r.PUT("", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("PUT_BUCKET_ACL"))
-		}).Name("acl.put").Action("s3:PutBucketAcl").Query("acl")
-
-		r.GET("", func(w http.ResponseWriter, r *http.Request) {
+		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("LIST_VERSIONS"))
 		}).Name("versions").Action("s3:ListBucketVersions").Query("versions")
 
-		r.GET("", func(w http.ResponseWriter, r *http.Request) {
+		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("GET_LIFECYCLE"))
 		}).Name("lifecycle").Action("s3:GetLifecycleConfiguration").Query("lifecycle")
 
+		// PUT bucket operations - needs query multiplexing for ACL
+		r.QueryPUT("", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("CREATE_BUCKET"))
+		}).Name("create").Action("s3:CreateBucket")
+
+		r.QueryPUT("", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("PUT_BUCKET_ACL"))
+		}).Name("acl.put").Action("s3:PutBucketAcl").Query("acl")
+
 		// Object operations
 		r.NamedGroup("/{key:.*}", "object", func(r *teapot.Router) {
-			r.GET("", func(w http.ResponseWriter, r *http.Request) {
-				key := teapot.URLParam(r, "key")
-				action := teapot.GetAction(r)
-				w.Write([]byte("GET_OBJECT:" + key + ":" + action))
-			}).Name("get").Action("s3:GetObject")
-
-			r.PUT("", func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte("PUT_OBJECT"))
-			}).Name("put").Action("s3:PutObject")
-
+			// Basic object operations (no query multiplexing)
 			r.DELETE("", func(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte("DELETE_OBJECT"))
 			}).Name("delete").Action("s3:DeleteObject")
@@ -73,16 +65,26 @@ func TestS3StyleAPI(t *testing.T) {
 				w.WriteHeader(200)
 			}).Name("head").Action("s3:HeadObject")
 
-			// Object query operations
-			r.GET("", func(w http.ResponseWriter, r *http.Request) {
+			// Query-based object operations - use QueryGET/QueryPUT/QueryPOST
+			r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
+				key := teapot.URLParam(r, "key")
+				action := teapot.GetAction(r)
+				w.Write([]byte("GET_OBJECT:" + key + ":" + action))
+			}).Name("get").Action("s3:GetObject")
+
+			r.QueryPUT("", func(w http.ResponseWriter, r *http.Request) {
+				w.Write([]byte("PUT_OBJECT"))
+			}).Name("put").Action("s3:PutObject")
+
+			r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte("GET_OBJECT_ACL"))
 			}).Name("acl.get").Action("s3:GetObjectAcl").Query("acl")
 
-			r.POST("", func(w http.ResponseWriter, r *http.Request) {
+			r.QueryPOST("", func(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte("INITIATE_MULTIPART"))
 			}).Name("multipart.initiate").Action("s3:CreateMultipartUpload").Query("uploads")
 
-			r.PUT("", func(w http.ResponseWriter, r *http.Request) {
+			r.QueryPUT("", func(w http.ResponseWriter, r *http.Request) {
 				w.Write([]byte("UPLOAD_PART"))
 			}).Name("multipart.upload").Action("s3:UploadPart").Query("partNumber").Query("uploadId")
 		})

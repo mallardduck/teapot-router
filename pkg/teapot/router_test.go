@@ -121,15 +121,15 @@ func TestActionAndNameContext(t *testing.T) {
 func TestQueryParameterMatching(t *testing.T) {
 	r := teapot.New()
 
-	r.GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/bucket", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("LIST"))
 	}).Name("bucket.list")
 
-	r.GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/bucket", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ACL"))
 	}).Name("bucket.acl").Query("acl")
 
-	r.GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/bucket", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("VERSIONING"))
 	}).Name("bucket.versioning").Query("versioning")
 
@@ -147,15 +147,15 @@ func TestQueryParameterMatching(t *testing.T) {
 func TestQueryValueMatching(t *testing.T) {
 	r := teapot.New()
 
-	r.GET("/search", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/search", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("FULL"))
 	}).QueryValue("type", "full")
 
-	r.GET("/search", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/search", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("PARTIAL"))
 	}).QueryValue("type", "partial")
 
-	r.GET("/search", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/search", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("DEFAULT"))
 	})
 
@@ -170,17 +170,17 @@ func TestMultipleQueryParameterPriority(t *testing.T) {
 	r := teapot.New()
 
 	// More specific (2 params) should match first
-	r.GET("/object", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/object", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("TWO_PARAMS"))
 	}).Query("partNumber").Query("uploadId")
 
 	// Less specific (1 param)
-	r.GET("/object", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/object", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("UPLOAD_ID"))
 	}).Query("uploadId")
 
 	// No query params
-	r.GET("/object", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/object", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("BASE"))
 	})
 
@@ -216,11 +216,11 @@ func TestNamedGroups(t *testing.T) {
 	r := teapot.New()
 
 	r.NamedGroup("/{bucket}", "bucket", func(r *teapot.Router) {
-		r.GET("", func(w http.ResponseWriter, r *http.Request) {
+		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("LIST"))
 		}).Name("list")
 
-		r.GET("", func(w http.ResponseWriter, r *http.Request) {
+		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("ACL"))
 		}).Name("acl").Query("acl")
 
@@ -313,11 +313,11 @@ func TestS3BucketOperations(t *testing.T) {
 			w.Write([]byte("DELETE"))
 		}).Name("delete").Action("s3:DeleteBucket")
 
-		r.GET("", func(w http.ResponseWriter, r *http.Request) {
+		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("LIST"))
 		}).Name("list").Action("s3:ListBucket")
 
-		r.GET("", func(w http.ResponseWriter, r *http.Request) {
+		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("ACL"))
 		}).Name("acl.get").Action("s3:GetBucketAcl").Query("acl")
 	})
@@ -335,7 +335,7 @@ func TestS3ObjectOperations(t *testing.T) {
 	r.NamedGroup("/{bucket}/{key:.*}", "object", func(r *teapot.Router) {
 		var capturedBucket, capturedKey string
 
-		r.GET("", func(w http.ResponseWriter, r *http.Request) {
+		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 			capturedBucket = teapot.URLParam(r, "bucket")
 			capturedKey = teapot.URLParam(r, "key")
 			w.Write([]byte("GET"))
@@ -345,7 +345,7 @@ func TestS3ObjectOperations(t *testing.T) {
 			w.Write([]byte("PUT"))
 		}).Name("put").Action("s3:PutObject")
 
-		r.GET("", func(w http.ResponseWriter, r *http.Request) {
+		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("ACL"))
 		}).Name("acl").Action("s3:GetObjectAcl").Query("acl")
 

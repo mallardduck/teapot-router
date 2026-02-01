@@ -11,13 +11,15 @@ import (
 
 // Router wraps chi.Mux and adds named routes, query multiplexing, and S3 actions
 type Router struct {
-	mux         *chi.Mux
-	routes      []*core.Route
-	dispatchers map[string]*core.Dispatcher // key: "METHOD:PATTERN"
-	nameIndex   map[string]*core.Route      // for URL generation
-	pathPrefix  string
-	namePrefix  string
-	middlewares []func(http.Handler) http.Handler
+	mux               *chi.Mux
+	routes            []*core.Route
+	dispatchers       map[string]*core.Dispatcher // key: "METHOD:PATTERN"
+	nameIndex         map[string]*core.Route      // for URL generation
+	pathPrefix        string
+	namePrefix        string
+	middlewares       []func(http.Handler) http.Handler
+	optimizedHandlers []*optimizedHandler // for finalization optimization
+	finalized         bool
 }
 
 // RouteBuilder provides a fluent API for building routes
@@ -25,6 +27,7 @@ type RouteBuilder struct {
 	router     *Router
 	route      *core.Route
 	dispatcher *core.Dispatcher
+	isDirect   bool // true if route bypasses dispatcher (fast path)
 }
 
 // Name assigns a name to the route for URL generation
@@ -46,6 +49,9 @@ func (rb *RouteBuilder) Action(action string) *RouteBuilder {
 
 // Query adds a query parameter existence matcher
 func (rb *RouteBuilder) Query(key string) *RouteBuilder {
+	if rb.isDirect {
+		panic("teapot: Cannot use .Query() with standard methods (GET, POST, etc). Use QueryGET, QueryPOST, etc. instead for query multiplexing.")
+	}
 	rb.route.QueryMatchers = append(rb.route.QueryMatchers, core.QueryExistsMatcher{Key: key})
 	rb.dispatcher.UpdateSpecificity()
 	return rb
@@ -53,6 +59,9 @@ func (rb *RouteBuilder) Query(key string) *RouteBuilder {
 
 // QueryValue adds a query parameter value matcher
 func (rb *RouteBuilder) QueryValue(key, value string) *RouteBuilder {
+	if rb.isDirect {
+		panic("teapot: Cannot use .QueryValue() with standard methods (GET, POST, etc). Use QueryGET, QueryPOST, etc. instead for query multiplexing.")
+	}
 	rb.route.QueryMatchers = append(rb.route.QueryMatchers, core.QueryValueMatcher{Key: key, Value: value})
 	rb.dispatcher.UpdateSpecificity()
 	return rb
@@ -74,43 +83,125 @@ func New() *Router {
 	}
 }
 
-// GET registers a GET route
+// GET registers a GET route (direct, no query multiplexing)
+// For query multiplexing, use QueryGET instead
 func (r *Router) GET(pattern string, handler http.HandlerFunc) *RouteBuilder {
-	return r.handle("GET", pattern, handler)
+	return r.handleDirect("GET", pattern, handler)
 }
 
-// POST registers a POST route
+// POST registers a POST route (direct, no query multiplexing)
+// For query multiplexing, use QueryPOST instead
 func (r *Router) POST(pattern string, handler http.HandlerFunc) *RouteBuilder {
-	return r.handle("POST", pattern, handler)
+	return r.handleDirect("POST", pattern, handler)
 }
 
-// PUT registers a PUT route
+// PUT registers a PUT route (direct, no query multiplexing)
+// For query multiplexing, use QueryPUT instead
 func (r *Router) PUT(pattern string, handler http.HandlerFunc) *RouteBuilder {
-	return r.handle("PUT", pattern, handler)
+	return r.handleDirect("PUT", pattern, handler)
 }
 
-// DELETE registers a DELETE route
+// DELETE registers a DELETE route (direct, no query multiplexing)
+// For query multiplexing, use QueryDELETE instead
 func (r *Router) DELETE(pattern string, handler http.HandlerFunc) *RouteBuilder {
-	return r.handle("DELETE", pattern, handler)
+	return r.handleDirect("DELETE", pattern, handler)
 }
 
-// HEAD registers a HEAD route
+// HEAD registers a HEAD route (direct, no query multiplexing)
+// For query multiplexing, use QueryHEAD instead
 func (r *Router) HEAD(pattern string, handler http.HandlerFunc) *RouteBuilder {
-	return r.handle("HEAD", pattern, handler)
+	return r.handleDirect("HEAD", pattern, handler)
 }
 
-// PATCH registers a PATCH route
+// PATCH registers a PATCH route (direct, no query multiplexing)
+// For query multiplexing, use QueryPATCH instead
 func (r *Router) PATCH(pattern string, handler http.HandlerFunc) *RouteBuilder {
-	return r.handle("PATCH", pattern, handler)
+	return r.handleDirect("PATCH", pattern, handler)
 }
 
-// OPTIONS registers an OPTIONS route
+// OPTIONS registers an OPTIONS route (direct, no query multiplexing)
+// For query multiplexing, use QueryOPTIONS instead
 func (r *Router) OPTIONS(pattern string, handler http.HandlerFunc) *RouteBuilder {
-	return r.handle("OPTIONS", pattern, handler)
+	return r.handleDirect("OPTIONS", pattern, handler)
 }
 
-// handle is the internal method that registers routes
-func (r *Router) handle(method, pattern string, handler http.HandlerFunc) *RouteBuilder {
+// QueryGET registers a GET route with query multiplexing support
+func (r *Router) QueryGET(pattern string, handler http.HandlerFunc) *RouteBuilder {
+	return r.handleQuery("GET", pattern, handler)
+}
+
+// QueryPOST registers a POST route with query multiplexing support
+func (r *Router) QueryPOST(pattern string, handler http.HandlerFunc) *RouteBuilder {
+	return r.handleQuery("POST", pattern, handler)
+}
+
+// QueryPUT registers a PUT route with query multiplexing support
+func (r *Router) QueryPUT(pattern string, handler http.HandlerFunc) *RouteBuilder {
+	return r.handleQuery("PUT", pattern, handler)
+}
+
+// QueryDELETE registers a DELETE route with query multiplexing support
+func (r *Router) QueryDELETE(pattern string, handler http.HandlerFunc) *RouteBuilder {
+	return r.handleQuery("DELETE", pattern, handler)
+}
+
+// QueryHEAD registers a HEAD route with query multiplexing support
+func (r *Router) QueryHEAD(pattern string, handler http.HandlerFunc) *RouteBuilder {
+	return r.handleQuery("HEAD", pattern, handler)
+}
+
+// QueryPATCH registers a PATCH route with query multiplexing support
+func (r *Router) QueryPATCH(pattern string, handler http.HandlerFunc) *RouteBuilder {
+	return r.handleQuery("PATCH", pattern, handler)
+}
+
+// QueryOPTIONS registers an OPTIONS route with query multiplexing support
+func (r *Router) QueryOPTIONS(pattern string, handler http.HandlerFunc) *RouteBuilder {
+	return r.handleQuery("OPTIONS", pattern, handler)
+}
+
+// handleDirect registers a route directly with Chi (no dispatcher, best performance)
+// This is used by GET, POST, PUT, DELETE, etc.
+// Does not support query multiplexing
+func (r *Router) handleDirect(method, pattern string, handler http.HandlerFunc) *RouteBuilder {
+	// Apply path prefix if in a group
+	fullPattern := r.pathPrefix + pattern
+
+	// Translate our {key:.*} syntax to Chi's wildcard syntax
+	chiPattern, wildcardParams := core.TranslatePattern(fullPattern)
+
+	// Create route metadata (for introspection and URL generation)
+	rt := &core.Route{
+		Method:         method,
+		Pattern:        fullPattern,
+		ChiPattern:     chiPattern,
+		Handler:        handler,
+		QueryMatchers:  make([]core.QueryMatcher, 0),
+		Middlewares:    make([]func(http.Handler) http.Handler, 0),
+		WildcardParams: wildcardParams,
+	}
+
+	// Copy group middlewares to route
+	rt.Middlewares = append(rt.Middlewares, r.middlewares...)
+
+	r.routes = append(r.routes, rt)
+
+	// Create optimized handler (can be finalized later)
+	optHandler := &optimizedHandler{
+		route:  rt,
+		router: r,
+	}
+	r.optimizedHandlers = append(r.optimizedHandlers, optHandler)
+
+	// Register with Chi
+	r.mux.Method(method, chiPattern, optHandler)
+
+	return &RouteBuilder{router: r, route: rt, isDirect: true}
+}
+
+// handleQuery is the internal method that registers routes with query multiplexing support
+// This is used by QueryGET, QueryPOST, etc.
+func (r *Router) handleQuery(method, pattern string, handler http.HandlerFunc) *RouteBuilder {
 	// Apply path prefix if in a group
 	fullPattern := r.pathPrefix + pattern
 
@@ -265,4 +356,26 @@ func GetRouteName(r *http.Request) string {
 // URLParam retrieves a URL parameter value (delegates to chi)
 func URLParam(r *http.Request, key string) string {
 	return chi.URLParam(r, key)
+}
+
+// Finalize optimizes all direct routes for maximum performance
+// Call this after registering all routes and before serving requests
+// This pre-computes handlers based on actual route configuration
+func (r *Router) Finalize() {
+	if r.finalized {
+		return // Already finalized
+	}
+
+	// Optimize all direct handlers
+	for _, oh := range r.optimizedHandlers {
+		oh.fastPath = r.createOptimizedHandler(oh.route)
+		oh.finalized.Store(true)
+	}
+
+	r.finalized = true
+}
+
+// IsFinalized returns whether the router has been finalized
+func (r *Router) IsFinalized() bool {
+	return r.finalized
 }

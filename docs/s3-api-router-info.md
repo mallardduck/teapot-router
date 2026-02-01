@@ -1,3 +1,7 @@
+# S3 API Router Info
+
+This is a list of the S3 API actions and how they could be mapped to the router.
+
 | Scope     | S3 Action Name    | Verb   | Path            | Query Param             | Description                                      |
 |-----------|-------------------|--------|-----------------|-------------------------|--------------------------------------------------|
 | Service   | ListBuckets       | GET    | /               | —                       | Returns XML list of all buckets.                 |

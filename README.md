@@ -155,16 +155,46 @@ r.Group("/api", func(r *teapot.Router) {
 
 ## Route Introspection
 
-List all registered routes:
+List all registered routes programmatically or via HTTP:
 ```go
+// Programmatic access
 for _, route := range r.Routes() {
-    fmt.Printf("%s %s -> %s (%s)\n", 
-        route.Method, 
-        route.Pattern, 
+    fmt.Printf("%s %s -> %s (%s)\n",
+        route.Method,
+        route.Pattern,
         route.Name,
         route.Action)
 }
+
+// HTTP debug endpoint (development only)
+if debug {
+    r.RegisterDebugRoute("/.internal/routes", "debug.routes")
+}
+// Visit http://localhost:8080/.internal/routes for JSON or HTML route listing
 ```
+
+See [docs/ROUTES-LISTING.md](docs/ROUTES-LISTING.md) for CLI helpers and formatters.
+
+---
+
+## Performance
+
+For production deployments, call `Finalize()` before serving to optimize route handlers:
+
+```go
+r := teapot.New()
+
+// Register all routes
+r.GET("/users", listUsers).Name("users.list")
+r.POST("/users", createUser).Name("users.create")
+
+// Optimize for production
+r.Finalize()
+
+http.ListenAndServe(":8080", r)
+```
+
+Finalize is optional but recommended — routes work without it, just with slightly more overhead.
 
 ---
 
@@ -201,6 +231,34 @@ r.NamedGroup("/{bucket}", "bucket", func(r *teapot.Router) {
 
 http.ListenAndServe(":8080", r)
 ```
+
+---
+
+## Additional Features
+
+**RESTful Resource Scaffolding:**
+```go
+r.Resource("photos", "/photos", "photo", teapot.ResourceHandlers{
+    Index:   listPhotos,   // GET    /photos
+    Store:   createPhoto,  // POST   /photos
+    Show:    showPhoto,    // GET    /photos/{photo}
+    Update:  updatePhoto,  // PUT    /photos/{photo}
+    Destroy: deletePhoto,  // DELETE /photos/{photo}
+})
+```
+
+**URL Builder Package:**
+
+For generating full URLs in responses (especially useful for S3 APIs):
+```go
+import "github.com/mallardduck/teapot-router/pkg/urlbuilder"
+
+urls := urlbuilder.New("s3.example.com")
+fullURL := urls.ObjectURL(r, "bucket", "path/to/file.txt")
+// Returns: https://s3.example.com/bucket/path/to/file.txt
+```
+
+See [docs/URLBUILDER.md](docs/URLBUILDER.md) for complete guide.
 
 ---
 

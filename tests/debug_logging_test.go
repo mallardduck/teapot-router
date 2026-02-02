@@ -21,7 +21,7 @@ func TestDebugLogging(t *testing.T) {
 
 		// Just verify that enabling debug logging doesn't crash
 		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("ok"))
+			_, _ = w.Write([]byte("ok"))
 		})
 
 		r.Finalize()
@@ -43,12 +43,12 @@ func TestDebugLogging(t *testing.T) {
 
 		// Add a QueryGET which should trigger debug logging for dispatcher creation
 		r.QueryGET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("query"))
+			_, _ = w.Write([]byte("query"))
 		}).Query("foo")
 
 		// Add a regular GET on same pattern to trigger auto-promotion logging
 		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("direct"))
+			_, _ = w.Write([]byte("direct"))
 		})
 
 		// Line 159: if r.debugLog { log.Printf(...) }
@@ -79,14 +79,14 @@ func TestDebugLogging(t *testing.T) {
 		// With debug
 		r1 := teapot.New().SetDebugLog(true)
 		r1.GET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("debug"))
+			_, _ = w.Write([]byte("debug"))
 		})
 		r1.Finalize()
 
 		// Without debug
 		r2 := teapot.New()
 		r2.GET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("no-debug"))
+			_, _ = w.Write([]byte("no-debug"))
 		})
 		r2.Finalize()
 

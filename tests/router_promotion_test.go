@@ -17,7 +17,7 @@ func TestDispatcherAutoPromotion(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("direct"))
+			_, _ = w.Write([]byte("direct"))
 		})
 
 		r.Finalize()
@@ -35,7 +35,7 @@ func TestDispatcherAutoPromotion(t *testing.T) {
 
 		// Line 266: dispatcherKey := method + ":" + chiPattern
 		r.QueryGET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("query-full"))
+			_, _ = w.Write([]byte("query-full"))
 		}).QueryValue("type", "full")
 
 		r.Finalize()
@@ -53,13 +53,13 @@ func TestDispatcherAutoPromotion(t *testing.T) {
 
 		// First register a QueryGET (creates dispatcher)
 		r.QueryGET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("query-full"))
+			_, _ = w.Write([]byte("query-full"))
 		}).QueryValue("type", "full")
 
 		// Then add a regular GET (should be added to existing dispatcher)
 		// Line 269: if disp, exists := r.dispatchers[dispatcherKey]
 		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("no-query"))
+			_, _ = w.Write([]byte("no-query"))
 		})
 
 		r.Finalize()
@@ -81,15 +81,15 @@ func TestDispatcherAutoPromotion(t *testing.T) {
 		r := teapot.New()
 
 		r.QueryGET("/object", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("acl"))
+			_, _ = w.Write([]byte("acl"))
 		}).Query("acl")
 
 		r.QueryGET("/object", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("tagging"))
+			_, _ = w.Write([]byte("tagging"))
 		}).Query("tagging")
 
 		r.GET("/object", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("get-object"))
+			_, _ = w.Write([]byte("get-object"))
 		})
 
 		r.Finalize()
@@ -118,11 +118,11 @@ func TestDispatcherAutoPromotion(t *testing.T) {
 		// Pattern with wildcard parameter - should be translated to Chi pattern
 		// Line 266: dispatcherKey := method + ":" + chiPattern
 		r.QueryGET("/{bucket}/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("acl"))
+			_, _ = w.Write([]byte("acl"))
 		}).Query("acl")
 
 		r.GET("/{bucket}/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("get"))
+			_, _ = w.Write([]byte("get"))
 		})
 
 		r.Finalize()
@@ -145,7 +145,7 @@ func TestQueryRouteAutoPromotion(t *testing.T) {
 		r := teapot.New()
 
 		r.QueryGET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("base"))
+			_, _ = w.Write([]byte("base"))
 		}).QueryValue("version", "v2")
 
 		r.Finalize()
@@ -172,7 +172,7 @@ func TestQueryRouteAutoPromotion(t *testing.T) {
 		r := teapot.New()
 
 		r.QueryGET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("ok"))
+			_, _ = w.Write([]byte("ok"))
 		}).Query("foo")
 
 		routes := r.Routes()
@@ -185,7 +185,7 @@ func TestQueryRouteAutoPromotion(t *testing.T) {
 		r := teapot.New()
 
 		r.QueryGET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("ok"))
+			_, _ = w.Write([]byte("ok"))
 		}).QueryValue("foo", "bar").Query("baz")
 
 		routes := r.Routes()
@@ -200,11 +200,11 @@ func TestMixedDirectAndQueryRoutes(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/bucket", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("list"))
+			_, _ = w.Write([]byte("list"))
 		})
 
 		r.QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("location"))
+			_, _ = w.Write([]byte("location"))
 		}).Query("location")
 
 		r.Finalize()
@@ -224,11 +224,11 @@ func TestMixedDirectAndQueryRoutes(t *testing.T) {
 		r := teapot.New()
 
 		r.QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("versioning"))
+			_, _ = w.Write([]byte("versioning"))
 		}).Query("versioning")
 
 		r.GET("/bucket", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("list"))
+			_, _ = w.Write([]byte("list"))
 		})
 
 		r.Finalize()
@@ -249,12 +249,12 @@ func TestMixedDirectAndQueryRoutes(t *testing.T) {
 
 		// GET with query param
 		r.QueryGET("/resource", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("get-filtered"))
+			_, _ = w.Write([]byte("get-filtered"))
 		}).QueryValue("filter", "active")
 
 		// POST direct (different method, same pattern - should be separate dispatcher)
 		r.POST("/resource", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("post"))
+			_, _ = w.Write([]byte("post"))
 		})
 
 		r.Finalize()
@@ -279,11 +279,11 @@ func TestDispatcherKeyGeneration(t *testing.T) {
 		// Different methods, same pattern - should create separate dispatchers
 		// Test ARITHMETIC_BASE mutations at router.go:266 (dispatcherKey := method + ":" + chiPattern)
 		r.QueryGET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("get"))
+			_, _ = w.Write([]byte("get"))
 		}).QueryValue("a", "1")
 
 		r.QueryPOST("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("post"))
+			_, _ = w.Write([]byte("post"))
 		}).QueryValue("b", "2")
 
 		r.Finalize()
@@ -319,11 +319,11 @@ func TestDispatcherKeyGeneration(t *testing.T) {
 
 		// Pattern with wildcard should be translated to Chi's /* pattern
 		r.QueryGET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("acl"))
+			_, _ = w.Write([]byte("acl"))
 		}).Query("acl")
 
 		r.QueryGET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("tagging"))
+			_, _ = w.Write([]byte("tagging"))
 		}).Query("tagging")
 
 		r.Finalize()

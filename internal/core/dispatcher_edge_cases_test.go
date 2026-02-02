@@ -16,7 +16,7 @@ func TestDispatcherFastPathEdgeCases(t *testing.T) {
 	t.Run("exactly one route with exactly zero query matchers", func(t *testing.T) {
 		// This should trigger fast path
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("FAST"))
+			_, _ = w.Write([]byte("FAST"))
 		})
 
 		route := &Route{
@@ -41,7 +41,7 @@ func TestDispatcherFastPathEdgeCases(t *testing.T) {
 	t.Run("exactly one route with one query matcher", func(t *testing.T) {
 		// This should NOT trigger fast path (tests the negation)
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("SLOW"))
+			_, _ = w.Write([]byte("SLOW"))
 		})
 
 		route := &Route{
@@ -78,7 +78,7 @@ func TestDispatcherFastPathEdgeCases(t *testing.T) {
 	t.Run("two routes with no query matchers", func(t *testing.T) {
 		// Should NOT trigger fast path (len != 1)
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("HANDLER"))
+			_, _ = w.Write([]byte("HANDLER"))
 		})
 
 		route1 := &Route{Method: "GET", Pattern: "/test", Handler: handler}
@@ -103,7 +103,7 @@ func TestDispatcherBoundaryConditions(t *testing.T) {
 		var capturedKey string
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			capturedKey = chi.URLParam(r, "key")
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		})
 
 		route := &Route{
@@ -133,7 +133,7 @@ func TestDispatcherBoundaryConditions(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			capturedKey1 = chi.URLParam(r, "key1")
 			capturedKey2 = chi.URLParam(r, "key2")
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		})
 
 		route := &Route{
@@ -245,7 +245,7 @@ func TestDispatcherBoundaryConditions(t *testing.T) {
 func TestDispatcherNilAndEmptyContexts(t *testing.T) {
 	t.Run("nil chi route context", func(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		})
 
 		route := &Route{

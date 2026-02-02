@@ -12,8 +12,7 @@ import (
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
-// TestRouteContextMiddleware tests the route context middleware that was
-// NOT COVERED in gremlins (pkg/teapot/router.go:575-750)
+// TestRouteContextMiddleware tests the route context middleware
 func TestRouteContextMiddleware(t *testing.T) {
 	t.Run("fast path - chi RouteContext available with direct route", func(t *testing.T) {
 		r := teapot.New()
@@ -22,7 +21,7 @@ func TestRouteContextMiddleware(t *testing.T) {
 		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
 			capturedName = teapot.GetRouteName(req)
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		}).Action("test:Action").Name("test.route")
 
 		r.Finalize()
@@ -40,12 +39,12 @@ func TestRouteContextMiddleware(t *testing.T) {
 		var capturedAction string
 		r.QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
-			w.Write([]byte("LIST"))
+			_, _ = w.Write([]byte("LIST"))
 		}).Action("s3:ListBucket")
 
 		r.QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
-			w.Write([]byte("ACL"))
+			_, _ = w.Write([]byte("ACL"))
 		}).Action("s3:GetBucketAcl").Query("acl")
 
 		r.Finalize()
@@ -70,12 +69,12 @@ func TestRouteContextMiddleware(t *testing.T) {
 		// Only query-specific routes, no fallback
 		r.QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
-			w.Write([]byte("ACL"))
+			_, _ = w.Write([]byte("ACL"))
 		}).Action("s3:GetBucketAcl").Query("acl")
 
 		r.QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
-			w.Write([]byte("VERSIONING"))
+			_, _ = w.Write([]byte("VERSIONING"))
 		}).Action("s3:GetBucketVersioning").Query("versioning")
 
 		r.Finalize()
@@ -103,7 +102,7 @@ func TestRouteContextMiddleware(t *testing.T) {
 		})
 
 		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		}).Action("test:Action")
 
 		r.Finalize()
@@ -123,7 +122,7 @@ func TestRouteContextMiddleware(t *testing.T) {
 		r.GET("/users/{id}", func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
 			capturedName = teapot.GetRouteName(req)
-			w.Write([]byte("USER"))
+			_, _ = w.Write([]byte("USER"))
 		}).Action("users:Get").Name("users.get")
 
 		r.Finalize()
@@ -138,14 +137,13 @@ func TestRouteContextMiddleware(t *testing.T) {
 	})
 }
 
-// TestMatchPattern tests the pattern matching logic that was NOT COVERED
-// (pkg/teapot/router.go:695-745)
+// TestMatchPattern tests the pattern matching logic used by middleware fallback path
 func TestMatchPattern(t *testing.T) {
 	t.Run("exact match", func(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/exact/path", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("EXACT"))
+			_, _ = w.Write([]byte("EXACT"))
 		})
 
 		r.Finalize()
@@ -158,7 +156,7 @@ func TestMatchPattern(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/static", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("STATIC"))
+			_, _ = w.Write([]byte("STATIC"))
 		})
 
 		r.Finalize()
@@ -175,7 +173,7 @@ func TestMatchPattern(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/files/*", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("FILES"))
+			_, _ = w.Write([]byte("FILES"))
 		})
 
 		r.Finalize()
@@ -189,7 +187,7 @@ func TestMatchPattern(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/files/prefix/*", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("FILES"))
+			_, _ = w.Write([]byte("FILES"))
 		})
 
 		r.Finalize()
@@ -203,7 +201,7 @@ func TestMatchPattern(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/files/{bucket}/*", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("FILES"))
+			_, _ = w.Write([]byte("FILES"))
 		})
 
 		r.Finalize()
@@ -217,7 +215,7 @@ func TestMatchPattern(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/a/b/c", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("ABC"))
+			_, _ = w.Write([]byte("ABC"))
 		})
 
 		r.Finalize()
@@ -236,7 +234,7 @@ func TestMatchPattern(t *testing.T) {
 		var capturedID string
 		r.GET("/users/{id}", func(w http.ResponseWriter, req *http.Request) {
 			capturedID = teapot.URLParam(req, "id")
-			w.Write([]byte("USER"))
+			_, _ = w.Write([]byte("USER"))
 		})
 
 		r.Finalize()
@@ -256,7 +254,7 @@ func TestMatchPattern(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/users/{id}/posts", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("POSTS"))
+			_, _ = w.Write([]byte("POSTS"))
 		})
 
 		r.Finalize()
@@ -276,7 +274,7 @@ func TestMatchPattern(t *testing.T) {
 		r.GET("/{bucket}/{key}", func(w http.ResponseWriter, req *http.Request) {
 			capturedBucket = teapot.URLParam(req, "bucket")
 			capturedKey = teapot.URLParam(req, "key")
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		})
 
 		r.Finalize()
@@ -293,7 +291,7 @@ func TestMatchPattern(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/test/", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("SLASH"))
+			_, _ = w.Write([]byte("SLASH"))
 		})
 
 		r.Finalize()
@@ -307,7 +305,7 @@ func TestMatchPattern(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("ROOT"))
+			_, _ = w.Write([]byte("ROOT"))
 		})
 
 		r.Finalize()
@@ -317,13 +315,13 @@ func TestMatchPattern(t *testing.T) {
 	})
 }
 
-// TestFindMatchingRouteEdgeCases tests edge cases for findMatchingRoute
+// TestFindMatchingRouteEdgeCases tests edge cases for findMatchingRoute used by middleware
 func TestFindMatchingRouteEdgeCases(t *testing.T) {
 	t.Run("no matching method", func(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("GET"))
+			_, _ = w.Write([]byte("GET"))
 		})
 
 		r.Finalize()
@@ -338,7 +336,7 @@ func TestFindMatchingRouteEdgeCases(t *testing.T) {
 
 		// Only routes with query matchers (no fallback)
 		r.QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("ACL"))
+			_, _ = w.Write([]byte("ACL"))
 		}).Query("acl")
 
 		r.Finalize()
@@ -352,11 +350,11 @@ func TestFindMatchingRouteEdgeCases(t *testing.T) {
 		r := teapot.New()
 
 		r.QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("LIST"))
+			_, _ = w.Write([]byte("LIST"))
 		}) // No query matcher - fallback
 
 		r.QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("ACL"))
+			_, _ = w.Write([]byte("ACL"))
 		}).Query("acl")
 
 		r.Finalize()
@@ -370,7 +368,7 @@ func TestFindMatchingRouteEdgeCases(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("TEST"))
+			_, _ = w.Write([]byte("TEST"))
 		})
 
 		r.Finalize()
@@ -393,7 +391,7 @@ func TestRouteContextMiddlewareWithGroups(t *testing.T) {
 				r.GET("/users", func(w http.ResponseWriter, req *http.Request) {
 					capturedAction = teapot.GetAction(req)
 					capturedName = teapot.GetRouteName(req)
-					w.Write([]byte("USERS"))
+					_, _ = w.Write([]byte("USERS"))
 				}).Action("api:GetUsers").Name("api.users")
 			})
 		})
@@ -418,7 +416,7 @@ func TestRouteContextInjectionBeforeFinalize(t *testing.T) {
 		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
 			capturedName = teapot.GetRouteName(req)
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		}).Action("test:Action").Name("test.route")
 
 		// Don't finalize - should still work via slow path
@@ -438,7 +436,7 @@ func TestRouteContextWithNilCases(t *testing.T) {
 		r := teapot.New()
 
 		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		})
 
 		r.Finalize()

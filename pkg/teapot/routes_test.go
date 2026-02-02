@@ -38,7 +38,7 @@ func TestRoutesHandler(t *testing.T) {
 	}
 
 	// Parse response
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode JSON: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestRoutesHandler(t *testing.T) {
 	}
 
 	// Check routes exist
-	routes, ok := response["routes"].([]interface{})
+	routes, ok := response["routes"].([]any)
 	if !ok || len(routes) != 4 {
 		t.Errorf("expected 4 routes, got %v", response["routes"])
 	}
@@ -109,7 +109,7 @@ func TestRegisterDebugRoute(t *testing.T) {
 		t.Errorf("expected 200, got %d", w.Code)
 	}
 
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("failed to decode JSON: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestFormatRoutesJSON(t *testing.T) {
 	}
 
 	// Parse output
-	var output map[string]interface{}
+	var output map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &output); err != nil {
 		t.Fatalf("failed to parse JSON: %v", err)
 	}
@@ -148,13 +148,13 @@ func TestFormatRoutesJSON(t *testing.T) {
 		t.Errorf("expected count=3, got %v", output["count"])
 	}
 
-	routes_list, ok := output["routes"].([]interface{})
+	routes_list, ok := output["routes"].([]any)
 	if !ok || len(routes_list) != 3 {
 		t.Errorf("expected 3 routes, got %v", output["routes"])
 	}
 
 	// Verify first route has expected fields
-	firstRoute, ok := routes_list[0].(map[string]interface{})
+	firstRoute, ok := routes_list[0].(map[string]any)
 	if !ok {
 		t.Fatal("expected route to be a map")
 	}
@@ -252,19 +252,19 @@ func TestRoutesSorting(t *testing.T) {
 	var buf bytes.Buffer
 	teapot.FormatRoutesJSON(&buf, routes)
 
-	var output map[string]interface{}
+	var output map[string]any
 	json.Unmarshal(buf.Bytes(), &output)
-	routesList := output["routes"].([]interface{})
+	routesList := output["routes"].([]any)
 
 	// First route should be /api/posts (sorted by pattern)
-	firstRoute := routesList[0].(map[string]interface{})
+	firstRoute := routesList[0].(map[string]any)
 	if firstRoute["Pattern"] != "/api/posts" {
 		t.Errorf("expected first route to be /api/posts, got %s", firstRoute["Pattern"])
 	}
 
 	// Routes with same pattern should be sorted by method
 	// /users: DELETE, GET, POST (alphabetical)
-	secondRoute := routesList[1].(map[string]interface{})
+	secondRoute := routesList[1].(map[string]any)
 	if secondRoute["Pattern"] != "/users" || secondRoute["Method"] != "DELETE" {
 		t.Errorf("expected DELETE /users, got %s %s", secondRoute["Method"], secondRoute["Pattern"])
 	}

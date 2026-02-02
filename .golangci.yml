@@ -1,0 +1,52 @@
+version: "2" # Required for V2 schema
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - unused
+    - revive
+    - gosec
+    - bodyclose
+    - nilnil
+    - usetesting # New in V2: recommends testing-specific packages
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+
+  settings:
+    # Linter-specific configurations are now nested here
+    govet:
+      enable:
+        - shadow
+    revive:
+      rules:
+        - name: exported
+          arguments: [ "checkPrivateReceivers" ]
+
+# NEW in V2: Dedicated section for code formatters
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - gci
+  settings:
+    gofmt:
+      simplify: true
+      rewrite-rules:
+        - pattern: 'interface{}'
+          replacement: 'any'
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/mallardduck)
+    gofumpt:
+      module-path: github.com/mallardduck/teapot-router
+      extra-rules: true

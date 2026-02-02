@@ -28,7 +28,7 @@ func FormatRoutesJSON(w io.Writer, routes []RouteInfo) error {
 
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
-	return encoder.Encode(map[string]interface{}{
+	return encoder.Encode(map[string]any{
 		"count":  len(sorted),
 		"routes": sorted,
 	})

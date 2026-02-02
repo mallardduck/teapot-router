@@ -2,7 +2,8 @@
 
 ## Overview
 
-The `urlbuilder` package provides a clean, composable way to generate full URLs for S3 API responses. It handles scheme detection, canonical domain configuration, and works seamlessly with teapot's named routes.
+The `urlbuilder` package provides a clean, composable way to generate full URLs for S3 API responses. It handles scheme
+detection, canonical domain configuration, and works seamlessly with teapot's named routes.
 
 ## Installation
 
@@ -69,16 +70,16 @@ The `BuildURL` method bridges teapot's named routes with full URL generation:
 router := teapot.New()
 urls := urlbuilder.New("s3.example.com")
 
-router.GET("/{bucket}", func(w http.ResponseWriter, r *http.Request) {
-    bucket := teapot.URLParam(r, "bucket")
+router.GET("/{bucket}", func (w http.ResponseWriter, r *http.Request) {
+bucket := teapot.URLParam(r, "bucket")
 
-    // Generate URL using named route
-    path := router.MustURL("bucket.show", "bucket", bucket)
-    fullURL := urls.BuildURL(r, path)
+// Generate URL using named route
+path := router.MustURL("bucket.show", "bucket", bucket)
+fullURL := urls.BuildURL(r, path)
 
-    json.NewEncoder(w).Encode(map[string]string{
-        "url": fullURL, // https://s3.example.com/mybucket
-    })
+json.NewEncoder(w).Encode(map[string]string{
+"url": fullURL, // https://s3.example.com/mybucket
+})
 }).Name("bucket.show")
 ```
 
@@ -86,22 +87,22 @@ router.GET("/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 
 ```go
 // Create reusable helper
-buildFullURL := func(req *http.Request, name string, params ...string) string {
-    path := router.MustURL(name, params...)
-    return urls.BuildURL(req, path)
+buildFullURL := func (req *http.Request, name string, params ...string) string {
+path := router.MustURL(name, params...)
+return urls.BuildURL(req, path)
 }
 
 // Use in handlers
-router.GET("/{bucket}/{key:.*}", func(w http.ResponseWriter, r *http.Request) {
-    bucket := teapot.URLParam(r, "bucket")
-    key := teapot.URLParam(r, "key")
+router.GET("/{bucket}/{key:.*}", func (w http.ResponseWriter, r *http.Request) {
+bucket := teapot.URLParam(r, "bucket")
+key := teapot.URLParam(r, "key")
 
-    response := map[string]string{
-        "object": buildFullURL(r, "object.get", "bucket", bucket, "key", key),
-        "bucket": buildFullURL(r, "bucket.show", "bucket", bucket),
-    }
+response := map[string]string{
+"object": buildFullURL(r, "object.get", "bucket", bucket, "key", key),
+"bucket": buildFullURL(r, "bucket.show", "bucket", bucket),
+}
 
-    json.NewEncoder(w).Encode(response)
+json.NewEncoder(w).Encode(response)
 }).Name("object.get")
 ```
 
@@ -112,22 +113,22 @@ router := teapot.New()
 urls := urlbuilder.New("s3.example.com")
 
 router.Resource("buckets", "/buckets", "bucket", teapot.ResourceHandlers{
-    Index: func(w http.ResponseWriter, r *http.Request) {
-        // Generate URLs for related resources
-        indexPath, _ := router.URL("buckets.index")
-        bucket1Path := router.MustURL("buckets.show", "bucket", "photos")
-        bucket2Path := router.MustURL("buckets.show", "bucket", "documents")
+Index: func (w http.ResponseWriter, r *http.Request) {
+// Generate URLs for related resources
+indexPath, _ := router.URL("buckets.index")
+bucket1Path := router.MustURL("buckets.show", "bucket", "photos")
+bucket2Path := router.MustURL("buckets.show", "bucket", "documents")
 
-        response := map[string]interface{}{
-            "self": urls.BuildURL(r, indexPath),
-            "buckets": []string{
-                urls.BuildURL(r, bucket1Path),
-                urls.BuildURL(r, bucket2Path),
-            },
-        }
+response := map[string]interface{}{
+"self": urls.BuildURL(r, indexPath),
+"buckets": []string{
+urls.BuildURL(r, bucket1Path),
+urls.BuildURL(r, bucket2Path),
+},
+}
 
-        json.NewEncoder(w).Encode(response)
-    },
+json.NewEncoder(w).Encode(response)
+},
 })
 ```
 
@@ -165,8 +166,8 @@ url := urls.BucketURL(r, "bucket")
 
 ```go
 func newURLBuilder() *urlbuilder.Builder {
-    domain := os.Getenv("S3_CANONICAL_DOMAIN")
-    return urlbuilder.New(domain)
+domain := os.Getenv("S3_CANONICAL_DOMAIN")
+return urlbuilder.New(domain)
 }
 
 // Development: S3_CANONICAL_DOMAIN=""
@@ -180,32 +181,32 @@ var urls *urlbuilder.Builder
 
 switch os.Getenv("ENV") {
 case "production":
-    urls = urlbuilder.New("s3.example.com")
+urls = urlbuilder.New("s3.example.com")
 case "staging":
-    urls = urlbuilder.New("s3-staging.example.com")
+urls = urlbuilder.New("s3-staging.example.com")
 default:
-    urls = urlbuilder.New("") // Development
+urls = urlbuilder.New("") // Development
 }
 ```
 
 ## S3 XML Response Example
 
 ```go
-router.QueryGET("/{bucket}", func(w http.ResponseWriter, r *http.Request) {
-    bucket := teapot.URLParam(r, "bucket")
+router.QueryGET("/{bucket}", func (w http.ResponseWriter, r *http.Request) {
+bucket := teapot.URLParam(r, "bucket")
 
-    // Generate URLs for XML response
-    objects := []struct {
-        Key string
-        URL string
-    }{
-        {Key: "file1.txt", URL: urls.ObjectURL(r, bucket, "file1.txt")},
-        {Key: "file2.jpg", URL: urls.ObjectURL(r, bucket, "file2.jpg")},
-    }
+// Generate URLs for XML response
+objects := []struct {
+Key string
+URL string
+}{
+{Key: "file1.txt", URL: urls.ObjectURL(r, bucket, "file1.txt")},
+{Key: "file2.jpg", URL: urls.ObjectURL(r, bucket, "file2.jpg")},
+}
 
-    // S3 XML response with full URLs
-    w.Header().Set("Content-Type", "application/xml")
-    fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
+// S3 XML response with full URLs
+w.Header().Set("Content-Type", "application/xml")
+fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
 <ListBucketResult>
     <Name>%s</Name>
     <Contents>
@@ -217,9 +218,9 @@ router.QueryGET("/{bucket}", func(w http.ResponseWriter, r *http.Request) {
         <URL>%s</URL>
     </Contents>
 </ListBucketResult>`,
-        bucket,
-        objects[0].Key, objects[0].URL,
-        objects[1].Key, objects[1].URL)
+bucket,
+objects[0].Key, objects[0].URL,
+objects[1].Key, objects[1].URL)
 }).Query("list-type").Action("s3:ListBucket")
 ```
 
@@ -233,8 +234,8 @@ var urls = urlbuilder.New(os.Getenv("S3_CANONICAL_DOMAIN"))
 
 // Reuse across handlers
 func listBuckets(w http.ResponseWriter, r *http.Request) {
-    url := urls.BucketURL(r, "mybucket")
-    // ...
+url := urls.BucketURL(r, "mybucket")
+// ...
 }
 ```
 
@@ -246,7 +247,7 @@ func listBuckets(w http.ResponseWriter, r *http.Request) {
 
 // Use named routes
 ✅ path := router.MustURL("bucket.show", "bucket", bucket)
-   fullURL := urls.BuildURL(r, path)
+fullURL := urls.BuildURL(r, path)
 ```
 
 ### 3. Use Canonical Domain in Production
@@ -266,6 +267,7 @@ go test ./pkg/urlbuilder/
 ```
 
 **77 tests** covering:
+
 - Bucket/Object URL generation
 - Canonical domain override
 - Scheme detection (TLS, X-Forwarded-Proto, default)
@@ -283,6 +285,7 @@ The `urlbuilder` package is intentionally **decoupled** from the `teapot` router
 - ✅ Standalone utility for S3 API development
 
 This design allows you to:
+
 - Use urlbuilder without teapot
 - Use teapot without urlbuilder
 - Compose them together for maximum convenience

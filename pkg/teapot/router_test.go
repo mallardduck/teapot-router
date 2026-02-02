@@ -17,7 +17,7 @@ func request(t *testing.T, router http.Handler, method, path string) *httptest.R
 	return w
 }
 
-func assertEqual(t *testing.T, got, want interface{}) {
+func assertEqual(t *testing.T, got, want any) {
 	t.Helper()
 	if got != want {
 		t.Errorf("got %v, want %v", got, want)

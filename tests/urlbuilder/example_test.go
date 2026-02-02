@@ -29,7 +29,7 @@ func Example() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		json.NewEncoder(w).Encode(map[string]any{
 			"buckets": bucketURLs,
 		})
 	}).Query("list-type")
@@ -46,7 +46,7 @@ func Example() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		json.NewEncoder(w).Encode(map[string]any{
 			"bucket":  urls.BucketURL(r, bucket),
 			"objects": objectURLs,
 		})

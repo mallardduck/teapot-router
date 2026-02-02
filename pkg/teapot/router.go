@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/mallardduck/teapot-router/internal/core"
 )
 
@@ -528,7 +529,7 @@ func (r *Router) RoutesHandler() http.HandlerFunc {
 		accept := req.Header.Get("Accept")
 		if strings.Contains(accept, "application/json") {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			json.NewEncoder(w).Encode(map[string]any{
 				"count":  len(routes),
 				"routes": routes,
 			})

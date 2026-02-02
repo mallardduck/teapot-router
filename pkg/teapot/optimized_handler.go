@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/mallardduck/teapot-router/internal/core"
 )
 

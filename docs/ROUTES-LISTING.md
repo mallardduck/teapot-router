@@ -1,6 +1,7 @@
 ## Routes Listing
 
-Teapot provides built-in support for viewing all registered routes, both via HTTP endpoints (for debugging) and CLI commands (like Laravel's `php artisan route:list`).
+Teapot provides built-in support for viewing all registered routes, both via HTTP endpoints (for debugging) and CLI
+commands (like Laravel's `php artisan route:list`).
 
 ## HTTP Debug Endpoint
 
@@ -15,7 +16,7 @@ router.POST("/api/users", createUser).Name("users.store")
 
 // Conditionally register debug route
 if debug {
-    router.RegisterDebugRoute("/.internal/routes", "debug.routes")
+router.RegisterDebugRoute("/.internal/routes", "debug.routes")
 }
 
 http.ListenAndServe(":8080", router)
@@ -28,6 +29,7 @@ Visit `http://localhost:8080/.internal/routes` to see all routes.
 The debug endpoint supports both JSON and HTML:
 
 **JSON** (with `Accept: application/json` header):
+
 ```json
 {
   "count": 3,
@@ -49,6 +51,7 @@ The debug endpoint supports both JSON and HTML:
 ```
 
 **HTML** (default for browsers):
+
 - Clean table layout
 - Color-coded HTTP methods
 - Sortable by method/pattern/name
@@ -66,13 +69,13 @@ router.GET("/.internal/routes", handler).Name("debug.routes")
 
 // Option 3: Environment-based
 if os.Getenv("DEBUG") == "true" {
-    router.RegisterDebugRoute("/.internal/routes", "debug.routes")
+router.RegisterDebugRoute("/.internal/routes", "debug.routes")
 }
 
 // Option 4: With middleware
 router.GET("/.internal/routes", router.RoutesHandler()).
-    Name("debug.routes").
-    With(authMiddleware)
+Name("debug.routes").
+With(authMiddleware)
 ```
 
 ## CLI Route Listing
@@ -85,45 +88,45 @@ For Laravel-style CLI commands, teapot provides formatting helpers.
 package main
 
 import (
-    "flag"
-    "fmt"
-    "os"
-    "github.com/mallardduck/teapot-router/pkg/teapot"
+	"flag"
+	"fmt"
+	"os"
+	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
 var jsonOutput = flag.Bool("json", false, "Output routes as JSON")
 
 func main() {
-    flag.Parse()
+	flag.Parse()
 
-    // Create router and register routes
-    router := setupRoutes()
+	// Create router and register routes
+	router := setupRoutes()
 
-    // Get all routes
-    routes := router.Routes()
+	// Get all routes
+	routes := router.Routes()
 
-    // Format output
-    var err error
-    if *jsonOutput {
-        err = teapot.FormatRoutesJSON(os.Stdout, routes)
-    } else {
-        err = teapot.FormatRoutesTable(os.Stdout, routes)
-    }
+	// Format output
+	var err error
+	if *jsonOutput {
+		err = teapot.FormatRoutesJSON(os.Stdout, routes)
+	} else {
+		err = teapot.FormatRoutesTable(os.Stdout, routes)
+	}
 
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-        os.Exit(1)
-    }
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 func setupRoutes() *teapot.Router {
-    router := teapot.New()
+	router := teapot.New()
 
-    // Register your routes here
-    router.GET("/api/users", listUsers).Name("users.index")
-    router.POST("/api/users", createUser).Name("users.store")
+	// Register your routes here
+	router.GET("/api/users", listUsers).Name("users.index")
+	router.POST("/api/users", createUser).Name("users.store")
 
-    return router
+	return router
 }
 ```
 
@@ -216,42 +219,42 @@ err := teapot.FormatRoutesCompact(os.Stdout, routes)
 package cmd
 
 import (
-    "fmt"
-    "os"
-    "github.com/mallardduck/teapot-router/pkg/teapot"
-    "github.com/spf13/cobra"
+	"fmt"
+	"os"
+	"github.com/mallardduck/teapot-router/pkg/teapot"
+	"github.com/spf13/cobra"
 )
 
 var jsonOutput bool
 
 var routesCmd = &cobra.Command{
-    Use:   "routes",
-    Short: "List all registered HTTP routes",
-    RunE:  runRoutes,
+	Use:   "routes",
+	Short: "List all registered HTTP routes",
+	RunE:  runRoutes,
 }
 
 func init() {
-    rootCmd.AddCommand(routesCmd)
-    routesCmd.Flags().BoolVar(&jsonOutput, "json", false, "Output as JSON")
+	rootCmd.AddCommand(routesCmd)
+	routesCmd.Flags().BoolVar(&jsonOutput, "json", false, "Output as JSON")
 }
 
 func runRoutes(cmd *cobra.Command, args []string) error {
-    // Create router without starting server
-    router := setupRoutes()
-    routes := router.Routes()
+	// Create router without starting server
+	router := setupRoutes()
+	routes := router.Routes()
 
-    if jsonOutput {
-        return teapot.FormatRoutesJSON(os.Stdout, routes)
-    }
-    return teapot.FormatRoutesTable(os.Stdout, routes)
+	if jsonOutput {
+		return teapot.FormatRoutesJSON(os.Stdout, routes)
+	}
+	return teapot.FormatRoutesTable(os.Stdout, routes)
 }
 
 func setupRoutes() *teapot.Router {
-    router := teapot.New()
-    // Register routes (same as server)
-    registerAPIRoutes(router)
-    registerWebRoutes(router)
-    return router
+	router := teapot.New()
+	// Register routes (same as server)
+	registerAPIRoutes(router)
+	registerWebRoutes(router)
+	return router
 }
 ```
 
@@ -265,32 +268,33 @@ routes := router.Routes()
 // Filter by method
 var getRoutes []teapot.RouteInfo
 for _, r := range routes {
-    if r.Method == "GET" {
-        getRoutes = append(getRoutes, r)
-    }
+if r.Method == "GET" {
+getRoutes = append(getRoutes, r)
+}
 }
 teapot.FormatRoutesTable(os.Stdout, getRoutes)
 
 // Filter by pattern
 var apiRoutes []teapot.RouteInfo
 for _, r := range routes {
-    if strings.HasPrefix(r.Pattern, "/api/") {
-        apiRoutes = append(apiRoutes, r)
-    }
+if strings.HasPrefix(r.Pattern, "/api/") {
+apiRoutes = append(apiRoutes, r)
+}
 }
 
 // Filter by action (S3 routes)
 var s3Routes []teapot.RouteInfo
 for _, r := range routes {
-    if r.Action != "" {
-        s3Routes = append(s3Routes, r)
-    }
+if r.Action != "" {
+s3Routes = append(s3Routes, r)
+}
 }
 ```
 
 ## Sorting
 
 All formatting helpers automatically sort routes:
+
 1. By pattern (alphabetically)
 2. By method (alphabetically) for same pattern
 
@@ -302,13 +306,13 @@ import "sort"
 routes := router.Routes()
 
 // Sort by name
-sort.Slice(routes, func(i, j int) bool {
-    return routes[i].Name < routes[j].Name
+sort.Slice(routes, func (i, j int) bool {
+return routes[i].Name < routes[j].Name
 })
 
 // Sort by method only
-sort.Slice(routes, func(i, j int) bool {
-    return routes[i].Method < routes[j].Method
+sort.Slice(routes, func (i, j int) bool {
+return routes[i].Method < routes[j].Method
 })
 ```
 
@@ -320,7 +324,7 @@ Only register debug routes in development:
 
 ```go
 if os.Getenv("APP_ENV") != "production" {
-    router.RegisterDebugRoute("/.internal/routes", "debug.routes")
+router.RegisterDebugRoute("/.internal/routes", "debug.routes")
 }
 ```
 
@@ -330,9 +334,9 @@ Add authentication for production debug endpoints:
 
 ```go
 if debug {
-    router.GET("/.internal/routes", router.RoutesHandler()).
-        Name("debug.routes").
-        With(adminAuth)
+router.GET("/.internal/routes", router.RoutesHandler()).
+Name("debug.routes").
+With(adminAuth)
 }
 ```
 
@@ -363,10 +367,10 @@ defer f.Close()
 
 fmt.Fprintln(f, "# API Routes\n")
 for _, r := range routes {
-    if strings.HasPrefix(r.Pattern, "/api/") {
-        fmt.Fprintf(f, "## %s %s\n", r.Method, r.Pattern)
-        fmt.Fprintf(f, "Name: `%s`\n\n", r.Name)
-    }
+if strings.HasPrefix(r.Pattern, "/api/") {
+fmt.Fprintf(f, "## %s %s\n", r.Method, r.Pattern)
+fmt.Fprintf(f, "Name: `%s`\n\n", r.Name)
+}
 }
 ```
 
@@ -392,9 +396,9 @@ See [examples/routes-cli/main.go](../../examples/routes-cli/main.go) for a compl
 
 ```go
 type RouteInfo struct {
-    Method  string  // HTTP method (GET, POST, etc.)
-    Pattern string  // URL pattern (/users/{id})
-    Name    string  // Route name (users.show)
-    Action  string  // S3 action (s3:GetObject) or empty
+Method  string // HTTP method (GET, POST, etc.)
+Pattern string // URL pattern (/users/{id})
+Name    string // Route name (users.show)
+Action  string // S3 action (s3:GetObject) or empty
 }
 ```

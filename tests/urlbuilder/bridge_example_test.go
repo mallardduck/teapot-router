@@ -25,7 +25,7 @@ func ExampleBuilder_BuildURL() {
 			bucket2Path := router.MustURL("buckets.show", "bucket", "docs")   // "/buckets/docs"
 
 			// Convert paths to full URLs
-			response := map[string]interface{}{
+			response := map[string]any{
 				"self": urls.BuildURL(r, indexPath),
 				"buckets": []string{
 					urls.BuildURL(r, bucket1Path),
@@ -97,7 +97,7 @@ func ExampleBuilder_BuildURL_relatedResources() {
 		selfPath := router.MustURL("object.get", "bucket", bucket, "key", key)
 		bucketPath := router.MustURL("bucket.show", "bucket", bucket)
 
-		response := map[string]interface{}{
+		response := map[string]any{
 			"self":   urls.BuildURL(r, selfPath),
 			"bucket": urls.BuildURL(r, bucketPath),
 		}

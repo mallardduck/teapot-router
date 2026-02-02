@@ -16,7 +16,7 @@ This guide covers everything you need to know to develop and contribute to teapo
 
 ## Prerequisites
 
-- Go 1.23 or later
+- Go 1.25 or later
 - Git
 - A code editor (GoLand, VS Code, or similar)
 

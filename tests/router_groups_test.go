@@ -27,7 +27,14 @@ func TestGroupNamePrefix(t *testing.T) {
 		routes := r.Routes()
 		require.Len(t, routes, 1)
 		// Empty prefix should inherit parent's "api." prefix
+		// Test to catch CONDITIONALS_NEGATION at router.go:405
 		assert.Equal(t, "api.test", routes[0].Name)
+		// Should NOT be just "test" (would happen if condition was negated)
+		assert.NotEqual(t, "test", routes[0].Name)
+		// Should NOT have extra dot "api..test"
+		assert.NotEqual(t, "api..test", routes[0].Name)
+		// Must contain parent prefix
+		assert.Contains(t, routes[0].Name, "api.")
 	})
 
 	t.Run("group with non-empty prefix concatenates", func(t *testing.T) {
@@ -147,7 +154,16 @@ func TestGroupPathPrefix(t *testing.T) {
 		routes := r.Routes()
 		require.Len(t, routes, 1)
 		// Pattern should include the full path with prefix
+		// Test EXACT concatenation to catch ARITHMETIC_BASE mutations at router.go:245
 		assert.Equal(t, "/api/users", routes[0].Pattern)
+		// Verify it's not malformed
+		assert.NotEqual(t, "/users", routes[0].Pattern)
+		assert.NotEqual(t, "/apiusers", routes[0].Pattern)
+		assert.NotEqual(t, "api/users", routes[0].Pattern)
+		// Verify both parts are present
+		assert.Contains(t, routes[0].Pattern, "/api")
+		assert.Contains(t, routes[0].Pattern, "/users")
+		assert.True(t, len("/api/users") == len(routes[0].Pattern))
 	})
 }
 

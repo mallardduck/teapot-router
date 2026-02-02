@@ -277,6 +277,7 @@ func TestDispatcherKeyGeneration(t *testing.T) {
 		r := teapot.New()
 
 		// Different methods, same pattern - should create separate dispatchers
+		// Test ARITHMETIC_BASE mutations at router.go:266 (dispatcherKey := method + ":" + chiPattern)
 		r.QueryGET("/test", func(w http.ResponseWriter, req *http.Request) {
 			w.Write([]byte("get"))
 		}).QueryValue("a", "1")
@@ -287,15 +288,30 @@ func TestDispatcherKeyGeneration(t *testing.T) {
 
 		r.Finalize()
 
+		// Verify GET works
 		req1 := httptest.NewRequest("GET", "/test?a=1", nil)
 		w1 := httptest.NewRecorder()
 		r.ServeHTTP(w1, req1)
+		assert.Equal(t, 200, w1.Code)
 		assert.Equal(t, "get", w1.Body.String())
 
+		// Verify POST works (different dispatcher)
 		req2 := httptest.NewRequest("POST", "/test?b=2", nil)
 		w2 := httptest.NewRecorder()
 		r.ServeHTTP(w2, req2)
+		assert.Equal(t, 200, w2.Code)
 		assert.Equal(t, "post", w2.Body.String())
+
+		// Verify wrong method doesn't work
+		req3 := httptest.NewRequest("GET", "/test?b=2", nil)
+		w3 := httptest.NewRecorder()
+		r.ServeHTTP(w3, req3)
+		assert.Equal(t, 404, w3.Code) // GET with POST query param
+
+		req4 := httptest.NewRequest("POST", "/test?a=1", nil)
+		w4 := httptest.NewRecorder()
+		r.ServeHTTP(w4, req4)
+		assert.Equal(t, 404, w4.Code) // POST with GET query param
 	})
 
 	t.Run("wildcard patterns generate correct dispatcher key", func(t *testing.T) {

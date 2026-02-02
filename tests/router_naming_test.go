@@ -32,7 +32,15 @@ func TestRouteNaming(t *testing.T) {
 		routes := r.Routes()
 		require.Len(t, routes, 1)
 		// Name prefix should be concatenated (line 77: fullName := rb.router.namePrefix + name)
+		// Test EXACT concatenation to catch ARITHMETIC_BASE mutations
 		assert.Equal(t, "api.users.list", routes[0].Name)
+		// Verify it's not just "users.list" or "apiusers.list"
+		assert.NotEqual(t, "users.list", routes[0].Name)
+		assert.NotEqual(t, "apiusers.list", routes[0].Name)
+		// Verify prefix is actually present
+		assert.True(t, len("api.users.list") > len("users.list"))
+		assert.Contains(t, routes[0].Name, "api.")
+		assert.Contains(t, routes[0].Name, "users.list")
 	})
 
 	t.Run("nested group name prefixes", func(t *testing.T) {
@@ -69,9 +77,23 @@ func TestDuplicateRouteNames(t *testing.T) {
 		r.GET("/test1", func(w http.ResponseWriter, req *http.Request) {}).Name("duplicate")
 
 		// Line 84: if existingRoute.Method == rb.route.Method
+		// Verify panic occurs and capture error message
+		var panicMsg string
 		assert.Panics(t, func() {
+			defer func() {
+				if r := recover(); r != nil {
+					panicMsg = r.(string)
+					panic(r) // re-panic for assert.Panics
+				}
+			}()
 			r.GET("/test2", func(w http.ResponseWriter, req *http.Request) {}).Name("duplicate")
 		}, "should panic on duplicate name with same method but different pattern")
+
+		// Verify panic message contains expected content
+		assert.Contains(t, panicMsg, "duplicate")
+		assert.Contains(t, panicMsg, "GET")
+		assert.Contains(t, panicMsg, "test1")
+		assert.Contains(t, panicMsg, "test2")
 	})
 
 	t.Run("duplicate name different methods same pattern ok", func(t *testing.T) {
@@ -83,8 +105,18 @@ func TestDuplicateRouteNames(t *testing.T) {
 
 		routes := r.Routes()
 		assert.Len(t, routes, 2)
+
+		// Verify both have same name and pattern but different methods
 		assert.Equal(t, "resource", routes[0].Name)
 		assert.Equal(t, "resource", routes[1].Name)
+		assert.Equal(t, "/test", routes[0].Pattern)
+		assert.Equal(t, "/test", routes[1].Pattern)
+		// Methods must be different
+		assert.NotEqual(t, routes[0].Method, routes[1].Method)
+		// One should be GET, one should be POST
+		methods := []string{routes[0].Method, routes[1].Method}
+		assert.Contains(t, methods, "GET")
+		assert.Contains(t, methods, "POST")
 	})
 
 	t.Run("duplicate name different methods different patterns panics", func(t *testing.T) {

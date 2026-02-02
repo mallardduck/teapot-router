@@ -5,9 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
 )
 
 // Test Chi's wildcard syntax directly to understand how it works

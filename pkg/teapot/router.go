@@ -14,13 +14,13 @@ import (
 // Router wraps chi.Mux and adds named routes, query multiplexing, and S3 actions
 type Router struct {
 	mux               *chi.Mux
-	routes            []*core.Route
+	routes            *[]*core.Route
 	dispatchers       map[string]*core.Dispatcher // key: "METHOD:PATTERN"
 	nameIndex         map[string]*core.Route      // for URL generation
 	pathPrefix        string
 	namePrefix        string
 	middlewares       []func(http.Handler) http.Handler
-	optimizedHandlers []*optimizedHandler // for finalization optimization
+	optimizedHandlers *[]*optimizedHandler // for finalization optimization
 	finalized         bool
 }
 
@@ -131,11 +131,14 @@ func (rb *RouteBuilder) With(middlewares ...func(http.Handler) http.Handler) *Ro
 
 // New creates a new Router instance
 func New() *Router {
+	routes := make([]*core.Route, 0)
+	optimizedHandlers := make([]*optimizedHandler, 0)
 	return &Router{
-		mux:         chi.NewRouter(),
-		routes:      make([]*core.Route, 0),
-		dispatchers: make(map[string]*core.Dispatcher),
-		nameIndex:   make(map[string]*core.Route),
+		mux:               chi.NewRouter(),
+		routes:            &routes,
+		dispatchers:       make(map[string]*core.Dispatcher),
+		nameIndex:         make(map[string]*core.Route),
+		optimizedHandlers: &optimizedHandlers,
 	}
 }
 
@@ -240,14 +243,14 @@ func (r *Router) handleDirect(method, pattern string, handler http.HandlerFunc) 
 	// Copy group middlewares to route
 	rt.Middlewares = append(rt.Middlewares, r.middlewares...)
 
-	r.routes = append(r.routes, rt)
+	*r.routes = append(*r.routes, rt)
 
 	// Create optimized handler (can be finalized later)
 	optHandler := &optimizedHandler{
 		route:  rt,
 		router: r,
 	}
-	r.optimizedHandlers = append(r.optimizedHandlers, optHandler)
+	*r.optimizedHandlers = append(*r.optimizedHandlers, optHandler)
 
 	// Register with Chi
 	r.mux.Method(method, chiPattern, optHandler)
@@ -278,7 +281,7 @@ func (r *Router) handleQuery(method, pattern string, handler http.HandlerFunc) *
 	// Copy group middlewares to route (but not global middlewares - those are handled by chi.Mux)
 	rt.Middlewares = append(rt.Middlewares, r.middlewares...)
 
-	r.routes = append(r.routes, rt)
+	*r.routes = append(*r.routes, rt)
 
 	// Get or create dispatcher for this method+pattern
 	dispatcherKey := method + ":" + chiPattern
@@ -332,13 +335,14 @@ func (r *Router) MiddlewareGroup(fn func(r *Router), middlewares ...func(http.Ha
 func (r *Router) NamedGroup(pattern, namePrefix string, fn func(r *Router)) {
 	// Create a sub-router with prefixes
 	subRouter := &Router{
-		mux:         r.mux, // Share the same chi mux
-		routes:      r.routes,
-		dispatchers: r.dispatchers,
-		nameIndex:   r.nameIndex,
-		pathPrefix:  r.pathPrefix + pattern,
-		namePrefix:  r.namePrefix + namePrefix + ".",
-		middlewares: append([]func(http.Handler) http.Handler{}, r.middlewares...), // Copy parent middlewares
+		mux:               r.mux, // Share the same chi mux
+		routes:            r.routes,
+		dispatchers:       r.dispatchers,
+		nameIndex:         r.nameIndex,
+		pathPrefix:        r.pathPrefix + pattern,
+		namePrefix:        r.namePrefix + namePrefix + ".",
+		middlewares:       append([]func(http.Handler) http.Handler{}, r.middlewares...), // Copy parent middlewares
+		optimizedHandlers: r.optimizedHandlers,
 	}
 
 	// Trim trailing dot if namePrefix is empty
@@ -502,7 +506,7 @@ type RouteInfo struct {
 // Routes returns information about all registered routes
 func (r *Router) Routes() []RouteInfo {
 	var infos []RouteInfo
-	for _, rt := range r.routes {
+	for _, rt := range *r.routes {
 		infos = append(infos, RouteInfo{
 			Method:  rt.Method,
 			Pattern: rt.Pattern,
@@ -658,7 +662,7 @@ func (r *Router) Finalize() {
 	}
 
 	// Optimize all direct handlers
-	for _, oh := range r.optimizedHandlers {
+	for _, oh := range *r.optimizedHandlers {
 		oh.fastPath = r.createOptimizedHandler(oh.route)
 		oh.finalized.Store(true)
 	}

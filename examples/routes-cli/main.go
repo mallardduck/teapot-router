@@ -70,13 +70,16 @@ func setupRoutes() *teapot.Router {
 	// S3 service-level operations (no bucket in path)
 	router.GET("/", listBuckets).Name("s3.service.list-buckets").Action("api:s3:ListBuckets")
 
-	// ==================== BUCKET OPERATIONS (NO QUERY PARAMS) ====================
+	// ==================== BUCKET OPERATIONS ====================
+	// Mix of direct routes (PUT, DELETE, HEAD, GET) and query-based routes (QueryGET, QueryPUT).
+	// The router automatically promotes to dispatcher-based routing when needed.
+
 	router.PUT("/{bucket}", createBucket).Name("s3.bucket.create").Action("api:s3:CreateBucket")
 	router.DELETE("/{bucket}", deleteBucket).Name("s3.bucket.delete").Action("api:s3:DeleteBucket")
 	router.HEAD("/{bucket}", headBucket).Name("s3.bucket.head").Action("api:s3:HeadBucket")
 	router.GET("/{bucket}", listObjectsV1).Name("s3.bucket.list-objects-v1").Action("api:s3:ListObjects")
 
-	// ==================== BUCKET OPERATIONS (WITH QUERY PARAMS) ====================
+	// Query-based bucket operations
 	// ListObjectsV2 (preferred over v1)
 	router.QueryGET("/{bucket}", listObjectsV2).Query("list-type").Name("s3.bucket.list-objects-v2").Action("api:s3:ListObjectsV2")
 
@@ -96,7 +99,8 @@ func setupRoutes() *teapot.Router {
 	// Bulk delete objects
 	router.QueryPOST("/{bucket}", deleteObjects).Query("delete").Name("s3.bucket.delete-objects").Action("api:s3:DeleteObjects")
 
-	// ==================== OBJECT OPERATIONS (NO QUERY PARAMS) ====================
+	// ==================== OBJECT OPERATIONS ====================
+	// Direct routes for operations without query params
 	router.GET("/{bucket}/{key:.*}", getObject).Name("s3.object.get").Action("api:s3:GetObject")
 	router.PUT("/{bucket}/{key:.*}", putObject).Name("s3.object.put").Action("api:s3:PutObject")
 	router.DELETE("/{bucket}/{key:.*}", deleteObject).Name("s3.object.delete").Action("api:s3:DeleteObject")
@@ -105,7 +109,7 @@ func setupRoutes() *teapot.Router {
 	//       The putObject handler detects this header and can adjust action context
 	//       for logging/metrics (e.g., override to "api:s3:CopyObject")
 
-	// ==================== OBJECT OPERATIONS (WITH QUERY PARAMS) ====================
+	// Query-based object operations
 	router.QueryGET("/{bucket}/{key:.*}", getObjectAcl).Query("acl").Name("s3.object.get-acl").Action("api:s3:GetObjectAcl")
 	router.QueryPUT("/{bucket}/{key:.*}", putObjectAcl).Query("acl").Name("s3.object.put-acl").Action("api:s3:PutObjectAcl")
 

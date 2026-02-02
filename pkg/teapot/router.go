@@ -3,6 +3,7 @@ package teapot
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -16,12 +17,14 @@ type Router struct {
 	mux               *chi.Mux
 	routes            *[]*core.Route
 	dispatchers       map[string]*core.Dispatcher // key: "METHOD:PATTERN"
+	directRoutes      map[string]*core.Route      // tracks direct-registered routes, key: "METHOD:PATTERN"
 	nameIndex         map[string]*core.Route      // for URL generation
 	pathPrefix        string
 	namePrefix        string
 	middlewares       []func(http.Handler) http.Handler
 	optimizedHandlers *[]*optimizedHandler // for finalization optimization
 	finalized         bool
+	debugLog          bool // enable debug logging for auto-promotion
 }
 
 // RouteBuilder provides a fluent API for building routes
@@ -137,8 +140,23 @@ func New() *Router {
 		mux:               chi.NewRouter(),
 		routes:            &routes,
 		dispatchers:       make(map[string]*core.Dispatcher),
+		directRoutes:      make(map[string]*core.Route),
 		nameIndex:         make(map[string]*core.Route),
 		optimizedHandlers: &optimizedHandlers,
+		debugLog:          false, // can be enabled with router.SetDebugLog(true)
+	}
+}
+
+// SetDebugLog enables or disables debug logging for route registration
+func (r *Router) SetDebugLog(enabled bool) *Router {
+	r.debugLog = enabled
+	return r
+}
+
+// debugLog logs a message if debug logging is enabled
+func (r *Router) debugLogf(format string, args ...interface{}) {
+	if r.debugLog {
+		log.Printf("[teapot-debug] "+format, args...)
 	}
 }
 
@@ -221,7 +239,7 @@ func (r *Router) QueryOPTIONS(pattern string, handler http.HandlerFunc) *RouteBu
 
 // handleDirect registers a route directly with Chi (no dispatcher, best performance)
 // This is used by GET, POST, PUT, DELETE, etc.
-// Does not support query multiplexing
+// Automatically promotes to dispatcher-based routing if multiple routes exist on same method+pattern
 func (r *Router) handleDirect(method, pattern string, handler http.HandlerFunc) *RouteBuilder {
 	// Apply path prefix if in a group
 	fullPattern := r.pathPrefix + pattern
@@ -245,15 +263,41 @@ func (r *Router) handleDirect(method, pattern string, handler http.HandlerFunc) 
 
 	*r.routes = append(*r.routes, rt)
 
-	// Create optimized handler (can be finalized later)
+	dispatcherKey := method + ":" + chiPattern
+
+	// Check if dispatcher already exists (from QueryGET/etc)
+	if disp, exists := r.dispatchers[dispatcherKey]; exists {
+		r.debugLogf("Adding direct route to existing dispatcher: %s %s", method, fullPattern)
+		// Add to existing dispatcher as fallback (no query matchers)
+		disp.AddRoute(rt)
+		return &RouteBuilder{router: r, route: rt, dispatcher: disp}
+	}
+
+	// Check if another direct route already exists
+	if existingRoute, exists := r.directRoutes[dispatcherKey]; exists {
+		r.debugLogf("Auto-promoting to dispatcher: %s %s (multiple routes on same path)", method, fullPattern)
+		// Promote to dispatcher!
+		disp := &core.Dispatcher{Routes: make([]*core.Route, 0)}
+		disp.AddRoute(existingRoute) // Old route becomes fallback
+		disp.AddRoute(rt)            // New route also fallback
+		r.dispatchers[dispatcherKey] = disp
+		delete(r.directRoutes, dispatcherKey)
+
+		// Register dispatcher with Chi (overwrites previous direct registration)
+		r.mux.Method(method, chiPattern, disp)
+
+		return &RouteBuilder{router: r, route: rt, dispatcher: disp}
+	}
+
+	// First route on this pattern - register directly for best performance
 	optHandler := &optimizedHandler{
 		route:  rt,
 		router: r,
 	}
 	*r.optimizedHandlers = append(*r.optimizedHandlers, optHandler)
 
-	// Register with Chi
 	r.mux.Method(method, chiPattern, optHandler)
+	r.directRoutes[dispatcherKey] = rt
 
 	return &RouteBuilder{router: r, route: rt, isDirect: true}
 }
@@ -287,10 +331,18 @@ func (r *Router) handleQuery(method, pattern string, handler http.HandlerFunc) *
 	dispatcherKey := method + ":" + chiPattern
 	disp, exists := r.dispatchers[dispatcherKey]
 	if !exists {
-		disp = &core.Dispatcher{Routes: make([]*core.Route, 0)}
+		// Check if a direct route exists - if so, promote it to dispatcher
+		if existingRoute, directExists := r.directRoutes[dispatcherKey]; directExists {
+			r.debugLogf("Auto-promoting direct route to dispatcher: %s %s (adding query-based route)", method, fullPattern)
+			disp = &core.Dispatcher{Routes: make([]*core.Route, 0)}
+			disp.AddRoute(existingRoute) // Existing direct route becomes fallback
+			delete(r.directRoutes, dispatcherKey)
+		} else {
+			disp = &core.Dispatcher{Routes: make([]*core.Route, 0)}
+		}
 		r.dispatchers[dispatcherKey] = disp
 
-		// Register dispatcher with Chi immediately (using Chi pattern)
+		// Register dispatcher with Chi (overwrites any previous direct registration)
 		r.mux.Method(method, chiPattern, disp)
 	}
 
@@ -318,6 +370,8 @@ func (r *Router) MiddlewareGroup(fn func(r *Router), middlewares ...func(http.Ha
 	// Create a sub-router with same path/name prefixes but additional middlewares
 	subRouter := &Router{
 		mux:               r.mux, // Share the same chi mux
+		directRoutes:      r.directRoutes,
+		debugLog:          r.debugLog,
 		routes:            r.routes,
 		dispatchers:       r.dispatchers,
 		nameIndex:         r.nameIndex,
@@ -338,11 +392,13 @@ func (r *Router) NamedGroup(pattern, namePrefix string, fn func(r *Router)) {
 		mux:               r.mux, // Share the same chi mux
 		routes:            r.routes,
 		dispatchers:       r.dispatchers,
+		directRoutes:      r.directRoutes,
 		nameIndex:         r.nameIndex,
 		pathPrefix:        r.pathPrefix + pattern,
 		namePrefix:        r.namePrefix + namePrefix + ".",
 		middlewares:       append([]func(http.Handler) http.Handler{}, r.middlewares...), // Copy parent middlewares
 		optimizedHandlers: r.optimizedHandlers,
+		debugLog:          r.debugLog,
 	}
 
 	// Trim trailing dot if namePrefix is empty
@@ -736,11 +792,13 @@ func (r *Router) With(middlewares ...func(http.Handler) http.Handler) *Router {
 		mux:               mux,
 		routes:            r.routes,            // Shared registry
 		dispatchers:       r.dispatchers,       // Shared dispatchers
+		directRoutes:      r.directRoutes,      // Shared direct routes tracker
 		nameIndex:         r.nameIndex,         // Shared name index
 		pathPrefix:        r.pathPrefix,        // Preserve path prefix
 		namePrefix:        r.namePrefix,        // Preserve name prefix
 		middlewares:       r.middlewares,       // Don't duplicate - Chi handles it
 		optimizedHandlers: r.optimizedHandlers, // Shared handlers
 		finalized:         r.finalized,
+		debugLog:          r.debugLog, // Preserve debug logging
 	}
 }

@@ -68,67 +68,72 @@ func setupRoutes() *teapot.Router {
 
 	// ==================== SERVICE-LEVEL OPERATIONS ====================
 	// S3 service-level operations (no bucket in path)
-	router.GET("/", listBuckets).Name("s3.service.list-buckets").Action("s3:ListBuckets")
+	router.GET("/", listBuckets).Name("s3.service.list-buckets").Action("api:s3:ListBuckets")
 
 	// ==================== BUCKET OPERATIONS (NO QUERY PARAMS) ====================
-	router.PUT("/{bucket}", createBucket).Name("s3.bucket.create").Action("s3:CreateBucket")
-	router.DELETE("/{bucket}", deleteBucket).Name("s3.bucket.delete").Action("s3:DeleteBucket")
-	router.HEAD("/{bucket}", headBucket).Name("s3.bucket.head").Action("s3:HeadBucket")
-	router.GET("/{bucket}", listObjectsV1).Name("s3.bucket.list-objects-v1").Action("s3:ListBucket")
+	router.PUT("/{bucket}", createBucket).Name("s3.bucket.create").Action("api:s3:CreateBucket")
+	router.DELETE("/{bucket}", deleteBucket).Name("s3.bucket.delete").Action("api:s3:DeleteBucket")
+	router.HEAD("/{bucket}", headBucket).Name("s3.bucket.head").Action("api:s3:HeadBucket")
+	router.GET("/{bucket}", listObjectsV1).Name("s3.bucket.list-objects-v1").Action("api:s3:ListObjects")
 
 	// ==================== BUCKET OPERATIONS (WITH QUERY PARAMS) ====================
 	// ListObjectsV2 (preferred over v1)
-	router.QueryGET("/{bucket}", listObjectsV2).Query("list-type").Name("s3.bucket.list-objects-v2").Action("s3:ListBucket")
+	router.QueryGET("/{bucket}", listObjectsV2).Query("list-type").Name("s3.bucket.list-objects-v2").Action("api:s3:ListObjectsV2")
 
 	// Bucket configuration endpoints
-	router.QueryGET("/{bucket}", getBucketLocation).Query("location").Name("s3.bucket.get-location").Action("s3:GetBucketLocation")
-	router.QueryGET("/{bucket}", getBucketVersioning).Query("versioning").Name("s3.bucket.get-versioning").Action("s3:GetBucketVersioning")
-	router.QueryPUT("/{bucket}", putBucketVersioning).Query("versioning").Name("s3.bucket.put-versioning").Action("s3:PutBucketVersioning")
-	router.QueryGET("/{bucket}", getBucketAcl).Query("acl").Name("s3.bucket.get-acl").Action("s3:GetBucketAcl")
-	router.QueryPUT("/{bucket}", putBucketAcl).Query("acl").Name("s3.bucket.put-acl").Action("s3:PutBucketAcl")
+	router.QueryGET("/{bucket}", getBucketLocation).Query("location").Name("s3.bucket.get-location").Action("api:s3:GetBucketLocation")
+	router.QueryGET("/{bucket}", getBucketVersioning).Query("versioning").Name("s3.bucket.get-versioning").Action("api:s3:GetBucketVersioning")
+	router.QueryPUT("/{bucket}", putBucketVersioning).Query("versioning").Name("s3.bucket.put-versioning").Action("api:s3:PutBucketVersioning")
+	router.QueryGET("/{bucket}", getBucketAcl).Query("acl").Name("s3.bucket.get-acl").Action("api:s3:GetBucketAcl")
+	router.QueryPUT("/{bucket}", putBucketAcl).Query("acl").Name("s3.bucket.put-acl").Action("api:s3:PutBucketAcl")
 
 	// List object versions (for versioned buckets)
-	router.QueryGET("/{bucket}", listObjectVersions).Query("versions").Name("s3.bucket.list-object-versions").Action("s3:ListBucketVersions")
+	router.QueryGET("/{bucket}", listObjectVersions).Query("versions").Name("s3.bucket.list-object-versions").Action("api:s3:ListObjectVersions")
 
 	// List multipart uploads in bucket
-	router.QueryGET("/{bucket}", listMultipartUploads).Query("uploads").Name("s3.bucket.list-multipart-uploads").Action("s3:ListBucketMultipartUploads")
+	router.QueryGET("/{bucket}", listMultipartUploads).Query("uploads").Name("s3.bucket.list-multipart-uploads").Action("api:s3:ListMultipartUploads")
 
 	// Bulk delete objects
-	router.QueryPOST("/{bucket}", deleteObjects).Query("delete").Name("s3.bucket.delete-objects").Action("s3:DeleteObject")
+	router.QueryPOST("/{bucket}", deleteObjects).Query("delete").Name("s3.bucket.delete-objects").Action("api:s3:DeleteObjects")
 
 	// ==================== OBJECT OPERATIONS (NO QUERY PARAMS) ====================
-	router.GET("/{bucket}/{key:.*}", getObject).Name("s3.object.get").Action("s3:GetObject")
-	router.PUT("/{bucket}/{key:.*}", putObject).Name("s3.object.put").Action("s3:PutObject")
-	router.DELETE("/{bucket}/{key:.*}", deleteObject).Name("s3.object.delete").Action("s3:DeleteObject")
-	router.HEAD("/{bucket}/{key:.*}", headObject).Name("s3.object.head").Action("s3:GetObject")
-	// Note: CopyObject uses PUT with x-amz-copy-source header, handled by putObject
+	router.GET("/{bucket}/{key:.*}", getObject).Name("s3.object.get").Action("api:s3:GetObject")
+	router.PUT("/{bucket}/{key:.*}", putObject).Name("s3.object.put").Action("api:s3:PutObject")
+	router.DELETE("/{bucket}/{key:.*}", deleteObject).Name("s3.object.delete").Action("api:s3:DeleteObject")
+	router.HEAD("/{bucket}/{key:.*}", headObject).Name("s3.object.head").Action("api:s3:HeadObject")
+	// Note: CopyObject uses PUT /{bucket}/{key} with x-amz-copy-source header.
+	//       The putObject handler detects this header and can adjust action context
+	//       for logging/metrics (e.g., override to "api:s3:CopyObject")
 
 	// ==================== OBJECT OPERATIONS (WITH QUERY PARAMS) ====================
-	router.QueryGET("/{bucket}/{key:.*}", getObjectAcl).Query("acl").Name("s3.object.get-acl").Action("s3:GetObjectAcl")
-	router.QueryPUT("/{bucket}/{key:.*}", putObjectAcl).Query("acl").Name("s3.object.put-acl").Action("s3:PutObjectAcl")
+	router.QueryGET("/{bucket}/{key:.*}", getObjectAcl).Query("acl").Name("s3.object.get-acl").Action("api:s3:GetObjectAcl")
+	router.QueryPUT("/{bucket}/{key:.*}", putObjectAcl).Query("acl").Name("s3.object.put-acl").Action("api:s3:PutObjectAcl")
 
 	// ==================== MULTIPART UPLOAD OPERATIONS ====================
 	// Initiate multipart upload
-	router.QueryPOST("/{bucket}/{key:.*}", createMultipartUpload).Query("uploads").Name("s3.multipart.create").Action("s3:PutObject")
+	router.QueryPOST("/{bucket}/{key:.*}", createMultipartUpload).Query("uploads").Name("s3.multipart.create").Action("api:s3:CreateMultipartUpload")
 
 	// Upload part (requires both partNumber and uploadId query params)
-	// Note: This also handles UploadPartCopy via x-amz-copy-source header
-	router.QueryPUT("/{bucket}/{key:.*}", uploadPart).Query("partNumber").Query("uploadId").Name("s3.multipart.upload-part").Action("s3:PutObject")
+	// Note: UploadPartCopy uses the same route with x-amz-copy-source header.
+	//       The uploadPart handler detects this and can adjust action context accordingly.
+	router.QueryPUT("/{bucket}/{key:.*}", uploadPart).Query("partNumber").Query("uploadId").Name("s3.multipart.upload-part").Action("api:s3:UploadPart")
 
 	// Complete multipart upload
-	router.QueryPOST("/{bucket}/{key:.*}", completeMultipartUpload).Query("uploadId").Name("s3.multipart.complete").Action("s3:PutObject")
+	router.QueryPOST("/{bucket}/{key:.*}", completeMultipartUpload).Query("uploadId").Name("s3.multipart.complete").Action("api:s3:CompleteMultipartUpload")
 
 	// Abort multipart upload
-	router.QueryDELETE("/{bucket}/{key:.*}", abortMultipartUpload).Query("uploadId").Name("s3.multipart.abort").Action("s3:AbortMultipartUpload")
+	router.QueryDELETE("/{bucket}/{key:.*}", abortMultipartUpload).Query("uploadId").Name("s3.multipart.abort").Action("api:s3:AbortMultipartUpload")
 
 	// List parts of a multipart upload
-	router.QueryGET("/{bucket}/{key:.*}", listParts).Query("uploadId").Name("s3.multipart.list-parts").Action("s3:ListMultipartUploadParts")
+	router.QueryGET("/{bucket}/{key:.*}", listParts).Query("uploadId").Name("s3.multipart.list-parts").Action("api:s3:ListParts")
 
 	// ==================== DEBUG ROUTES ====================
 	// Debug route (conditionally registered)
 	if isDebug() {
 		router.RegisterDebugRoute("/.internal/routes", "debug.routes")
 	}
+
+	router.GET("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {}).Name("favicon")
 
 	return router
 }

@@ -56,8 +56,8 @@ func FormatRoutesTable(w io.Writer, routes []RouteInfo) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 
 	// Header
-	_, _ = fmt.Fprintln(tw, "METHOD\tPATTERN\tNAME\tACTION")
-	_, _ = fmt.Fprintln(tw, "------\t-------\t----\t------")
+	_, _ = fmt.Fprintln(tw, "METHOD\tPATTERN\tQUERY PARAMS\tNAME\tACTION")
+	_, _ = fmt.Fprintln(tw, "------\t-------\t------------\t----\t------")
 
 	// Rows
 	for _, route := range sorted {
@@ -69,10 +69,12 @@ func FormatRoutesTable(w io.Writer, routes []RouteInfo) error {
 		if action == "" {
 			action = "-"
 		}
+		queryParams := formatQueryParams(route.QueryParams)
 
-		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n",
 			route.Method,
 			route.Pattern,
+			queryParams,
 			name,
 			action,
 		)
@@ -81,7 +83,34 @@ func FormatRoutesTable(w io.Writer, routes []RouteInfo) error {
 	return tw.Flush()
 }
 
-// FormatRoutesCompact writes routes in a compact format (METHOD PATH NAME).
+// formatQueryParams formats query parameters for display
+func formatQueryParams(params []QueryParam) string {
+	if len(params) == 0 {
+		return "-"
+	}
+
+	var parts []string
+	for _, p := range params {
+		if p.Value == "" {
+			// Existence check only
+			parts = append(parts, p.Key)
+		} else {
+			// Value check
+			parts = append(parts, fmt.Sprintf("%s=%s", p.Key, p.Value))
+		}
+	}
+
+	result := ""
+	for i, part := range parts {
+		if i > 0 {
+			result += "&"
+		}
+		result += part
+	}
+	return result
+}
+
+// FormatRoutesCompact writes routes in a compact format (METHOD PATH?QUERY NAME).
 // This is useful for quick scanning of routes.
 //
 // Example:
@@ -105,9 +134,15 @@ func FormatRoutesCompact(w io.Writer, routes []RouteInfo) error {
 			name = "-"
 		}
 
-		_, _ = fmt.Fprintf(w, "%-7s %-40s %s\n",
+		// Build path with query params
+		pathWithQuery := route.Pattern
+		if len(route.QueryParams) > 0 {
+			pathWithQuery += "?" + formatQueryParams(route.QueryParams)
+		}
+
+		_, _ = fmt.Fprintf(w, "%-7s %-50s %s\n",
 			route.Method,
-			route.Pattern,
+			pathWithQuery,
 			name,
 		)
 	}

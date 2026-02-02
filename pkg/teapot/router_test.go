@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mallardduck/teapot-router/pkg/teapot"
+	"github.com/stretchr/testify/assert"
 )
 
 // Helper to make test requests
@@ -471,4 +472,25 @@ func TestContextAccess(t *testing.T) {
 			t.Errorf("index %d: got %q, want %q", i, values[i], v)
 		}
 	}
+}
+
+func TestMiddlewareGroupRoutes(t *testing.T) {
+	asserts := assert.New(t)
+	r := teapot.New()
+
+	// Register some routes directly
+	r.GET("/direct1", nil).Name("direct1")
+	r.GET("/direct2", nil).Name("direct2")
+
+	// Register routes in a middleware group
+	r.MiddlewareGroup(func(r *teapot.Router) {
+		r.GET("/group1", nil).Name("group1")
+		r.GET("/group2", nil).Name("group2")
+		r.GET("/group3", nil).Name("group3")
+		r.GET("/group4", nil).Name("group4")
+		r.GET("/group5", nil).Name("group5")
+	})
+
+	routes := r.Routes()
+	asserts.Len(routes, 7, "expected 7 routes after middleware group registration")
 }

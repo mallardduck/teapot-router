@@ -51,9 +51,7 @@ func TranslatePattern(pattern string) (string, map[string]bool) {
 			// We need to keep everything before {key:.*} and replace the rest
 			prefix := result[:idx]
 			// Remove trailing slash if present before adding /*
-			if strings.HasSuffix(prefix, "/") {
-				prefix = strings.TrimSuffix(prefix, "/")
-			}
+			prefix = strings.TrimSuffix(prefix, "/")
 			result = prefix + "/*"
 			break // Only one wildcard per pattern is supported by Chi
 		}

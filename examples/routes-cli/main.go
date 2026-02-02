@@ -111,6 +111,4 @@ func putObject(w http.ResponseWriter, r *http.Request)      {}
 func deleteObject(w http.ResponseWriter, r *http.Request)   {}
 func adminDashboard(w http.ResponseWriter, r *http.Request) {}
 func adminUsers(w http.ResponseWriter, r *http.Request)     {}
-func authMiddleware(next http.Handler) http.Handler         { return next }
-func adminMiddleware(next http.Handler) http.Handler        { return next }
 func isDebug() bool                                         { return os.Getenv("DEBUG") == "true" }

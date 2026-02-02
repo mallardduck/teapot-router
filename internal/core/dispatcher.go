@@ -83,6 +83,7 @@ func (d *Dispatcher) executeRoute(w http.ResponseWriter, r *http.Request, rt *Ro
 	handler.ServeHTTP(w, r)
 }
 
+// AddRoute adds a new route to the dispatcher and re-sorts routes by specificity
 func (d *Dispatcher) AddRoute(rt *Route) {
 	d.Routes = append(d.Routes, rt)
 
@@ -100,6 +101,7 @@ func (d *Dispatcher) routeSpecificity(rt *Route) int {
 	return specificity
 }
 
+// UpdateSpecificity re-sorts all routes by their specificity
 func (d *Dispatcher) UpdateSpecificity() {
 	// Re-sort routes by specificity
 	sort.Slice(d.Routes, func(i, j int) bool {

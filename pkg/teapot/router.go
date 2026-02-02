@@ -533,16 +533,20 @@ func (r *Router) RoutesHandler() http.HandlerFunc {
 		accept := req.Header.Get("Accept")
 		if strings.Contains(accept, "application/json") {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]any{
+			err := json.NewEncoder(w).Encode(map[string]any{
 				"count":  len(routes),
 				"routes": routes,
 			})
+			if err != nil {
+				// todo log error
+				return
+			}
 			return
 		}
 
 		// Default to HTML
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, `<!DOCTYPE html>
+		_, _ = fmt.Fprintf(w, `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -594,7 +598,7 @@ func (r *Router) RoutesHandler() http.HandlerFunc {
 				action = "-"
 			}
 
-			fmt.Fprintf(w, `            <tr>
+			_, _ = fmt.Fprintf(w, `            <tr>
                 <td class="method %s">%s</td>
                 <td class="pattern">%s</td>
                 <td class="name">%s</td>
@@ -603,7 +607,7 @@ func (r *Router) RoutesHandler() http.HandlerFunc {
 `, methodClass, route.Method, route.Pattern, name, action)
 		}
 
-		fmt.Fprintf(w, `        </tbody>
+		_, _ = fmt.Fprintf(w, `        </tbody>
     </table>
 </body>
 </html>`)

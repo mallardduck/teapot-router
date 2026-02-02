@@ -6,7 +6,9 @@ import "context"
 type contextKey int
 
 const (
+	// ActionKey is the context key for storing S3 action values
 	ActionKey contextKey = iota
+	// RouteNameKey is the context key for storing route name values
 	RouteNameKey
 )
 

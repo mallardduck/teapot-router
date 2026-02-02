@@ -56,8 +56,8 @@ func FormatRoutesTable(w io.Writer, routes []RouteInfo) error {
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 
 	// Header
-	fmt.Fprintln(tw, "METHOD\tPATTERN\tNAME\tACTION")
-	fmt.Fprintln(tw, "------\t-------\t----\t------")
+	_, _ = fmt.Fprintln(tw, "METHOD\tPATTERN\tNAME\tACTION")
+	_, _ = fmt.Fprintln(tw, "------\t-------\t----\t------")
 
 	// Rows
 	for _, route := range sorted {
@@ -70,7 +70,7 @@ func FormatRoutesTable(w io.Writer, routes []RouteInfo) error {
 			action = "-"
 		}
 
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
 			route.Method,
 			route.Pattern,
 			name,
@@ -105,7 +105,7 @@ func FormatRoutesCompact(w io.Writer, routes []RouteInfo) error {
 			name = "-"
 		}
 
-		fmt.Fprintf(w, "%-7s %-40s %s\n",
+		_, _ = fmt.Fprintf(w, "%-7s %-40s %s\n",
 			route.Method,
 			route.Pattern,
 			name,

@@ -13,8 +13,3 @@ unleash:
 
   # RECOMMENDED: Use tags if your integration tests require them.
   tags: "integration,heavy"
-
-  # OPTIONAL: Limit workers.
-  # Integration tests often share resources (DBs, Ports).
-  # If tests flake when run in parallel, set this to 1 or 2.
-  workers: 2

@@ -154,7 +154,7 @@ func (r *Router) SetDebugLog(enabled bool) *Router {
 }
 
 // debugLog logs a message if debug logging is enabled
-func (r *Router) debugLogf(format string, args ...interface{}) {
+func (r *Router) debugLogf(format string, args ...any) {
 	if r.debugLog {
 		log.Printf("[teapot-debug] "+format, args...)
 	}
@@ -409,6 +409,47 @@ func (r *Router) NamedGroup(pattern, namePrefix string, fn func(r *Router)) {
 	fn(subRouter)
 }
 
+// Route creates a routing group with Chi's Route() semantics. This is the RECOMMENDED way
+// to structure your app when using RouteContextMiddleware, as middleware added inside
+// Route() blocks has access to Chi's RouteContext (fast path).
+//
+// Example:
+//
+//	r.Route("/", func(r *teapot.Router) {
+//	    r.Use(teapot.RouteContextMiddleware(r))  // Fast path - RouteContext available
+//	    r.Use(loggingMiddleware)                 // Has access to route metadata
+//	    // register all routes...
+//	})
+//
+// This wraps Chi's Route() method and provides a teapot Router to the function,
+// making it easy to use teapot's route registration methods while benefiting from
+// Chi's routing context.
+func (r *Router) Route(pattern string, fn func(r *Router)) {
+	r.mux.Route(pattern, func(chiRouter chi.Router) {
+		// Create a teapot Router that uses the Chi sub-router
+		chiMux, ok := chiRouter.(*chi.Mux)
+		if !ok {
+			panic("teapot: Route() expected *chi.Mux from chi.Route()")
+		}
+
+		subRouter := &Router{
+			mux:               chiMux,
+			routes:            r.routes,            // Shared
+			dispatchers:       r.dispatchers,       // Shared
+			directRoutes:      r.directRoutes,      // Shared
+			nameIndex:         r.nameIndex,         // Shared
+			pathPrefix:        r.pathPrefix,        // No change (pattern is handled by Chi)
+			namePrefix:        r.namePrefix,        // No change
+			middlewares:       r.middlewares,       // Shared
+			optimizedHandlers: r.optimizedHandlers, // Shared
+			finalized:         r.finalized,
+			debugLog:          r.debugLog,
+		}
+
+		fn(subRouter)
+	})
+}
+
 // Resource creates RESTful resource routes following Laravel/Rails conventions.
 // This is a convenience method for scaffolding standard CRUD operations.
 //
@@ -502,6 +543,205 @@ func (r *Router) Use(middlewares ...func(http.Handler) http.Handler) {
 	// Only add to chi.Mux for truly global middleware
 	// Don't add to r.middlewares as that would duplicate with route-specific
 	r.mux.Use(middlewares...)
+}
+
+// RouteContextMiddleware returns middleware that injects teapot route metadata (Name, Action)
+// into the request context. The middleware intelligently adapts based on available context:
+// - When Chi's RouteContext is available (fast path), it uses that
+// - When RouteContext is not available (fallback), it manually matches routes
+//
+// RECOMMENDED: Use inside a Route() group for best performance:
+//
+//	r.Route("/", func(r *teapot.Router) {
+//	    r.Use(teapot.RouteContextMiddleware(r))  // Fast path
+//	    r.Use(loggingMiddleware)                 // Sees route metadata
+//	    // register routes...
+//	})
+//
+// ALTERNATIVE: Add globally (works but slightly slower due to fallback matching):
+//
+//	r.Use(teapot.RouteContextMiddleware(r))  // Uses fallback matching
+//	r.Use(loggingMiddleware)                 // Sees route metadata
+//
+// For query-multiplexed routes, this provides early context injection. The Dispatcher
+// will re-inject more specific metadata after query parameter matching.
+func RouteContextMiddleware(r *Router) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			ctx := req.Context()
+			injected := false
+
+			// Try Chi's RouteContext first (fast path - available in Route() groups)
+			if rctx := chi.RouteContext(ctx); rctx != nil && rctx.RoutePattern() != "" {
+				method := rctx.RouteMethod
+				pattern := rctx.RoutePattern()
+				key := method + ":" + pattern
+
+				// Check if this is a dispatcher route (query-multiplexed)
+				if disp, exists := r.dispatchers[key]; exists && len(disp.Routes) > 0 {
+					// Find fallback route (no query matchers) for early context injection
+					var bestRoute *core.Route
+					for _, rt := range disp.Routes {
+						if len(rt.QueryMatchers) == 0 {
+							bestRoute = rt
+							break
+						}
+					}
+					// If no fallback, use first route (most specific)
+					if bestRoute == nil && len(disp.Routes) > 0 {
+						bestRoute = disp.Routes[0]
+					}
+
+					if bestRoute != nil {
+						if bestRoute.Action != "" {
+							ctx = core.SetAction(ctx, bestRoute.Action)
+							injected = true
+						}
+						if bestRoute.Name != "" {
+							ctx = core.SetRouteName(ctx, bestRoute.Name)
+							injected = true
+						}
+					}
+				} else if route, exists := r.directRoutes[key]; exists {
+					// Direct route - inject its metadata
+					if route.Action != "" {
+						ctx = core.SetAction(ctx, route.Action)
+						injected = true
+					}
+					if route.Name != "" {
+						ctx = core.SetRouteName(ctx, route.Name)
+						injected = true
+					}
+				}
+			}
+
+			// Fallback path: If fast path didn't find anything, manually match route
+			if !injected {
+				method := req.Method
+				path := req.URL.Path
+
+				// Try exact matches first (fast)
+				key := method + ":" + path
+				if route, exists := r.directRoutes[key]; exists {
+					if route.Action != "" {
+						ctx = core.SetAction(ctx, route.Action)
+						injected = true
+					}
+					if route.Name != "" {
+						ctx = core.SetRouteName(ctx, route.Name)
+						injected = true
+					}
+				} else {
+					// Pattern matching (slower)
+					route := r.findMatchingRoute(method, path)
+					if route != nil {
+						if route.Action != "" {
+							ctx = core.SetAction(ctx, route.Action)
+							injected = true
+						}
+						if route.Name != "" {
+							ctx = core.SetRouteName(ctx, route.Name)
+							injected = true
+						}
+					}
+				}
+			}
+
+			// Update request context if we injected anything
+			if injected {
+				req = req.WithContext(ctx)
+			}
+
+			next.ServeHTTP(w, req)
+		})
+	}
+}
+
+// findMatchingRoute manually matches a request against registered routes
+// This is used as a fallback when Chi's RouteContext isn't available (e.g., in global middleware)
+func (r *Router) findMatchingRoute(method, path string) *core.Route {
+	// Check all direct routes
+	for key, route := range r.directRoutes {
+		if strings.HasPrefix(key, method+":") {
+			pattern := strings.TrimPrefix(key, method+":")
+			if r.matchPattern(pattern, path) {
+				return route
+			}
+		}
+	}
+
+	// Check dispatcher routes (return fallback route for query-multiplexed)
+	for key, disp := range r.dispatchers {
+		if strings.HasPrefix(key, method+":") {
+			pattern := strings.TrimPrefix(key, method+":")
+			if r.matchPattern(pattern, path) {
+				// Return fallback route (no query matchers)
+				for _, rt := range disp.Routes {
+					if len(rt.QueryMatchers) == 0 {
+						return rt
+					}
+				}
+				// If no fallback, return first route
+				if len(disp.Routes) > 0 {
+					return disp.Routes[0]
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// matchPattern checks if a Chi pattern matches a path
+// Supports Chi patterns like /users/{id}, /users/{id}/posts, /{bucket}/{key}/*
+func (r *Router) matchPattern(pattern, path string) bool {
+	// Exact match
+	if pattern == path {
+		return true
+	}
+
+	// No parameters - must be exact match
+	if !strings.Contains(pattern, "{") && !strings.HasSuffix(pattern, "/*") {
+		return false
+	}
+
+	// Split into segments
+	patternParts := strings.Split(strings.Trim(pattern, "/"), "/")
+	pathParts := strings.Split(strings.Trim(path, "/"), "/")
+
+	// Handle wildcard at the end (Chi's /* pattern)
+	if len(patternParts) > 0 && patternParts[len(patternParts)-1] == "*" {
+		// Path must have at least as many parts as pattern (minus the wildcard)
+		if len(pathParts) < len(patternParts)-1 {
+			return false
+		}
+		// Match up to the wildcard
+		patternParts = patternParts[:len(patternParts)-1]
+		pathParts = pathParts[:len(patternParts)]
+	}
+
+	// Different number of segments
+	if len(patternParts) != len(pathParts) {
+		return false
+	}
+
+	// Match each segment
+	for i := 0; i < len(patternParts); i++ {
+		patternPart := patternParts[i]
+		pathPart := pathParts[i]
+
+		// Parameter segment (matches anything)
+		if strings.HasPrefix(patternPart, "{") && strings.HasSuffix(patternPart, "}") {
+			continue
+		}
+
+		// Literal segment (must match exactly)
+		if patternPart != pathPart {
+			return false
+		}
+	}
+
+	return true
 }
 
 // ServeHTTP implements http.Handler

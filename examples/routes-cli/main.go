@@ -1,10 +1,20 @@
-// Example CLI command to list routes (like Laravel's php artisan route:list)
+// Example CLI command demonstrating S3 API route implementation
+//
+// This example showcases a comprehensive S3-compatible API implementation using
+// teapot-router, demonstrating:
+//   - Path-based bucket routing (/{bucket} not subdomain-based)
+//   - Query parameter-based route disambiguation (QueryGET, QueryPUT, etc.)
+//   - Multiple HTTP methods on the same path pattern
+//   - Route naming and S3 action tagging
+//   - All tiers of S3 operations (Service, Bucket, Object, Multipart)
 //
 // Usage:
 //
-//	go run examples/routes-cli/main.go
-//	go run examples/routes-cli/main.go --json
-//	go run examples/routes-cli/main.go --compact
+//	go run examples/routes-cli/main.go           # Table format
+//	go run examples/routes-cli/main.go --json    # JSON format
+//	go run examples/routes-cli/main.go --compact # Compact format
+//
+// The output formats are similar to Laravel's `php artisan route:list` command.
 package main
 
 import (
@@ -47,41 +57,74 @@ func main() {
 	}
 }
 
-// setupRoutes demonstrates a typical route registration
-// In your app, this would be in your server setup code
+// setupRoutes demonstrates a comprehensive S3 API implementation
+// This showcases the router's capabilities for handling complex APIs with:
+//   - Multiple HTTP methods on same paths
+//   - Query parameter-based routing
+//   - Path parameters with wildcards
+//   - Named routes and actions
 func setupRoutes() *teapot.Router {
 	router := teapot.New()
 
-	// Public routes
-	router.GET("/", homeHandler).Name("home")
-	router.GET("/about", aboutHandler).Name("about")
+	// ==================== SERVICE-LEVEL OPERATIONS ====================
+	// S3 service-level operations (no bucket in path)
+	router.GET("/", listBuckets).Name("s3.service.list-buckets").Action("s3:ListBuckets")
 
-	// API routes (basic RESTful)
-	router.GET("/api/users", listUsers).Name("api.users.index")
-	router.POST("/api/users", createUser).Name("api.users.store")
-	router.GET("/api/users/{id}", showUser).Name("api.users.show")
-	router.PUT("/api/users/{id}", updateUser).Name("api.users.update")
-	router.DELETE("/api/users/{id}", deleteUser).Name("api.users.destroy")
+	// ==================== BUCKET OPERATIONS (NO QUERY PARAMS) ====================
+	router.PUT("/{bucket}", createBucket).Name("s3.bucket.create").Action("s3:CreateBucket")
+	router.DELETE("/{bucket}", deleteBucket).Name("s3.bucket.delete").Action("s3:DeleteBucket")
+	router.HEAD("/{bucket}", headBucket).Name("s3.bucket.head").Action("s3:HeadBucket")
+	router.GET("/{bucket}", listObjectsV1).Name("s3.bucket.list-objects-v1").Action("s3:ListBucket")
 
-	router.GET("/api/posts", listPosts).Name("api.posts.index")
-	router.POST("/api/posts", createPost).Name("api.posts.store")
-	router.GET("/api/posts/{id}", showPost).Name("api.posts.show")
-	router.PUT("/api/posts/{id}", updatePost).Name("api.posts.update")
+	// ==================== BUCKET OPERATIONS (WITH QUERY PARAMS) ====================
+	// ListObjectsV2 (preferred over v1)
+	router.QueryGET("/{bucket}", listObjectsV2).Query("list-type").Name("s3.bucket.list-objects-v2").Action("s3:ListBucket")
 
-	// S3 API routes
-	router.QueryGET("/", listBuckets).Query("list-type").Name("s3.buckets.list").Action("s3:ListBuckets")
-	router.PUT("/{bucket}", createBucket).Name("s3.buckets.create").Action("s3:CreateBucket")
-	router.DELETE("/{bucket}", deleteBucket).Name("s3.buckets.delete").Action("s3:DeleteBucket")
+	// Bucket configuration endpoints
+	router.QueryGET("/{bucket}", getBucketLocation).Query("location").Name("s3.bucket.get-location").Action("s3:GetBucketLocation")
+	router.QueryGET("/{bucket}", getBucketVersioning).Query("versioning").Name("s3.bucket.get-versioning").Action("s3:GetBucketVersioning")
+	router.QueryPUT("/{bucket}", putBucketVersioning).Query("versioning").Name("s3.bucket.put-versioning").Action("s3:PutBucketVersioning")
+	router.QueryGET("/{bucket}", getBucketAcl).Query("acl").Name("s3.bucket.get-acl").Action("s3:GetBucketAcl")
+	router.QueryPUT("/{bucket}", putBucketAcl).Query("acl").Name("s3.bucket.put-acl").Action("s3:PutBucketAcl")
 
-	router.QueryGET("/{bucket}", listObjects).Query("list-type").Name("s3.objects.list").Action("s3:ListObjects")
-	router.GET("/{bucket}/{key:.*}", getObject).Name("s3.objects.get").Action("s3:GetObject")
-	router.PUT("/{bucket}/{key:.*}", putObject).Name("s3.objects.put").Action("s3:PutObject")
-	router.DELETE("/{bucket}/{key:.*}", deleteObject).Name("s3.objects.delete").Action("s3:DeleteObject")
+	// List object versions (for versioned buckets)
+	router.QueryGET("/{bucket}", listObjectVersions).Query("versions").Name("s3.bucket.list-object-versions").Action("s3:ListBucketVersions")
 
-	// Admin routes
-	router.GET("/admin", adminDashboard).Name("admin.dashboard")
-	router.GET("/admin/users", adminUsers).Name("admin.users")
+	// List multipart uploads in bucket
+	router.QueryGET("/{bucket}", listMultipartUploads).Query("uploads").Name("s3.bucket.list-multipart-uploads").Action("s3:ListBucketMultipartUploads")
 
+	// Bulk delete objects
+	router.QueryPOST("/{bucket}", deleteObjects).Query("delete").Name("s3.bucket.delete-objects").Action("s3:DeleteObject")
+
+	// ==================== OBJECT OPERATIONS (NO QUERY PARAMS) ====================
+	router.GET("/{bucket}/{key:.*}", getObject).Name("s3.object.get").Action("s3:GetObject")
+	router.PUT("/{bucket}/{key:.*}", putObject).Name("s3.object.put").Action("s3:PutObject")
+	router.DELETE("/{bucket}/{key:.*}", deleteObject).Name("s3.object.delete").Action("s3:DeleteObject")
+	router.HEAD("/{bucket}/{key:.*}", headObject).Name("s3.object.head").Action("s3:GetObject")
+	// Note: CopyObject uses PUT with x-amz-copy-source header, handled by putObject
+
+	// ==================== OBJECT OPERATIONS (WITH QUERY PARAMS) ====================
+	router.QueryGET("/{bucket}/{key:.*}", getObjectAcl).Query("acl").Name("s3.object.get-acl").Action("s3:GetObjectAcl")
+	router.QueryPUT("/{bucket}/{key:.*}", putObjectAcl).Query("acl").Name("s3.object.put-acl").Action("s3:PutObjectAcl")
+
+	// ==================== MULTIPART UPLOAD OPERATIONS ====================
+	// Initiate multipart upload
+	router.QueryPOST("/{bucket}/{key:.*}", createMultipartUpload).Query("uploads").Name("s3.multipart.create").Action("s3:PutObject")
+
+	// Upload part (requires both partNumber and uploadId query params)
+	// Note: This also handles UploadPartCopy via x-amz-copy-source header
+	router.QueryPUT("/{bucket}/{key:.*}", uploadPart).Query("partNumber").Query("uploadId").Name("s3.multipart.upload-part").Action("s3:PutObject")
+
+	// Complete multipart upload
+	router.QueryPOST("/{bucket}/{key:.*}", completeMultipartUpload).Query("uploadId").Name("s3.multipart.complete").Action("s3:PutObject")
+
+	// Abort multipart upload
+	router.QueryDELETE("/{bucket}/{key:.*}", abortMultipartUpload).Query("uploadId").Name("s3.multipart.abort").Action("s3:AbortMultipartUpload")
+
+	// List parts of a multipart upload
+	router.QueryGET("/{bucket}/{key:.*}", listParts).Query("uploadId").Name("s3.multipart.list-parts").Action("s3:ListMultipartUploadParts")
+
+	// ==================== DEBUG ROUTES ====================
 	// Debug route (conditionally registered)
 	if isDebug() {
 		router.RegisterDebugRoute("/.internal/routes", "debug.routes")
@@ -90,25 +133,38 @@ func setupRoutes() *teapot.Router {
 	return router
 }
 
-// Mock handlers
-func homeHandler(_ http.ResponseWriter, _ *http.Request)    {}
-func aboutHandler(_ http.ResponseWriter, _ *http.Request)   {}
-func listUsers(_ http.ResponseWriter, _ *http.Request)      {}
-func createUser(_ http.ResponseWriter, _ *http.Request)     {}
-func showUser(_ http.ResponseWriter, _ *http.Request)       {}
-func updateUser(_ http.ResponseWriter, _ *http.Request)     {}
-func deleteUser(_ http.ResponseWriter, _ *http.Request)     {}
-func listPosts(_ http.ResponseWriter, _ *http.Request)      {}
-func createPost(_ http.ResponseWriter, _ *http.Request)     {}
-func showPost(_ http.ResponseWriter, _ *http.Request)       {}
-func updatePost(_ http.ResponseWriter, _ *http.Request)     {}
-func listBuckets(_ http.ResponseWriter, _ *http.Request)    {}
-func createBucket(_ http.ResponseWriter, _ *http.Request)   {}
-func deleteBucket(_ http.ResponseWriter, _ *http.Request)   {}
-func listObjects(_ http.ResponseWriter, _ *http.Request)    {}
-func getObject(_ http.ResponseWriter, _ *http.Request)      {}
-func putObject(_ http.ResponseWriter, _ *http.Request)      {}
-func deleteObject(_ http.ResponseWriter, _ *http.Request)   {}
-func adminDashboard(_ http.ResponseWriter, _ *http.Request) {}
-func adminUsers(_ http.ResponseWriter, _ *http.Request)     {}
-func isDebug() bool                                         { return os.Getenv("DEBUG") == "true" }
+// Mock S3 API handlers
+// Service-level
+func listBuckets(_ http.ResponseWriter, _ *http.Request) {}
+
+// Bucket operations
+func createBucket(_ http.ResponseWriter, _ *http.Request)         {}
+func deleteBucket(_ http.ResponseWriter, _ *http.Request)         {}
+func headBucket(_ http.ResponseWriter, _ *http.Request)           {}
+func listObjectsV1(_ http.ResponseWriter, _ *http.Request)        {}
+func listObjectsV2(_ http.ResponseWriter, _ *http.Request)        {}
+func getBucketLocation(_ http.ResponseWriter, _ *http.Request)    {}
+func getBucketVersioning(_ http.ResponseWriter, _ *http.Request)  {}
+func putBucketVersioning(_ http.ResponseWriter, _ *http.Request)  {}
+func getBucketAcl(_ http.ResponseWriter, _ *http.Request)         {}
+func putBucketAcl(_ http.ResponseWriter, _ *http.Request)         {}
+func listObjectVersions(_ http.ResponseWriter, _ *http.Request)   {}
+func listMultipartUploads(_ http.ResponseWriter, _ *http.Request) {}
+func deleteObjects(_ http.ResponseWriter, _ *http.Request)        {}
+
+// Object operations
+func getObject(_ http.ResponseWriter, _ *http.Request)    {}
+func putObject(_ http.ResponseWriter, _ *http.Request)    {}
+func deleteObject(_ http.ResponseWriter, _ *http.Request) {}
+func headObject(_ http.ResponseWriter, _ *http.Request)   {}
+func getObjectAcl(_ http.ResponseWriter, _ *http.Request) {}
+func putObjectAcl(_ http.ResponseWriter, _ *http.Request) {}
+
+// Multipart upload operations
+func createMultipartUpload(_ http.ResponseWriter, _ *http.Request)   {}
+func uploadPart(_ http.ResponseWriter, _ *http.Request)              {}
+func completeMultipartUpload(_ http.ResponseWriter, _ *http.Request) {}
+func abortMultipartUpload(_ http.ResponseWriter, _ *http.Request)    {}
+func listParts(_ http.ResponseWriter, _ *http.Request)               {}
+
+func isDebug() bool { return os.Getenv("DEBUG") == "true" }

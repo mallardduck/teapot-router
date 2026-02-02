@@ -1,0 +1,182 @@
+package tests
+
+import (
+	"net/http"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/mallardduck/teapot-router/pkg/teapot"
+)
+
+// TestRouteNaming tests route naming functionality to kill mutants in router.go:77
+func TestRouteNaming(t *testing.T) {
+	t.Run("simple route name", func(t *testing.T) {
+		r := teapot.New()
+
+		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test.route")
+
+		routes := r.Routes()
+		require.Len(t, routes, 1)
+		assert.Equal(t, "test.route", routes[0].Name)
+	})
+
+	t.Run("route name with prefix from group", func(t *testing.T) {
+		r := teapot.New()
+
+		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
+			sub.GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users.list")
+		})
+
+		routes := r.Routes()
+		require.Len(t, routes, 1)
+		// Name prefix should be concatenated (line 77: fullName := rb.router.namePrefix + name)
+		assert.Equal(t, "api.users.list", routes[0].Name)
+	})
+
+	t.Run("nested group name prefixes", func(t *testing.T) {
+		r := teapot.New()
+
+		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
+			sub.NamedGroup("/v1", "v1", func(sub2 *teapot.Router) {
+				sub2.GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users")
+			})
+		})
+
+		routes := r.Routes()
+		require.Len(t, routes, 1)
+		// Should concatenate all prefixes
+		assert.Equal(t, "api.v1.users", routes[0].Name)
+	})
+
+	t.Run("route without name has empty string", func(t *testing.T) {
+		r := teapot.New()
+
+		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {})
+
+		routes := r.Routes()
+		require.Len(t, routes, 1)
+		assert.Equal(t, "", routes[0].Name)
+	})
+}
+
+// TestDuplicateRouteNames tests duplicate name detection to kill mutants at router.go:82,84,90
+func TestDuplicateRouteNames(t *testing.T) {
+	t.Run("duplicate name same method panics", func(t *testing.T) {
+		r := teapot.New()
+
+		r.GET("/test1", func(w http.ResponseWriter, req *http.Request) {}).Name("duplicate")
+
+		// Line 84: if existingRoute.Method == rb.route.Method
+		assert.Panics(t, func() {
+			r.GET("/test2", func(w http.ResponseWriter, req *http.Request) {}).Name("duplicate")
+		}, "should panic on duplicate name with same method but different pattern")
+	})
+
+	t.Run("duplicate name different methods same pattern ok", func(t *testing.T) {
+		r := teapot.New()
+
+		// Same name, different methods, same pattern - this is OK (Laravel-style resources)
+		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("resource")
+		r.POST("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("resource")
+
+		routes := r.Routes()
+		assert.Len(t, routes, 2)
+		assert.Equal(t, "resource", routes[0].Name)
+		assert.Equal(t, "resource", routes[1].Name)
+	})
+
+	t.Run("duplicate name different methods different patterns panics", func(t *testing.T) {
+		r := teapot.New()
+
+		r.GET("/test1", func(w http.ResponseWriter, req *http.Request) {}).Name("conflict")
+
+		// Line 90: if existingRoute.Pattern != rb.route.Pattern
+		assert.Panics(t, func() {
+			r.POST("/test2", func(w http.ResponseWriter, req *http.Request) {}).Name("conflict")
+		}, "should panic on duplicate name with different methods and different patterns")
+	})
+
+	t.Run("same name in different groups with prefix ok", func(t *testing.T) {
+		r := teapot.New()
+
+		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
+			sub.GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users")
+		})
+
+		r.NamedGroup("/admin", "admin", func(sub *teapot.Router) {
+			sub.GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users")
+		})
+
+		routes := r.Routes()
+		assert.Len(t, routes, 2)
+		assert.Equal(t, "api.users", routes[0].Name)
+		assert.Equal(t, "admin.users", routes[1].Name)
+	})
+
+	t.Run("URL generation requires unique route names", func(t *testing.T) {
+		r := teapot.New()
+
+		r.GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users.list")
+		r.GET("/users/{id}", func(w http.ResponseWriter, req *http.Request) {}).Name("users.show")
+
+		// Should be able to generate URLs for both
+		url1, err := r.URL("users.list")
+		assert.NoError(t, err)
+		assert.Equal(t, "/users", url1)
+
+		url2, err := r.URL("users.show", "id", "123")
+		assert.NoError(t, err)
+		assert.Equal(t, "/users/123", url2)
+	})
+}
+
+// TestRouteNameValidation tests edge cases in name validation
+func TestRouteNameValidation(t *testing.T) {
+	t.Run("empty name is valid", func(t *testing.T) {
+		r := teapot.New()
+
+		// Empty name should be OK
+		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("")
+
+		routes := r.Routes()
+		require.Len(t, routes, 1)
+		assert.Equal(t, "", routes[0].Name)
+	})
+
+	t.Run("multiple routes without names ok", func(t *testing.T) {
+		r := teapot.New()
+
+		r.GET("/test1", func(w http.ResponseWriter, req *http.Request) {})
+		r.GET("/test2", func(w http.ResponseWriter, req *http.Request) {})
+		r.GET("/test3", func(w http.ResponseWriter, req *http.Request) {})
+
+		routes := r.Routes()
+		assert.Len(t, routes, 3)
+	})
+
+	t.Run("name can be set after route creation", func(t *testing.T) {
+		r := teapot.New()
+
+		rb := r.GET("/test", func(w http.ResponseWriter, req *http.Request) {})
+		rb.Name("my.route")
+
+		routes := r.Routes()
+		require.Len(t, routes, 1)
+		assert.Equal(t, "my.route", routes[0].Name)
+	})
+
+	t.Run("name and action can both be set", func(t *testing.T) {
+		r := teapot.New()
+
+		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {}).
+			Name("test.route").
+			Action("s3:GetObject")
+
+		routes := r.Routes()
+		require.Len(t, routes, 1)
+		assert.Equal(t, "test.route", routes[0].Name)
+		assert.Equal(t, "s3:GetObject", routes[0].Action)
+	})
+}

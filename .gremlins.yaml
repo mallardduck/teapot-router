@@ -1,0 +1,20 @@
+unleash:
+  # REQUIRED: Without this, Gremlins only tests the mutated package.
+  # This flag ensures it looks at your /tests folder for every mutation.
+  integration: true
+
+  # REQUIRED: Tells Go which packages to measure coverage for.
+  # Use your module path prefix or relative paths to your source code.
+  coverpkg: "./internal/...,./pkg/..."
+
+  # RECOMMENDED: Integration tests are heavier.
+  # This gives them more breathing room before Gremlins kills the process.
+  timeout-coefficient: 5
+
+  # RECOMMENDED: Use tags if your integration tests require them.
+  tags: "integration,heavy"
+
+  # OPTIONAL: Limit workers.
+  # Integration tests often share resources (DBs, Ports).
+  # If tests flake when run in parallel, set this to 1 or 2.
+  workers: 2

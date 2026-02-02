@@ -14,13 +14,13 @@ func TestFinalizeOptimization(t *testing.T) {
 
 	// Register routes
 	r.GET("/simple", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("SIMPLE"))
+		_, _ = w.Write([]byte("SIMPLE"))
 	})
 
 	r.GET("/with-meta", func(w http.ResponseWriter, r *http.Request) {
 		action := teapot.GetAction(r)
 		name := teapot.GetRouteName(r)
-		w.Write([]byte(action + ":" + name))
+		_, _ = w.Write([]byte(action + ":" + name))
 	}).Name("test").Action("s3:Test")
 
 	// Optimize before serving
@@ -51,7 +51,7 @@ func TestFinalizeOptimization(t *testing.T) {
 func TestFinalizeIdempotent(t *testing.T) {
 	r := teapot.New()
 	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	r.Finalize()
@@ -73,21 +73,21 @@ func TestS3WithFinalize(t *testing.T) {
 
 	// Service endpoint
 	r.GET("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("LIST_BUCKETS"))
+		_, _ = w.Write([]byte("LIST_BUCKETS"))
 	}).Name("service.list").Action("s3:ListAllMyBuckets")
 
 	// Bucket operations
 	r.NamedGroup("/{bucket}", "bucket", func(r *teapot.Router) {
 		r.PUT("", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("CREATE"))
+			_, _ = w.Write([]byte("CREATE"))
 		}).Name("create").Action("s3:CreateBucket")
 
 		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("LIST"))
+			_, _ = w.Write([]byte("LIST"))
 		}).Name("list").Action("s3:ListBucket")
 
 		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("ACL"))
+			_, _ = w.Write([]byte("ACL"))
 		}).Name("acl").Action("s3:GetBucketAcl").Query("acl")
 	})
 

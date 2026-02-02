@@ -68,7 +68,7 @@ func TestChiAccessor(t *testing.T) {
 	r.Chi().NotFound(func(w http.ResponseWriter, r *http.Request) {
 		notFoundCalled = true
 		w.WriteHeader(404)
-		w.Write([]byte("Custom 404"))
+		_, _ = w.Write([]byte("Custom 404"))
 	})
 
 	r.GET("/exists", func(w http.ResponseWriter, r *http.Request) {
@@ -119,17 +119,17 @@ func TestRouterWith(t *testing.T) {
 
 	// Route without middleware
 	r.GET("/public", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("PUBLIC"))
+		_, _ = w.Write([]byte("PUBLIC"))
 	})
 
 	// Route with mw1
 	r.With(mw1).GET("/protected", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("PROTECTED"))
+		_, _ = w.Write([]byte("PROTECTED"))
 	})
 
 	// Route with mw1 and mw2
 	r.With(mw1, mw2).GET("/admin", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("ADMIN"))
+		_, _ = w.Write([]byte("ADMIN"))
 	})
 
 	// Test public route
@@ -224,17 +224,17 @@ func TestMiddlewareGroup(t *testing.T) {
 
 	// Public routes (no middleware)
 	r.GET("/public", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("PUBLIC"))
+		_, _ = w.Write([]byte("PUBLIC"))
 	}).Name("public")
 
 	// Protected routes (with auth + logging middleware)
 	r.MiddlewareGroup(func(r *teapot.Router) {
 		r.GET("/admin", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("ADMIN"))
+			_, _ = w.Write([]byte("ADMIN"))
 		}).Name("admin")
 
 		r.GET("/dashboard", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("DASHBOARD"))
+			_, _ = w.Write([]byte("DASHBOARD"))
 		}).Name("dashboard")
 	}, auth, logging)
 
@@ -344,7 +344,7 @@ func TestMiddlewareGroupWithNamedGroup(t *testing.T) {
 	r.MiddlewareGroup(func(r *teapot.Router) {
 		r.NamedGroup("/api", "api", func(r *teapot.Router) {
 			r.GET("/users", func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte("USERS"))
+				_, _ = w.Write([]byte("USERS"))
 			}).Name("users")
 		})
 	}, auth)

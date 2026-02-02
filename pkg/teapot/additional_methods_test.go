@@ -12,10 +12,10 @@ func TestPatchAndOptions(t *testing.T) {
 	r := teapot.New()
 
 	r.PATCH("/resource", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("PATCH"))
+		_, _ = w.Write([]byte("PATCH"))
 	})
 	r.OPTIONS("/resource", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OPTIONS"))
+		_, _ = w.Write([]byte("OPTIONS"))
 	})
 
 	assertEqual(t, request(t, r, "PATCH", "/resource").Body.String(), "PATCH")
@@ -27,11 +27,11 @@ func TestQueryPOST(t *testing.T) {
 	r := teapot.New()
 
 	r.QueryPOST("/upload", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("UPLOAD"))
+		_, _ = w.Write([]byte("UPLOAD"))
 	}).Query("uploads")
 
 	r.QueryPOST("/upload", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("CREATE"))
+		_, _ = w.Write([]byte("CREATE"))
 	})
 
 	assertEqual(t, request(t, r, "POST", "/upload?uploads").Body.String(), "UPLOAD")
@@ -43,11 +43,11 @@ func TestQueryPUT(t *testing.T) {
 	r := teapot.New()
 
 	r.QueryPUT("/object", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("ACL"))
+		_, _ = w.Write([]byte("ACL"))
 	}).Query("acl")
 
 	r.QueryPUT("/object", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("PUT"))
+		_, _ = w.Write([]byte("PUT"))
 	})
 
 	assertEqual(t, request(t, r, "PUT", "/object?acl").Body.String(), "ACL")
@@ -59,11 +59,11 @@ func TestQueryDELETE(t *testing.T) {
 	r := teapot.New()
 
 	r.QueryDELETE("/object", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("DELETE_ALL"))
+		_, _ = w.Write([]byte("DELETE_ALL"))
 	}).Query("deleteAll")
 
 	r.QueryDELETE("/object", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("DELETE"))
+		_, _ = w.Write([]byte("DELETE"))
 	})
 
 	assertEqual(t, request(t, r, "DELETE", "/object?deleteAll").Body.String(), "DELETE_ALL")
@@ -96,11 +96,11 @@ func TestQueryPATCH(t *testing.T) {
 	r := teapot.New()
 
 	r.QueryPATCH("/resource", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("PARTIAL"))
+		_, _ = w.Write([]byte("PARTIAL"))
 	}).Query("partial")
 
 	r.QueryPATCH("/resource", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("PATCH"))
+		_, _ = w.Write([]byte("PATCH"))
 	})
 
 	assertEqual(t, request(t, r, "PATCH", "/resource?partial").Body.String(), "PARTIAL")
@@ -133,7 +133,7 @@ func TestFinalizeAndIsFinalized(t *testing.T) {
 	r := teapot.New()
 
 	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	// Initially not finalized
@@ -198,19 +198,19 @@ func TestQueryChaining(t *testing.T) {
 	r := teapot.New()
 
 	r.QueryGET("/search", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("FULL_ADMIN"))
+		_, _ = w.Write([]byte("FULL_ADMIN"))
 	}).Query("admin").QueryValue("type", "full")
 
 	r.QueryGET("/search", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("ADMIN"))
+		_, _ = w.Write([]byte("ADMIN"))
 	}).Query("admin")
 
 	r.QueryGET("/search", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("FULL"))
+		_, _ = w.Write([]byte("FULL"))
 	}).QueryValue("type", "full")
 
 	r.QueryGET("/search", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("DEFAULT"))
+		_, _ = w.Write([]byte("DEFAULT"))
 	})
 
 	assertEqual(t, request(t, r, "GET", "/search?admin&type=full").Body.String(), "FULL_ADMIN")

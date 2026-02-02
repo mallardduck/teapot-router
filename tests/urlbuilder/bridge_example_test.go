@@ -34,7 +34,7 @@ func ExampleBuilder_BuildURL() {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		},
 		Show: func(w http.ResponseWriter, r *http.Request) {
 			// Handler for showing bucket
@@ -72,7 +72,7 @@ func ExampleBuilder_BuildURL_helper() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}).Name("object.get")
 
 	req := httptest.NewRequest("GET", "/mybucket/path/to/file.txt", nil)
@@ -103,7 +103,7 @@ func ExampleBuilder_BuildURL_relatedResources() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	}).Name("object.get")
 
 	// Bucket routes

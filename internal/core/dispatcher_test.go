@@ -11,7 +11,7 @@ import (
 
 func TestDispatcherSingleRoute(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	route := &Route{
@@ -39,10 +39,10 @@ func TestDispatcherSingleRoute(t *testing.T) {
 
 func TestDispatcherQueryMatching(t *testing.T) {
 	handler1 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("HANDLER1"))
+		_, _ = w.Write([]byte("HANDLER1"))
 	})
 	handler2 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("HANDLER2"))
+		_, _ = w.Write([]byte("HANDLER2"))
 	})
 
 	route1 := &Route{
@@ -82,7 +82,7 @@ func TestDispatcherQueryMatching(t *testing.T) {
 
 func TestDispatcherNoMatch(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	route := &Route{
@@ -113,7 +113,7 @@ func TestDispatcherContextInjection(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedAction = GetAction(r.Context())
 		capturedName = GetRouteName(r.Context())
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	route := &Route{
@@ -146,7 +146,7 @@ func TestDispatcherWildcardParams(t *testing.T) {
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedKey = chi.URLParam(r, "key")
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	route := &Route{
@@ -187,7 +187,7 @@ func TestDispatcherMiddleware(t *testing.T) {
 	}
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	route := &Route{

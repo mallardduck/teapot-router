@@ -29,7 +29,7 @@ func Example() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"buckets": bucketURLs,
 		})
 	}).Query("list-type")
@@ -46,7 +46,7 @@ func Example() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"bucket":  urls.BucketURL(r, bucket),
 			"objects": objectURLs,
 		})
@@ -76,7 +76,7 @@ func ExampleBuilder_development() {
 		objectURL := urls.ObjectURL(r, bucket, key)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"url": objectURL,
 		})
 	})
@@ -104,7 +104,7 @@ func ExampleBuilder_reverseProxy() {
 		bucketURL := urls.BucketURL(r, bucket)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"bucket": bucketURL,
 		})
 	})

@@ -14,14 +14,14 @@ func TestS3StyleAPI(t *testing.T) {
 
 	// Service endpoint
 	r.GET("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("LIST_BUCKETS"))
+		_, _ = w.Write([]byte("LIST_BUCKETS"))
 	}).Name("service.list").Action("s3:ListAllMyBuckets")
 
 	// Bucket operations
 	r.NamedGroup("/{bucket}", "bucket", func(r *teapot.Router) {
 		// Basic bucket operations (no query multiplexing - use standard methods)
 		r.DELETE("", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("DELETE_BUCKET"))
+			_, _ = w.Write([]byte("DELETE_BUCKET"))
 		}).Name("delete").Action("s3:DeleteBucket")
 
 		r.HEAD("", func(w http.ResponseWriter, r *http.Request) {
@@ -30,35 +30,35 @@ func TestS3StyleAPI(t *testing.T) {
 
 		// Query-based bucket operations (S3's special sauce!) - use QueryGET/QueryPUT
 		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("LIST_OBJECTS"))
+			_, _ = w.Write([]byte("LIST_OBJECTS"))
 		}).Name("list").Action("s3:ListBucket")
 
 		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("GET_BUCKET_ACL"))
+			_, _ = w.Write([]byte("GET_BUCKET_ACL"))
 		}).Name("acl.get").Action("s3:GetBucketAcl").Query("acl")
 
 		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("LIST_VERSIONS"))
+			_, _ = w.Write([]byte("LIST_VERSIONS"))
 		}).Name("versions").Action("s3:ListBucketVersions").Query("versions")
 
 		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("GET_LIFECYCLE"))
+			_, _ = w.Write([]byte("GET_LIFECYCLE"))
 		}).Name("lifecycle").Action("s3:GetLifecycleConfiguration").Query("lifecycle")
 
 		// PUT bucket operations - needs query multiplexing for ACL
 		r.QueryPUT("", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("CREATE_BUCKET"))
+			_, _ = w.Write([]byte("CREATE_BUCKET"))
 		}).Name("create").Action("s3:CreateBucket")
 
 		r.QueryPUT("", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("PUT_BUCKET_ACL"))
+			_, _ = w.Write([]byte("PUT_BUCKET_ACL"))
 		}).Name("acl.put").Action("s3:PutBucketAcl").Query("acl")
 
 		// Object operations
 		r.NamedGroup("/{key:.*}", "object", func(r *teapot.Router) {
 			// Basic object operations (no query multiplexing)
 			r.DELETE("", func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte("DELETE_OBJECT"))
+				_, _ = w.Write([]byte("DELETE_OBJECT"))
 			}).Name("delete").Action("s3:DeleteObject")
 
 			r.HEAD("", func(w http.ResponseWriter, r *http.Request) {
@@ -69,23 +69,23 @@ func TestS3StyleAPI(t *testing.T) {
 			r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 				key := teapot.URLParam(r, "key")
 				action := teapot.GetAction(r)
-				w.Write([]byte("GET_OBJECT:" + key + ":" + action))
+				_, _ = w.Write([]byte("GET_OBJECT:" + key + ":" + action))
 			}).Name("get").Action("s3:GetObject")
 
 			r.QueryPUT("", func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte("PUT_OBJECT"))
+				_, _ = w.Write([]byte("PUT_OBJECT"))
 			}).Name("put").Action("s3:PutObject")
 
 			r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte("GET_OBJECT_ACL"))
+				_, _ = w.Write([]byte("GET_OBJECT_ACL"))
 			}).Name("acl.get").Action("s3:GetObjectAcl").Query("acl")
 
 			r.QueryPOST("", func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte("INITIATE_MULTIPART"))
+				_, _ = w.Write([]byte("INITIATE_MULTIPART"))
 			}).Name("multipart.initiate").Action("s3:CreateMultipartUpload").Query("uploads")
 
 			r.QueryPUT("", func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte("UPLOAD_PART"))
+				_, _ = w.Write([]byte("UPLOAD_PART"))
 			}).Name("multipart.upload").Action("s3:UploadPart").Query("partNumber").Query("uploadId")
 		})
 	})
@@ -112,9 +112,9 @@ func TestS3StyleAPI(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		w := request(t, r, tt.method, tt.path)
-		if w.Body.String() != tt.expected {
-			t.Errorf("%s %s: got %q, want %q", tt.method, tt.path, w.Body.String(), tt.expected)
+		response := request(t, r, tt.method, tt.path)
+		if response.Body.String() != tt.expected {
+			t.Errorf("%s %s: got %q, want %q", tt.method, tt.path, response.Body.String(), tt.expected)
 		}
 	}
 

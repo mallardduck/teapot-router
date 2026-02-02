@@ -91,24 +91,24 @@ func setupRoutes() *teapot.Router {
 }
 
 // Mock handlers
-func homeHandler(w http.ResponseWriter, r *http.Request)    {}
-func aboutHandler(w http.ResponseWriter, r *http.Request)   {}
-func listUsers(w http.ResponseWriter, r *http.Request)      {}
-func createUser(w http.ResponseWriter, r *http.Request)     {}
-func showUser(w http.ResponseWriter, r *http.Request)       {}
-func updateUser(w http.ResponseWriter, r *http.Request)     {}
-func deleteUser(w http.ResponseWriter, r *http.Request)     {}
-func listPosts(w http.ResponseWriter, r *http.Request)      {}
-func createPost(w http.ResponseWriter, r *http.Request)     {}
-func showPost(w http.ResponseWriter, r *http.Request)       {}
-func updatePost(w http.ResponseWriter, r *http.Request)     {}
-func listBuckets(w http.ResponseWriter, r *http.Request)    {}
-func createBucket(w http.ResponseWriter, r *http.Request)   {}
-func deleteBucket(w http.ResponseWriter, r *http.Request)   {}
-func listObjects(w http.ResponseWriter, r *http.Request)    {}
-func getObject(w http.ResponseWriter, r *http.Request)      {}
-func putObject(w http.ResponseWriter, r *http.Request)      {}
-func deleteObject(w http.ResponseWriter, r *http.Request)   {}
-func adminDashboard(w http.ResponseWriter, r *http.Request) {}
-func adminUsers(w http.ResponseWriter, r *http.Request)     {}
+func homeHandler(_ http.ResponseWriter, _ *http.Request)    {}
+func aboutHandler(_ http.ResponseWriter, _ *http.Request)   {}
+func listUsers(_ http.ResponseWriter, _ *http.Request)      {}
+func createUser(_ http.ResponseWriter, _ *http.Request)     {}
+func showUser(_ http.ResponseWriter, _ *http.Request)       {}
+func updateUser(_ http.ResponseWriter, _ *http.Request)     {}
+func deleteUser(_ http.ResponseWriter, _ *http.Request)     {}
+func listPosts(_ http.ResponseWriter, _ *http.Request)      {}
+func createPost(_ http.ResponseWriter, _ *http.Request)     {}
+func showPost(_ http.ResponseWriter, _ *http.Request)       {}
+func updatePost(_ http.ResponseWriter, _ *http.Request)     {}
+func listBuckets(_ http.ResponseWriter, _ *http.Request)    {}
+func createBucket(_ http.ResponseWriter, _ *http.Request)   {}
+func deleteBucket(_ http.ResponseWriter, _ *http.Request)   {}
+func listObjects(_ http.ResponseWriter, _ *http.Request)    {}
+func getObject(_ http.ResponseWriter, _ *http.Request)      {}
+func putObject(_ http.ResponseWriter, _ *http.Request)      {}
+func deleteObject(_ http.ResponseWriter, _ *http.Request)   {}
+func adminDashboard(_ http.ResponseWriter, _ *http.Request) {}
+func adminUsers(_ http.ResponseWriter, _ *http.Request)     {}
 func isDebug() bool                                         { return os.Getenv("DEBUG") == "true" }

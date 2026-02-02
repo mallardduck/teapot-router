@@ -29,7 +29,7 @@ func TestChiWildcardSyntax(t *testing.T) {
 
 			r.Get(tt.pattern, func(w http.ResponseWriter, r *http.Request) {
 				captured = chi.URLParam(r, tt.paramKey)
-				w.Write([]byte(captured))
+				_, _ = w.Write([]byte(captured))
 			})
 
 			req := httptest.NewRequest("GET", tt.url, nil)

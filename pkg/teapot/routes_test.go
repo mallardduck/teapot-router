@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -250,10 +252,12 @@ func TestRoutesSorting(t *testing.T) {
 	routes := r.Routes()
 
 	var buf bytes.Buffer
-	teapot.FormatRoutesJSON(&buf, routes)
+	fmtErr := teapot.FormatRoutesJSON(&buf, routes)
+	assert.NoError(t, fmtErr)
 
 	var output map[string]any
-	json.Unmarshal(buf.Bytes(), &output)
+	err := json.Unmarshal(buf.Bytes(), &output)
+	assert.NoError(t, err)
 	routesList := output["routes"].([]any)
 
 	// First route should be /api/posts (sorted by pattern)

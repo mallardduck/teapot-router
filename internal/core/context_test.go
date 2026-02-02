@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSetAndGetAction(t *testing.T) {
@@ -12,18 +14,14 @@ func TestSetAndGetAction(t *testing.T) {
 	ctx = SetAction(ctx, "s3:GetObject")
 
 	// Test getting action
-	if got := GetAction(ctx); got != "s3:GetObject" {
-		t.Errorf("GetAction() = %q, want %q", got, "s3:GetObject")
-	}
+	assert.Equal(t, "s3:GetObject", GetAction(ctx))
 }
 
 func TestGetActionEmpty(t *testing.T) {
 	ctx := context.Background()
 
 	// Test getting action from empty context
-	if got := GetAction(ctx); got != "" {
-		t.Errorf("GetAction() = %q, want empty string", got)
-	}
+	assert.Equal(t, "", GetAction(ctx))
 }
 
 func TestSetAndGetRouteName(t *testing.T) {
@@ -33,21 +31,18 @@ func TestSetAndGetRouteName(t *testing.T) {
 	ctx = SetRouteName(ctx, "bucket.list")
 
 	// Test getting route name
-	if got := GetRouteName(ctx); got != "bucket.list" {
-		t.Errorf("GetRouteName() = %q, want %q", got, "bucket.list")
-	}
+	assert.Equal(t, "bucket.list", GetRouteName(ctx))
 }
 
 func TestGetRouteNameEmpty(t *testing.T) {
 	ctx := context.Background()
 
 	// Test getting route name from empty context
-	if got := GetRouteName(ctx); got != "" {
-		t.Errorf("GetRouteName() = %q, want empty string", got)
-	}
+	assert.Equal(t, "", GetRouteName(ctx))
 }
 
 func TestMultipleContextValues(t *testing.T) {
+	asserts := assert.New(t)
 	ctx := context.Background()
 
 	// Set both action and route name
@@ -55,10 +50,6 @@ func TestMultipleContextValues(t *testing.T) {
 	ctx = SetRouteName(ctx, "object.put")
 
 	// Verify both values are preserved
-	if got := GetAction(ctx); got != "s3:PutObject" {
-		t.Errorf("GetAction() = %q, want %q", got, "s3:PutObject")
-	}
-	if got := GetRouteName(ctx); got != "object.put" {
-		t.Errorf("GetRouteName() = %q, want %q", got, "object.put")
-	}
+	asserts.Equal("s3:PutObject", GetAction(ctx))
+	asserts.Equal("object.put", GetRouteName(ctx))
 }

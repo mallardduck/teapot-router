@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -19,7 +21,7 @@ func TestFinalizeMinimalRoute(t *testing.T) {
 	r.Finalize()
 
 	// Route should still work after finalization
-	assertEqual(t, request(t, r, "GET", "/test").Body.String(), "OK")
+	assert.Equal(t, "OK", request(t, r, "GET", "/test").Body.String())
 }
 
 // Test: Finalize optimizes route with action and name
@@ -38,8 +40,8 @@ func TestFinalizeWithActionAndName(t *testing.T) {
 
 	// Test that action and name are still injected after finalization
 	request(t, r, "GET", "/bucket")
-	assertEqual(t, capturedAction, "s3:ListBucket")
-	assertEqual(t, capturedName, "bucket.list")
+	assert.Equal(t, "s3:ListBucket", capturedAction)
+	assert.Equal(t, "bucket.list", capturedName)
 }
 
 // Test: Finalize optimizes route with middleware
@@ -64,9 +66,7 @@ func TestFinalizeWithMiddleware(t *testing.T) {
 	// Test that middleware is still called after finalization
 	middlewareCalled = false
 	request(t, r, "GET", "/protected")
-	if !middlewareCalled {
-		t.Error("middleware was not called after finalization")
-	}
+	assert.True(t, middlewareCalled, "middleware was not called after finalization")
 }
 
 // Test: Finalize optimizes route with wildcard params
@@ -84,7 +84,7 @@ func TestFinalizeWithWildcardParams(t *testing.T) {
 
 	// Test that wildcard params are still accessible after finalization
 	request(t, r, "GET", "/mybucket/path/to/file.txt")
-	assertEqual(t, capturedKey, "path/to/file.txt")
+	assert.Equal(t, "path/to/file.txt", capturedKey)
 }
 
 // Test: Finalize optimizes route with everything
@@ -115,12 +115,10 @@ func TestFinalizeWithEverything(t *testing.T) {
 	middlewareCalled = false
 	request(t, r, "GET", "/mybucket/path/to/file.txt")
 
-	if !middlewareCalled {
-		t.Error("middleware was not called")
-	}
-	assertEqual(t, capturedAction, "s3:GetObject")
-	assertEqual(t, capturedName, "object.get")
-	assertEqual(t, capturedKey, "path/to/file.txt")
+	assert.True(t, middlewareCalled, "middleware was not called")
+	assert.Equal(t, "s3:GetObject", capturedAction)
+	assert.Equal(t, "object.get", capturedName)
+	assert.Equal(t, "path/to/file.txt", capturedKey)
 }
 
 // Test: Routes work both before and after finalization
@@ -136,7 +134,7 @@ func TestRouteBeforeAndAfterFinalize(t *testing.T) {
 	// Test before finalization (slow path)
 	capturedAction = ""
 	request(t, r, "GET", "/test")
-	assertEqual(t, capturedAction, "test:Action")
+	assert.Equal(t, "test:Action", capturedAction)
 
 	// Finalize
 	r.Finalize()
@@ -144,7 +142,7 @@ func TestRouteBeforeAndAfterFinalize(t *testing.T) {
 	// Test after finalization (fast path)
 	capturedAction = ""
 	request(t, r, "GET", "/test")
-	assertEqual(t, capturedAction, "test:Action")
+	assert.Equal(t, "test:Action", capturedAction)
 }
 
 // Test: Query routes are optimized after finalization
@@ -168,12 +166,12 @@ func TestFinalizeQueryRoutes(t *testing.T) {
 
 	// Test both query routes work after finalization
 	capturedAction = ""
-	assertEqual(t, request(t, r, "GET", "/bucket").Body.String(), "LIST")
-	assertEqual(t, capturedAction, "s3:ListBucket")
+	assert.Equal(t, "LIST", request(t, r, "GET", "/bucket").Body.String())
+	assert.Equal(t, "s3:ListBucket", capturedAction)
 
 	capturedAction = ""
-	assertEqual(t, request(t, r, "GET", "/bucket?acl").Body.String(), "ACL")
-	assertEqual(t, capturedAction, "s3:GetBucketAcl")
+	assert.Equal(t, "ACL", request(t, r, "GET", "/bucket?acl").Body.String())
+	assert.Equal(t, "s3:GetBucketAcl", capturedAction)
 }
 
 // Test: Multiple finalizations should be safe
@@ -190,7 +188,7 @@ func TestMultipleFinalize(t *testing.T) {
 	r.Finalize()
 
 	// Route should still work
-	assertEqual(t, request(t, r, "GET", "/test").Body.String(), "OK")
+	assert.Equal(t, "OK", request(t, r, "GET", "/test").Body.String())
 }
 
 // Test: Finalize with groups
@@ -207,11 +205,11 @@ func TestFinalizeWithGroups(t *testing.T) {
 	r.Finalize()
 
 	// Routes in groups should work after finalization
-	assertEqual(t, request(t, r, "GET", "/api/users").Body.String(), "USERS")
+	assert.Equal(t, "USERS", request(t, r, "GET", "/api/users").Body.String())
 
 	// URL generation should still work
 	url := r.MustURL("api.users")
-	assertEqual(t, url, "/api/users")
+	assert.Equal(t, "/api/users", url)
 }
 
 // Test: Finalize with only middleware (no action/name)
@@ -236,7 +234,7 @@ func TestFinalizeMiddlewareOnly(t *testing.T) {
 	// Test middleware is called
 	callCount = 0
 	request(t, r, "GET", "/test")
-	assertEqual(t, callCount, 1)
+	assert.Equal(t, 1, callCount)
 }
 
 // Test: Finalize with only action (no name/middleware/wildcards)
@@ -255,7 +253,7 @@ func TestFinalizeActionOnly(t *testing.T) {
 	// Test action is injected
 	capturedAction = ""
 	request(t, r, "GET", "/test")
-	assertEqual(t, capturedAction, "test:Action")
+	assert.Equal(t, "test:Action", capturedAction)
 }
 
 // Test: Finalize with only name (no action/middleware/wildcards)
@@ -274,5 +272,5 @@ func TestFinalizeNameOnly(t *testing.T) {
 	// Test name is injected
 	capturedName = ""
 	request(t, r, "GET", "/test")
-	assertEqual(t, capturedName, "test.route")
+	assert.Equal(t, "test.route", capturedName)
 }

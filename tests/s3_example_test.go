@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -198,18 +200,14 @@ func TestS3StyleAPI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			response := request(t, r, tt.method, tt.path)
-			if response.Body.String() != tt.expected {
-				t.Errorf("%s %s: got %q, want %q", tt.method, tt.path, response.Body.String(), tt.expected)
-			}
+			assert.Equal(t, tt.expected, response.Body.String(), "%s %s response mismatch", tt.method, tt.path)
 		})
 	}
 
 	// Verify total route count matches expectations
 	routes := r.Routes()
 	expectedRouteCount := 25 // Total S3 API routes
-	if len(routes) != expectedRouteCount {
-		t.Errorf("Expected %d routes, got %d", expectedRouteCount, len(routes))
-	}
+	assert.Len(t, routes, expectedRouteCount, "expected route count mismatch")
 }
 
 // Helper to make test requests

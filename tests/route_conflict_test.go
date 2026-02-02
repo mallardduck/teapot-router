@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -28,18 +30,14 @@ func TestRouteConflict(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	t.Logf("GET /mybucket (no query): %s", w.Body.String())
-	if w.Body.String() != "DIRECT" {
-		t.Errorf("Expected DIRECT, got %s (auto-promotion should preserve direct route)", w.Body.String())
-	}
+	assert.Equal(t, "DIRECT", w.Body.String(), "auto-promotion should preserve direct route")
 
 	// Test query route (with query param)
 	req = httptest.NewRequest("GET", "/mybucket?test", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	t.Logf("GET /mybucket?test: %s", w.Body.String())
-	if w.Body.String() != "QUERY" {
-		t.Errorf("Expected QUERY, got %s", w.Body.String())
-	}
+	assert.Equal(t, "QUERY", w.Body.String())
 }
 
 // TestQueryRouteFallback verifies that QueryGET without .Query() acts as default
@@ -61,16 +59,12 @@ func TestQueryRouteFallback(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	t.Logf("GET /mybucket (no query): %s", w.Body.String())
-	if w.Body.String() != "FALLBACK" {
-		t.Errorf("Expected FALLBACK, got %s", w.Body.String())
-	}
+	assert.Equal(t, "FALLBACK", w.Body.String())
 
 	// Test with query param
 	req = httptest.NewRequest("GET", "/mybucket?test", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	t.Logf("GET /mybucket?test: %s", w.Body.String())
-	if w.Body.String() != "WITH_QUERY" {
-		t.Errorf("Expected WITH_QUERY, got %s", w.Body.String())
-	}
+	assert.Equal(t, "WITH_QUERY", w.Body.String())
 }

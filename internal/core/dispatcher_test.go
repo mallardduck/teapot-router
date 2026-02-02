@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/go-chi/chi/v5"
 )
 
@@ -29,12 +31,8 @@ func TestDispatcherSingleRoute(t *testing.T) {
 
 	dispatcher.ServeHTTP(w, req)
 
-	if w.Code != 200 {
-		t.Errorf("expected status 200, got %d", w.Code)
-	}
-	if w.Body.String() != "OK" {
-		t.Errorf("expected body 'OK', got %q", w.Body.String())
-	}
+	assert.Equal(t, 200, w.Code)
+	assert.Equal(t, "OK", w.Body.String())
 }
 
 func TestDispatcherQueryMatching(t *testing.T) {
@@ -66,18 +64,14 @@ func TestDispatcherQueryMatching(t *testing.T) {
 	w := httptest.NewRecorder()
 	dispatcher.ServeHTTP(w, req)
 
-	if w.Body.String() != "HANDLER1" {
-		t.Errorf("expected HANDLER1, got %q", w.Body.String())
-	}
+	assert.Equal(t, "HANDLER1", w.Body.String())
 
 	// Request without ?foo should match route2
 	req = httptest.NewRequest("GET", "/test", nil)
 	w = httptest.NewRecorder()
 	dispatcher.ServeHTTP(w, req)
 
-	if w.Body.String() != "HANDLER2" {
-		t.Errorf("expected HANDLER2, got %q", w.Body.String())
-	}
+	assert.Equal(t, "HANDLER2", w.Body.String())
 }
 
 func TestDispatcherNoMatch(t *testing.T) {
@@ -102,9 +96,7 @@ func TestDispatcherNoMatch(t *testing.T) {
 
 	dispatcher.ServeHTTP(w, req)
 
-	if w.Code != 404 {
-		t.Errorf("expected status 404, got %d", w.Code)
-	}
+	assert.Equal(t, 404, w.Code)
 }
 
 func TestDispatcherContextInjection(t *testing.T) {
@@ -133,12 +125,8 @@ func TestDispatcherContextInjection(t *testing.T) {
 
 	dispatcher.ServeHTTP(w, req)
 
-	if capturedAction != "s3:GetBucket" {
-		t.Errorf("expected action 's3:GetBucket', got %q", capturedAction)
-	}
-	if capturedName != "bucket.get" {
-		t.Errorf("expected name 'bucket.get', got %q", capturedName)
-	}
+	assert.Equal(t, "s3:GetBucket", capturedAction)
+	assert.Equal(t, "bucket.get", capturedName)
 }
 
 func TestDispatcherWildcardParams(t *testing.T) {
@@ -171,9 +159,7 @@ func TestDispatcherWildcardParams(t *testing.T) {
 	w := httptest.NewRecorder()
 	dispatcher.ServeHTTP(w, req)
 
-	if capturedKey != "path/to/file.txt" {
-		t.Errorf("expected key 'path/to/file.txt', got %q", capturedKey)
-	}
+	assert.Equal(t, "path/to/file.txt", capturedKey)
 }
 
 func TestDispatcherMiddleware(t *testing.T) {
@@ -206,12 +192,11 @@ func TestDispatcherMiddleware(t *testing.T) {
 
 	dispatcher.ServeHTTP(w, req)
 
-	if !middlewareCalled {
-		t.Error("expected middleware to be called")
-	}
+	assert.True(t, middlewareCalled, "expected middleware to be called")
 }
 
 func TestDispatcherAddRouteSpecificity(t *testing.T) {
+	asserts := assert.New(t)
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 
 	route1 := &Route{
@@ -238,18 +223,10 @@ func TestDispatcherAddRouteSpecificity(t *testing.T) {
 	dispatcher.AddRoute(route3)
 
 	// Routes should be sorted by specificity: route3 (2), route2 (1), route1 (0)
-	if len(dispatcher.Routes) != 3 {
-		t.Fatalf("expected 3 routes, got %d", len(dispatcher.Routes))
-	}
-	if dispatcher.routeSpecificity(dispatcher.Routes[0]) != 2 {
-		t.Errorf("expected first route specificity 2, got %d", dispatcher.routeSpecificity(dispatcher.Routes[0]))
-	}
-	if dispatcher.routeSpecificity(dispatcher.Routes[1]) != 1 {
-		t.Errorf("expected second route specificity 1, got %d", dispatcher.routeSpecificity(dispatcher.Routes[1]))
-	}
-	if dispatcher.routeSpecificity(dispatcher.Routes[2]) != 0 {
-		t.Errorf("expected third route specificity 0, got %d", dispatcher.routeSpecificity(dispatcher.Routes[2]))
-	}
+	asserts.Len(dispatcher.Routes, 3)
+	asserts.Equal(2, dispatcher.routeSpecificity(dispatcher.Routes[0]))
+	asserts.Equal(1, dispatcher.routeSpecificity(dispatcher.Routes[1]))
+	asserts.Equal(0, dispatcher.routeSpecificity(dispatcher.Routes[2]))
 }
 
 func TestDispatcherUpdateSpecificity(t *testing.T) {
@@ -278,7 +255,5 @@ func TestDispatcherUpdateSpecificity(t *testing.T) {
 	dispatcher.UpdateSpecificity()
 
 	// route2 should now be first due to higher specificity
-	if dispatcher.routeSpecificity(dispatcher.Routes[0]) != 1 {
-		t.Errorf("expected first route specificity 1, got %d", dispatcher.routeSpecificity(dispatcher.Routes[0]))
-	}
+	assert.Equal(t, 1, dispatcher.routeSpecificity(dispatcher.Routes[0]))
 }

@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -15,15 +17,9 @@ func TestURLParams(t *testing.T) {
 	r.GET("/users/{id}/posts/{postId}", func(w http.ResponseWriter, r *http.Request) {
 		params := teapot.URLParams(r)
 
-		if len(params) != 2 {
-			t.Errorf("expected 2 params, got %d", len(params))
-		}
-		if params["id"] != "123" {
-			t.Errorf("expected id=123, got %q", params["id"])
-		}
-		if params["postId"] != "456" {
-			t.Errorf("expected postId=456, got %q", params["postId"])
-		}
+		assert.Len(t, params, 2)
+		assert.Equal(t, "123", params["id"])
+		assert.Equal(t, "456", params["postId"])
 
 		w.WriteHeader(200)
 	})
@@ -32,9 +28,7 @@ func TestURLParams(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if w.Code != 200 {
-		t.Errorf("expected 200, got %d", w.Code)
-	}
+	assert.Equal(t, 200, w.Code)
 }
 
 // TestURLParamsEmpty verifies URLParams returns empty map when no params
@@ -44,12 +38,8 @@ func TestURLParamsEmpty(t *testing.T) {
 	r.GET("/simple", func(w http.ResponseWriter, r *http.Request) {
 		params := teapot.URLParams(r)
 
-		if params == nil {
-			t.Error("expected empty map, got nil")
-		}
-		if len(params) != 0 {
-			t.Errorf("expected 0 params, got %d", len(params))
-		}
+		assert.NotNil(t, params, "expected empty map, not nil")
+		assert.Len(t, params, 0)
 
 		w.WriteHeader(200)
 	})
@@ -79,25 +69,20 @@ func TestChiAccessor(t *testing.T) {
 	req := httptest.NewRequest("GET", "/exists", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 200 {
-		t.Errorf("expected 200, got %d", w.Code)
-	}
+	assert.Equal(t, 200, w.Code)
 
 	// Test custom 404 handler is called
 	req = httptest.NewRequest("GET", "/nonexistent", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if !notFoundCalled {
-		t.Error("custom NotFound handler was not called")
-	}
-	if w.Body.String() != "Custom 404" {
-		t.Errorf("expected 'Custom 404', got %q", w.Body.String())
-	}
+	assert.True(t, notFoundCalled, "custom NotFound handler was not called")
+	assert.Equal(t, "Custom 404", w.Body.String())
 }
 
 // TestRouterWith verifies With() method creates router with middleware
 func TestRouterWith(t *testing.T) {
+	asserts := assert.New(t)
 	r := teapot.New()
 
 	// Track middleware calls
@@ -137,27 +122,21 @@ func TestRouterWith(t *testing.T) {
 	req := httptest.NewRequest("GET", "/public", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if len(calls) != 0 {
-		t.Errorf("public route should have no middleware, got %v", calls)
-	}
+	asserts.Len(calls, 0, "public route should have no middleware")
 
 	// Test protected route
 	calls = nil
 	req = httptest.NewRequest("GET", "/protected", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if len(calls) != 1 || calls[0] != "mw1" {
-		t.Errorf("protected route expected [mw1], got %v", calls)
-	}
+	asserts.Equal([]string{"mw1"}, calls)
 
 	// Test admin route
 	calls = nil
 	req = httptest.NewRequest("GET", "/admin", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if len(calls) != 2 || calls[0] != "mw1" || calls[1] != "mw2" {
-		t.Errorf("admin route expected [mw1 mw2], got %v", calls)
-	}
+	asserts.Equal([]string{"mw1", "mw2"}, calls)
 }
 
 // TestRouterWithChaining verifies With() can be chained
@@ -191,19 +170,12 @@ func TestRouterWithChaining(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	expected := []string{"1", "2", "handler"}
-	if len(order) != len(expected) {
-		t.Errorf("expected %v, got %v", expected, order)
-	}
-	for i, v := range expected {
-		if i >= len(order) || order[i] != v {
-			t.Errorf("expected %v, got %v", expected, order)
-			break
-		}
-	}
+	assert.Equal(t, expected, order)
 }
 
 // TestMiddlewareGroup verifies MiddlewareGroup applies middleware without path/name changes
 func TestMiddlewareGroup(t *testing.T) {
+	asserts := assert.New(t)
 	r := teapot.New()
 
 	var calls []string
@@ -243,37 +215,26 @@ func TestMiddlewareGroup(t *testing.T) {
 	req := httptest.NewRequest("GET", "/public", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if len(calls) != 0 {
-		t.Errorf("public route should have no middleware, got %v", calls)
-	}
+	asserts.Len(calls, 0, "public route should have no middleware")
 
 	// Test admin route (has middleware)
 	calls = nil
 	req = httptest.NewRequest("GET", "/admin", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	expected := []string{"auth", "logging"}
-	if len(calls) != 2 || calls[0] != "auth" || calls[1] != "logging" {
-		t.Errorf("admin route expected %v, got %v", expected, calls)
-	}
+	asserts.Equal([]string{"auth", "logging"}, calls)
 
 	// Test dashboard route (has middleware)
 	calls = nil
 	req = httptest.NewRequest("GET", "/dashboard", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if len(calls) != 2 || calls[0] != "auth" || calls[1] != "logging" {
-		t.Errorf("dashboard route expected %v, got %v", expected, calls)
-	}
+	asserts.Equal([]string{"auth", "logging"}, calls)
 
 	// Verify route names are correct (no prefix added)
 	url, err := r.URL("admin")
-	if err != nil {
-		t.Errorf("expected admin route to exist, got error: %v", err)
-	}
-	if url != "/admin" {
-		t.Errorf("expected /admin, got %s", url)
-	}
+	asserts.NoError(err)
+	asserts.Equal("/admin", url)
 }
 
 // TestMiddlewareGroupNested verifies MiddlewareGroup can be nested
@@ -317,19 +278,12 @@ func TestMiddlewareGroupNested(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	expected := []string{"mw1", "mw2", "mw3", "handler"}
-	if len(order) != len(expected) {
-		t.Errorf("expected %v, got %v", expected, order)
-	}
-	for i, v := range expected {
-		if i >= len(order) || order[i] != v {
-			t.Errorf("expected %v, got %v", expected, order)
-			break
-		}
-	}
+	assert.Equal(t, expected, order)
 }
 
 // TestMiddlewareGroupWithNamedGroup verifies MiddlewareGroup works with NamedGroup
 func TestMiddlewareGroupWithNamedGroup(t *testing.T) {
+	asserts := assert.New(t)
 	r := teapot.New()
 
 	var calls []string
@@ -355,16 +309,10 @@ func TestMiddlewareGroupWithNamedGroup(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if len(calls) != 1 || calls[0] != "auth" {
-		t.Errorf("expected [auth], got %v", calls)
-	}
+	asserts.Equal([]string{"auth"}, calls)
 
 	// Verify route name includes prefix
 	url, err := r.URL("api.users")
-	if err != nil {
-		t.Errorf("expected api.users route to exist, got error: %v", err)
-	}
-	if url != "/api/users" {
-		t.Errorf("expected /api/users, got %s", url)
-	}
+	asserts.NoError(err)
+	asserts.Equal("/api/users", url)
 }

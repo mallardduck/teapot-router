@@ -2,8 +2,9 @@ package teapot_test
 
 import (
 	"net/http"
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
@@ -12,17 +13,14 @@ var dummyHandler = func(w http.ResponseWriter, r *http.Request) {}
 
 // TestDuplicateRouteName verifies panic on duplicate method+name
 func TestDuplicateRouteName(t *testing.T) {
+	asserts := assert.New(t)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Error("expected panic for duplicate route name")
 		} else {
 			msg := r.(string)
-			if !strings.Contains(msg, "duplicate route") {
-				t.Errorf("expected 'duplicate route' in panic message, got: %s", msg)
-			}
-			if !strings.Contains(msg, "GET:users") {
-				t.Errorf("expected 'GET:users' in panic message, got: %s", msg)
-			}
+			asserts.Contains(msg, "duplicate route")
+			asserts.Contains(msg, "GET:users")
 		}
 	}()
 
@@ -42,24 +40,19 @@ func TestSameNameDifferentMethodsSamePath(t *testing.T) {
 
 	// Verify all routes registered
 	routes := r.Routes()
-	if len(routes) != 3 {
-		t.Errorf("expected 3 routes, got %d", len(routes))
-	}
+	assert.Len(t, routes, 3)
 }
 
 // TestSameNameDifferentMethodsDifferentPath should panic
 func TestSameNameDifferentMethodsDifferentPath(t *testing.T) {
+	asserts := assert.New(t)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Error("expected panic for same name with different paths")
 		} else {
 			msg := r.(string)
-			if !strings.Contains(msg, "used with different paths") {
-				t.Errorf("expected 'used with different paths' in panic message, got: %s", msg)
-			}
-			if !strings.Contains(msg, "users.show") {
-				t.Errorf("expected 'users.show' in panic message, got: %s", msg)
-			}
+			asserts.Contains(msg, "used with different paths")
+			asserts.Contains(msg, "users.show")
 		}
 	}()
 
@@ -70,18 +63,15 @@ func TestSameNameDifferentMethodsDifferentPath(t *testing.T) {
 
 // TestDuplicateInNamedGroup verifies validation works in groups
 func TestDuplicateInNamedGroup(t *testing.T) {
+	asserts := assert.New(t)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Error("expected panic for duplicate route in group")
 		} else {
 			msg := r.(string)
-			if !strings.Contains(msg, "duplicate route") {
-				t.Errorf("expected 'duplicate route' in panic message, got: %s", msg)
-			}
+			asserts.Contains(msg, "duplicate route")
 			// Should include full name with prefix
-			if !strings.Contains(msg, "api.users") {
-				t.Errorf("expected 'api.users' in panic message, got: %s", msg)
-			}
+			asserts.Contains(msg, "api.users")
 		}
 	}()
 
@@ -120,6 +110,7 @@ func TestNoNameNoValidation(t *testing.T) {
 
 // TestPanicMessageQuality verifies panic messages are helpful
 func TestPanicMessageQuality(t *testing.T) {
+	asserts := assert.New(t)
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatal("expected panic")
@@ -127,22 +118,14 @@ func TestPanicMessageQuality(t *testing.T) {
 			msg := r.(string)
 
 			// Should include method
-			if !strings.Contains(msg, "GET") {
-				t.Errorf("panic message should include method, got: %s", msg)
-			}
+			asserts.Contains(msg, "GET", "panic message should include method")
 
 			// Should include route name
-			if !strings.Contains(msg, "users.show") {
-				t.Errorf("panic message should include route name, got: %s", msg)
-			}
+			asserts.Contains(msg, "users.show", "panic message should include route name")
 
 			// Should include both paths for comparison
-			if !strings.Contains(msg, "/users/{id}") {
-				t.Errorf("panic message should include existing path, got: %s", msg)
-			}
-			if !strings.Contains(msg, "/posts/{id}") {
-				t.Errorf("panic message should include new path, got: %s", msg)
-			}
+			asserts.Contains(msg, "/users/{id}", "panic message should include existing path")
+			asserts.Contains(msg, "/posts/{id}", "panic message should include new path")
 		}
 	}()
 

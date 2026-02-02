@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/go-chi/chi/v5"
 )
 
@@ -36,9 +38,7 @@ func TestChiWildcardSyntax(t *testing.T) {
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
 
-			if captured != tt.expected {
-				t.Errorf("pattern %s: got %q, want %q", tt.pattern, captured, tt.expected)
-			}
+			assert.Equal(t, tt.expected, captured, "pattern %s", tt.pattern)
 		})
 	}
 }

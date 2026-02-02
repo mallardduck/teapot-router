@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -55,9 +57,7 @@ func TestWithoutFinalize(t *testing.T) {
 
 	// NO Finalize() call!
 	// Verify router is not finalized
-	if r.IsFinalized() {
-		t.Fatal("router should not be finalized")
-	}
+	assert.False(t, r.IsFinalized(), "router should not be finalized")
 
 	// Test all routes work correctly
 	tests := []struct {
@@ -80,14 +80,10 @@ func TestWithoutFinalize(t *testing.T) {
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
 
-			if w.Body.String() != tt.expected {
-				t.Errorf("got %q, want %q", w.Body.String(), tt.expected)
-			}
+			assert.Equal(t, tt.expected, w.Body.String())
 
 			if tt.header != "" {
-				if got := w.Header().Get("X-Middleware"); got != tt.header {
-					t.Errorf("middleware header: got %q, want %q", got, tt.header)
-				}
+				assert.Equal(t, tt.header, w.Header().Get("X-Middleware"), "middleware header")
 			}
 		})
 	}
@@ -141,9 +137,7 @@ func TestWithFinalize(t *testing.T) {
 	r.Finalize()
 
 	// Verify router is finalized
-	if !r.IsFinalized() {
-		t.Fatal("router should be finalized")
-	}
+	assert.True(t, r.IsFinalized(), "router should be finalized")
 
 	// Test all routes work correctly (same tests as without Finalize)
 	tests := []struct {
@@ -166,14 +160,10 @@ func TestWithFinalize(t *testing.T) {
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
 
-			if w.Body.String() != tt.expected {
-				t.Errorf("got %q, want %q", w.Body.String(), tt.expected)
-			}
+			assert.Equal(t, tt.expected, w.Body.String())
 
 			if tt.header != "" {
-				if got := w.Header().Get("X-Middleware"); got != tt.header {
-					t.Errorf("middleware header: got %q, want %q", got, tt.header)
-				}
+				assert.Equal(t, tt.header, w.Header().Get("X-Middleware"), "middleware header")
 			}
 		})
 	}
@@ -209,13 +199,8 @@ func TestFinalizeIsPureOptimization(t *testing.T) {
 	w2 := httptest.NewRecorder()
 	r2.ServeHTTP(w2, req)
 
-	if w1.Body.String() != w2.Body.String() {
-		t.Errorf("Results differ: without Finalize=%q, with Finalize=%q",
-			w1.Body.String(), w2.Body.String())
-	}
+	assert.Equal(t, w2.Body.String(), w1.Body.String(), "Results should match regardless of Finalize")
 
 	expected := "test:s3:Test"
-	if w1.Body.String() != expected {
-		t.Errorf("Incorrect result: got %q, want %q", w1.Body.String(), expected)
-	}
+	assert.Equal(t, expected, w1.Body.String())
 }

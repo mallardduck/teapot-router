@@ -3,6 +3,8 @@ package core
 import (
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestQueryExistsMatcher(t *testing.T) {
@@ -22,18 +24,14 @@ func TestQueryExistsMatcher(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", tt.url, nil)
-			if got := matcher.Matches(req); got != tt.expected {
-				t.Errorf("Matches() = %v, want %v", got, tt.expected)
-			}
+			assert.Equal(t, tt.expected, matcher.Matches(req))
 		})
 	}
 }
 
 func TestQueryExistsMatcherSpecificity(t *testing.T) {
 	matcher := QueryExistsMatcher{Key: "test"}
-	if got := matcher.Specificity(); got != 1 {
-		t.Errorf("Specificity() = %d, want 1", got)
-	}
+	assert.Equal(t, 1, matcher.Specificity())
 }
 
 func TestQueryValueMatcher(t *testing.T) {
@@ -54,16 +52,12 @@ func TestQueryValueMatcher(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", tt.url, nil)
-			if got := matcher.Matches(req); got != tt.expected {
-				t.Errorf("Matches() = %v, want %v", got, tt.expected)
-			}
+			assert.Equal(t, tt.expected, matcher.Matches(req))
 		})
 	}
 }
 
 func TestQueryValueMatcherSpecificity(t *testing.T) {
 	matcher := QueryValueMatcher{Key: "type", Value: "test"}
-	if got := matcher.Specificity(); got != 2 {
-		t.Errorf("Specificity() = %d, want 2", got)
-	}
+	assert.Equal(t, 2, matcher.Specificity())
 }

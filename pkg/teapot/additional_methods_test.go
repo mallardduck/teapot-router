@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -18,8 +20,8 @@ func TestPatchAndOptions(t *testing.T) {
 		_, _ = w.Write([]byte("OPTIONS"))
 	})
 
-	assertEqual(t, request(t, r, "PATCH", "/resource").Body.String(), "PATCH")
-	assertEqual(t, request(t, r, "OPTIONS", "/resource").Body.String(), "OPTIONS")
+	assert.Equal(t, "PATCH", request(t, r, "PATCH", "/resource").Body.String())
+	assert.Equal(t, "OPTIONS", request(t, r, "OPTIONS", "/resource").Body.String())
 }
 
 // Test: QueryPOST
@@ -34,8 +36,8 @@ func TestQueryPOST(t *testing.T) {
 		_, _ = w.Write([]byte("CREATE"))
 	})
 
-	assertEqual(t, request(t, r, "POST", "/upload?uploads").Body.String(), "UPLOAD")
-	assertEqual(t, request(t, r, "POST", "/upload").Body.String(), "CREATE")
+	assert.Equal(t, "UPLOAD", request(t, r, "POST", "/upload?uploads").Body.String())
+	assert.Equal(t, "CREATE", request(t, r, "POST", "/upload").Body.String())
 }
 
 // Test: QueryPUT
@@ -50,8 +52,8 @@ func TestQueryPUT(t *testing.T) {
 		_, _ = w.Write([]byte("PUT"))
 	})
 
-	assertEqual(t, request(t, r, "PUT", "/object?acl").Body.String(), "ACL")
-	assertEqual(t, request(t, r, "PUT", "/object").Body.String(), "PUT")
+	assert.Equal(t, "ACL", request(t, r, "PUT", "/object?acl").Body.String())
+	assert.Equal(t, "PUT", request(t, r, "PUT", "/object").Body.String())
 }
 
 // Test: QueryDELETE
@@ -66,8 +68,8 @@ func TestQueryDELETE(t *testing.T) {
 		_, _ = w.Write([]byte("DELETE"))
 	})
 
-	assertEqual(t, request(t, r, "DELETE", "/object?deleteAll").Body.String(), "DELETE_ALL")
-	assertEqual(t, request(t, r, "DELETE", "/object").Body.String(), "DELETE")
+	assert.Equal(t, "DELETE_ALL", request(t, r, "DELETE", "/object?deleteAll").Body.String())
+	assert.Equal(t, "DELETE", request(t, r, "DELETE", "/object").Body.String())
 }
 
 // Test: QueryHEAD
@@ -84,11 +86,11 @@ func TestQueryHEAD(t *testing.T) {
 	})
 
 	w := request(t, r, "HEAD", "/object?metadata")
-	assertEqual(t, w.Code, 200)
-	assertEqual(t, w.Header().Get("X-Custom"), "metadata")
+	assert.Equal(t, 200, w.Code)
+	assert.Equal(t, "metadata", w.Header().Get("X-Custom"))
 
 	w = request(t, r, "HEAD", "/object")
-	assertEqual(t, w.Code, 200)
+	assert.Equal(t, 200, w.Code)
 }
 
 // Test: QueryPATCH
@@ -103,8 +105,8 @@ func TestQueryPATCH(t *testing.T) {
 		_, _ = w.Write([]byte("PATCH"))
 	})
 
-	assertEqual(t, request(t, r, "PATCH", "/resource?partial").Body.String(), "PARTIAL")
-	assertEqual(t, request(t, r, "PATCH", "/resource").Body.String(), "PATCH")
+	assert.Equal(t, "PARTIAL", request(t, r, "PATCH", "/resource?partial").Body.String())
+	assert.Equal(t, "PATCH", request(t, r, "PATCH", "/resource").Body.String())
 }
 
 // Test: QueryOPTIONS
@@ -122,10 +124,10 @@ func TestQueryOPTIONS(t *testing.T) {
 	})
 
 	w := request(t, r, "OPTIONS", "/resource?cors")
-	assertEqual(t, w.Header().Get("Allow"), "GET, POST, CORS")
+	assert.Equal(t, "GET, POST, CORS", w.Header().Get("Allow"))
 
 	w = request(t, r, "OPTIONS", "/resource")
-	assertEqual(t, w.Header().Get("Allow"), "GET, POST")
+	assert.Equal(t, "GET, POST", w.Header().Get("Allow"))
 }
 
 // Test: Finalize and IsFinalized
@@ -137,20 +139,16 @@ func TestFinalizeAndIsFinalized(t *testing.T) {
 	})
 
 	// Initially not finalized
-	if r.IsFinalized() {
-		t.Error("router should not be finalized initially")
-	}
+	assert.False(t, r.IsFinalized(), "router should not be finalized initially")
 
 	// Finalize the router
 	r.Finalize()
 
 	// Should now be finalized
-	if !r.IsFinalized() {
-		t.Error("router should be finalized after calling Finalize()")
-	}
+	assert.True(t, r.IsFinalized(), "router should be finalized after calling Finalize()")
 
 	// Routes should still work after finalization
-	assertEqual(t, request(t, r, "GET", "/test").Body.String(), "OK")
+	assert.Equal(t, "OK", request(t, r, "GET", "/test").Body.String())
 }
 
 // Test: URL edge cases
@@ -162,22 +160,16 @@ func TestURLEdgeCases(t *testing.T) {
 
 	// Test with no parameters
 	_, err := r.URL("user.posts.show")
-	if err == nil {
-		t.Error("expected error when no parameters provided")
-	}
+	assert.Error(t, err, "expected error when no parameters provided")
 
 	// Test with odd number of parameters
 	_, err = r.URL("user.posts.show", "id")
-	if err == nil {
-		t.Error("expected error when odd number of parameters provided")
-	}
+	assert.Error(t, err, "expected error when odd number of parameters provided")
 
 	// Test with correct parameters
 	url, err := r.URL("user.posts.show", "id", "123", "postId", "456")
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-	assertEqual(t, url, "/users/123/posts/456")
+	assert.NoError(t, err)
+	assert.Equal(t, "/users/123/posts/456", url)
 }
 
 // Test: MustURL panics
@@ -213,8 +205,8 @@ func TestQueryChaining(t *testing.T) {
 		_, _ = w.Write([]byte("DEFAULT"))
 	})
 
-	assertEqual(t, request(t, r, "GET", "/search?admin&type=full").Body.String(), "FULL_ADMIN")
-	assertEqual(t, request(t, r, "GET", "/search?admin").Body.String(), "ADMIN")
-	assertEqual(t, request(t, r, "GET", "/search?type=full").Body.String(), "FULL")
-	assertEqual(t, request(t, r, "GET", "/search").Body.String(), "DEFAULT")
+	assert.Equal(t, "FULL_ADMIN", request(t, r, "GET", "/search?admin&type=full").Body.String())
+	assert.Equal(t, "ADMIN", request(t, r, "GET", "/search?admin").Body.String())
+	assert.Equal(t, "FULL", request(t, r, "GET", "/search?type=full").Body.String())
+	assert.Equal(t, "DEFAULT", request(t, r, "GET", "/search").Body.String())
 }

@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -20,9 +22,7 @@ func TestDirectVsQueryPerformance(t *testing.T) {
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
-		if w.Code != 200 {
-			t.Errorf("expected 200, got %d", w.Code)
-		}
+		assert.Equal(t, 200, w.Code)
 	})
 
 	t.Run("Query route (QueryGET)", func(t *testing.T) {
@@ -35,9 +35,7 @@ func TestDirectVsQueryPerformance(t *testing.T) {
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
-		if w.Code != 200 {
-			t.Errorf("expected 200, got %d", w.Code)
-		}
+		assert.Equal(t, 200, w.Code)
 	})
 }
 

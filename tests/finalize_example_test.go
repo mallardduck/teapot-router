@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -30,21 +32,15 @@ func TestFinalizeOptimization(t *testing.T) {
 	req := httptest.NewRequest("GET", "/simple", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Body.String() != "SIMPLE" {
-		t.Errorf("expected SIMPLE, got %s", w.Body.String())
-	}
+	assert.Equal(t, "SIMPLE", w.Body.String())
 
 	req = httptest.NewRequest("GET", "/with-meta", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Body.String() != "s3:Test:test" {
-		t.Errorf("expected s3:Test:test, got %s", w.Body.String())
-	}
+	assert.Equal(t, "s3:Test:test", w.Body.String())
 
 	// Verify router is finalized
-	if !r.IsFinalized() {
-		t.Error("router should be finalized")
-	}
+	assert.True(t, r.IsFinalized(), "router should be finalized")
 }
 
 // TestFinalizeIdempotent ensures calling Finalize multiple times is safe
@@ -62,9 +58,7 @@ func TestFinalizeIdempotent(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if w.Body.String() != "OK" {
-		t.Errorf("expected OK, got %s", w.Body.String())
-	}
+	assert.Equal(t, "OK", w.Body.String())
 }
 
 // TestS3WithFinalize demonstrates S3 API with Finalize
@@ -111,8 +105,6 @@ func TestS3WithFinalize(t *testing.T) {
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
-		if w.Body.String() != tt.expected {
-			t.Errorf("%s %s: got %q, want %q", tt.method, tt.path, w.Body.String(), tt.expected)
-		}
+		assert.Equal(t, tt.expected, w.Body.String(), "%s %s", tt.method, tt.path)
 	}
 }

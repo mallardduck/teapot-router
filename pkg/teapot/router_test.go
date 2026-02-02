@@ -21,9 +21,7 @@ func request(t *testing.T, router http.Handler, method, path string) *httptest.R
 
 func assertEqual(t *testing.T, got, want any) {
 	t.Helper()
-	if got != want {
-		t.Errorf("got %v, want %v", got, want)
-	}
+	assert.Equal(t, want, got)
 }
 
 // Test: Basic HTTP methods
@@ -46,11 +44,11 @@ func TestBasicHTTPMethods(t *testing.T) {
 		w.WriteHeader(200)
 	})
 
-	assertEqual(t, request(t, r, "GET", "/get").Body.String(), "GET")
-	assertEqual(t, request(t, r, "POST", "/post").Body.String(), "POST")
-	assertEqual(t, request(t, r, "PUT", "/put").Body.String(), "PUT")
-	assertEqual(t, request(t, r, "DELETE", "/delete").Body.String(), "DELETE")
-	assertEqual(t, request(t, r, "HEAD", "/head").Code, 200)
+	assert.Equal(t, "GET", request(t, r, "GET", "/get").Body.String())
+	assert.Equal(t, "POST", request(t, r, "POST", "/post").Body.String())
+	assert.Equal(t, "PUT", request(t, r, "PUT", "/put").Body.String())
+	assert.Equal(t, "DELETE", request(t, r, "DELETE", "/delete").Body.String())
+	assert.Equal(t, 200, request(t, r, "HEAD", "/head").Code)
 }
 
 // Test: URL parameters
@@ -98,9 +96,7 @@ func TestNamedRoutes(t *testing.T) {
 
 	// Test URL() with error handling
 	_, err := r.URL("nonexistent")
-	if err == nil {
-		t.Error("expected error for nonexistent route")
-	}
+	assert.Error(t, err, "expected error for nonexistent route")
 }
 
 // Test: S3 Action and Route Name context injection
@@ -269,16 +265,12 @@ func TestRouteMiddleware(t *testing.T) {
 	// Protected route should trigger middleware
 	middlewareCalled = false
 	request(t, r, "GET", "/protected")
-	if !middlewareCalled {
-		t.Error("middleware was not called for protected route")
-	}
+	assert.True(t, middlewareCalled, "middleware was not called for protected route")
 
 	// Public route should not trigger middleware
 	middlewareCalled = false
 	request(t, r, "GET", "/public")
-	if middlewareCalled {
-		t.Error("middleware was called for public route")
-	}
+	assert.False(t, middlewareCalled, "middleware was called for public route")
 }
 
 // Test: Global middleware via Use()
@@ -374,14 +366,13 @@ func TestRouteIntrospection(t *testing.T) {
 		Action("app:CreateUser")
 
 	routes := r.Routes()
-	if len(routes) != 2 {
-		t.Errorf("expected 2 routes, got %d", len(routes))
-	}
+	assert.Len(t, routes, 2)
 
 	// Check first route
-	if routes[0].Method != "GET" || routes[0].Pattern != "/users" || routes[0].Name != "users.list" || routes[0].Action != "app:ListUsers" {
-		t.Errorf("unexpected route info: %+v", routes[0])
-	}
+	assert.Equal(t, "GET", routes[0].Method)
+	assert.Equal(t, "/users", routes[0].Pattern)
+	assert.Equal(t, "users.list", routes[0].Name)
+	assert.Equal(t, "app:ListUsers", routes[0].Action)
 }
 
 // Test: Edge case - empty route name
@@ -468,11 +459,7 @@ func TestContextAccess(t *testing.T) {
 	request(t, r, "GET", "/mybucket/path/to/file.txt")
 
 	expected := []string{"s3:GetObject", "object.get", "mybucket", "path/to/file.txt"}
-	for i, v := range expected {
-		if values[i] != v {
-			t.Errorf("index %d: got %q, want %q", i, values[i], v)
-		}
-	}
+	assert.Equal(t, expected, values)
 }
 
 func TestMiddlewareGroupRoutes(t *testing.T) {
@@ -610,15 +597,7 @@ func TestMiddlewareGroupMultipleMiddlewares(t *testing.T) {
 		"mw3-after", "mw2-after", "mw1-after",
 	}
 
-	if len(executionOrder) != len(expected) {
-		t.Errorf("execution order length mismatch: got %d, want %d", len(executionOrder), len(expected))
-	}
-
-	for i, step := range expected {
-		if i >= len(executionOrder) || executionOrder[i] != step {
-			t.Errorf("execution order[%d]: got %q, want %q", i, executionOrder[i], step)
-		}
-	}
+	assert.Equal(t, expected, executionOrder)
 }
 
 // Test: Nested middleware groups - execution order
@@ -888,23 +867,15 @@ func TestMiddlewareGroupWithRouteSpecificMiddleware(t *testing.T) {
 	groupMwCalled = false
 	routeMwCalled = false
 	request(t, r, "GET", "/normal")
-	if !groupMwCalled {
-		t.Error("group middleware should be called for /normal")
-	}
-	if routeMwCalled {
-		t.Error("route middleware should NOT be called for /normal")
-	}
+	assert.True(t, groupMwCalled, "group middleware should be called for /normal")
+	assert.False(t, routeMwCalled, "route middleware should NOT be called for /normal")
 
 	// Test extra route - both middlewares
 	groupMwCalled = false
 	routeMwCalled = false
 	request(t, r, "GET", "/extra")
-	if !groupMwCalled {
-		t.Error("group middleware should be called for /extra")
-	}
-	if !routeMwCalled {
-		t.Error("route middleware should be called for /extra")
-	}
+	assert.True(t, groupMwCalled, "group middleware should be called for /extra")
+	assert.True(t, routeMwCalled, "route middleware should be called for /extra")
 }
 
 // Test: Routes added via With() are visible in Routes()

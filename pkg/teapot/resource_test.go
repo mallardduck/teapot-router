@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -71,13 +73,8 @@ func TestResourceRESTful(t *testing.T) {
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
-		if w.Code != tt.expectedCode {
-			t.Errorf("%s %s: expected code %d, got %d", tt.method, tt.path, tt.expectedCode, w.Code)
-		}
-
-		if len(calls) != 1 || calls[0] != tt.expectedCall {
-			t.Errorf("%s %s: expected [%s], got %v", tt.method, tt.path, tt.expectedCall, calls)
-		}
+		assert.Equal(t, tt.expectedCode, w.Code, "%s %s", tt.method, tt.path)
+		assert.Equal(t, []string{tt.expectedCall}, calls, "%s %s", tt.method, tt.path)
 	}
 }
 
@@ -126,13 +123,8 @@ func TestResourceS3Style(t *testing.T) {
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 
-		if w.Code != tt.expectedCode {
-			t.Errorf("%s %s: expected code %d, got %d", tt.method, tt.path, tt.expectedCode, w.Code)
-		}
-
-		if len(calls) != 1 || calls[0] != tt.expectedCall {
-			t.Errorf("%s %s: expected [%s], got %v", tt.method, tt.path, tt.expectedCall, calls)
-		}
+		assert.Equal(t, tt.expectedCode, w.Code, "%s %s", tt.method, tt.path)
+		assert.Equal(t, []string{tt.expectedCall}, calls, "%s %s", tt.method, tt.path)
 	}
 }
 
@@ -155,31 +147,23 @@ func TestResourcePartialHandlers(t *testing.T) {
 	req := httptest.NewRequest("GET", "/users", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 200 {
-		t.Errorf("GET /users: expected 200, got %d", w.Code)
-	}
+	assert.Equal(t, 200, w.Code, "GET /users")
 
 	req = httptest.NewRequest("GET", "/users/123", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 200 {
-		t.Errorf("GET /users/123: expected 200, got %d", w.Code)
-	}
+	assert.Equal(t, 200, w.Code, "GET /users/123")
 
 	// These should 405 (path exists but method not allowed, no handlers registered)
 	req = httptest.NewRequest("POST", "/users", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 405 {
-		t.Errorf("POST /users: expected 405 Method Not Allowed (no Store handler), got %d", w.Code)
-	}
+	assert.Equal(t, 405, w.Code, "POST /users - expected 405 Method Not Allowed (no Store handler)")
 
 	req = httptest.NewRequest("PUT", "/users/123", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 405 {
-		t.Errorf("PUT /users/123: expected 405 Method Not Allowed (no Update handler), got %d", w.Code)
-	}
+	assert.Equal(t, 405, w.Code, "PUT /users/123 - expected 405 Method Not Allowed (no Update handler)")
 }
 
 // TestResourceNaming verifies route names are correctly set
@@ -219,13 +203,8 @@ func TestResourceNaming(t *testing.T) {
 
 	for _, tt := range tests {
 		url, err := r.URL(tt.name, tt.params...)
-		if err != nil {
-			t.Errorf("URL(%s): unexpected error: %v", tt.name, err)
-			continue
-		}
-		if url != tt.expected {
-			t.Errorf("URL(%s): expected %s, got %s", tt.name, tt.expected, url)
-		}
+		assert.NoError(t, err, "URL(%s)", tt.name)
+		assert.Equal(t, tt.expected, url, "URL(%s)", tt.name)
 	}
 }
 
@@ -252,39 +231,27 @@ func TestResourceCustomMethods(t *testing.T) {
 	req := httptest.NewRequest("PUT", "/items", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 201 {
-		t.Errorf("PUT /items: expected 201, got %d", w.Code)
-	}
-	if storeCalls != 1 {
-		t.Errorf("PUT /items: expected 1 store call, got %d", storeCalls)
-	}
+	assert.Equal(t, 201, w.Code, "PUT /items")
+	assert.Equal(t, 1, storeCalls, "PUT /items store calls")
 
 	// POST /items should 405 (PUT is registered, POST is not)
 	req = httptest.NewRequest("POST", "/items", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 405 {
-		t.Errorf("POST /items: expected 405 Method Not Allowed, got %d", w.Code)
-	}
+	assert.Equal(t, 405, w.Code, "POST /items - expected 405 Method Not Allowed")
 
 	// Update should use POST
 	req = httptest.NewRequest("POST", "/items/123", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 200 {
-		t.Errorf("POST /items/123: expected 200, got %d", w.Code)
-	}
-	if updateCalls != 1 {
-		t.Errorf("POST /items/123: expected 1 update call, got %d", updateCalls)
-	}
+	assert.Equal(t, 200, w.Code, "POST /items/123")
+	assert.Equal(t, 1, updateCalls, "POST /items/123 update calls")
 
 	// PUT /items/123 should 405 (POST is registered, PUT is not)
 	req = httptest.NewRequest("PUT", "/items/123", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 405 {
-		t.Errorf("PUT /items/123: expected 405 Method Not Allowed, got %d", w.Code)
-	}
+	assert.Equal(t, 405, w.Code, "PUT /items/123 - expected 405 Method Not Allowed")
 }
 
 // TestResourceURLParams verifies URL parameters work correctly
@@ -304,9 +271,7 @@ func TestResourceURLParams(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if capturedParam != "abc-123" {
-		t.Errorf("expected productId='abc-123', got %q", capturedParam)
-	}
+	assert.Equal(t, "abc-123", capturedParam)
 }
 
 // TestResourceWithGroup verifies Resource works inside groups
@@ -328,31 +293,19 @@ func TestResourceWithGroup(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/users", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 200 {
-		t.Errorf("GET /api/users: expected 200, got %d", w.Code)
-	}
+	assert.Equal(t, 200, w.Code, "GET /api/users")
 
 	req = httptest.NewRequest("GET", "/api/users/123", nil)
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	if w.Code != 200 {
-		t.Errorf("GET /api/users/123: expected 200, got %d", w.Code)
-	}
+	assert.Equal(t, 200, w.Code, "GET /api/users/123")
 
 	// Test routes have correct names
 	url, err := r.URL("api.users.index")
-	if err != nil {
-		t.Errorf("URL(api.users.index): unexpected error: %v", err)
-	}
-	if url != "/api/users" {
-		t.Errorf("URL(api.users.index): expected /api/users, got %s", url)
-	}
+	assert.NoError(t, err, "URL(api.users.index)")
+	assert.Equal(t, "/api/users", url, "URL(api.users.index)")
 
 	url, err = r.URL("api.users.show", "userId", "123")
-	if err != nil {
-		t.Errorf("URL(api.users.show): unexpected error: %v", err)
-	}
-	if url != "/api/users/123" {
-		t.Errorf("URL(api.users.show): expected /api/users/123, got %s", url)
-	}
+	assert.NoError(t, err, "URL(api.users.show)")
+	assert.Equal(t, "/api/users/123", url, "URL(api.users.show)")
 }

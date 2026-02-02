@@ -1,8 +1,9 @@
 package core
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTranslatePattern(t *testing.T) {
@@ -60,13 +61,8 @@ func TestTranslatePattern(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gotPattern, gotWildcards := TranslatePattern(tt.input)
 
-			if gotPattern != tt.expectedPattern {
-				t.Errorf("TranslatePattern() pattern = %q, want %q", gotPattern, tt.expectedPattern)
-			}
-
-			if !reflect.DeepEqual(gotWildcards, tt.expectedWildcards) {
-				t.Errorf("TranslatePattern() wildcards = %v, want %v", gotWildcards, tt.expectedWildcards)
-			}
+			assert.Equal(t, tt.expectedPattern, gotPattern)
+			assert.Equal(t, tt.expectedWildcards, gotWildcards)
 		})
 	}
 }

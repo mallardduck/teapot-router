@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mallardduck/teapot-router/pkg/urlbuilder"
 )
 
@@ -18,9 +20,7 @@ func TestBucketURLFromRequest(t *testing.T) {
 	url := b.BucketURL(req, "mybucket")
 	expected := "http://localhost:8080/mybucket"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }
 
 // TestObjectURLFromRequest verifies object URL generation from request
@@ -33,9 +33,7 @@ func TestObjectURLFromRequest(t *testing.T) {
 	url := b.ObjectURL(req, "mybucket", "mykey")
 	expected := "http://localhost:8080/mybucket/mykey"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }
 
 // TestCanonicalDomain verifies canonical domain overrides request host
@@ -48,9 +46,7 @@ func TestCanonicalDomain(t *testing.T) {
 	url := b.BucketURL(req, "mybucket")
 	expected := "https://s3.example.com/mybucket"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }
 
 // TestCanonicalDomainHTTPS verifies canonical domain uses HTTPS
@@ -62,9 +58,7 @@ func TestCanonicalDomainHTTPS(t *testing.T) {
 	url := b.ObjectURL(req, "bucket", "key")
 	expected := "https://s3.production.com/bucket/key"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }
 
 // TestTLSDetection verifies HTTPS detection from TLS state
@@ -78,9 +72,7 @@ func TestTLSDetection(t *testing.T) {
 	url := b.BucketURL(req, "bucket")
 	expected := "https://example.com/bucket"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }
 
 // TestXForwardedProto verifies X-Forwarded-Proto header detection
@@ -94,9 +86,7 @@ func TestXForwardedProto(t *testing.T) {
 	url := b.BucketURL(req, "bucket")
 	expected := "https://example.com/bucket"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }
 
 // TestXForwardedProtoCaseInsensitive verifies header is case-insensitive
@@ -110,9 +100,7 @@ func TestXForwardedProtoCaseInsensitive(t *testing.T) {
 	url := b.BucketURL(req, "bucket")
 	expected := "https://example.com/bucket"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }
 
 // TestDefaultHTTP verifies default scheme is http
@@ -126,9 +114,7 @@ func TestDefaultHTTP(t *testing.T) {
 	url := b.BucketURL(req, "bucket")
 	expected := "http://localhost/bucket"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }
 
 // TestObjectURLWithSlashInKey verifies keys with slashes work correctly
@@ -141,9 +127,7 @@ func TestObjectURLWithSlashInKey(t *testing.T) {
 	url := b.ObjectURL(req, "mybucket", "path/to/object.txt")
 	expected := "http://localhost/mybucket/path/to/object.txt"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }
 
 // TestNonStandardPort verifies port numbers are preserved
@@ -156,9 +140,7 @@ func TestNonStandardPort(t *testing.T) {
 	url := b.BucketURL(req, "mybucket")
 	expected := "http://localhost:9000/mybucket"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }
 
 // TestSchemePriorityCanonical verifies canonical domain takes priority
@@ -173,9 +155,7 @@ func TestSchemePriorityCanonical(t *testing.T) {
 	url := b.BucketURL(req, "bucket")
 	expected := "https://s3.example.com/bucket"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }
 
 // TestSchemePriorityXForwardedProto verifies X-Forwarded-Proto takes priority over TLS
@@ -190,9 +170,7 @@ func TestSchemePriorityXForwardedProto(t *testing.T) {
 	url := b.BucketURL(req, "bucket")
 	expected := "https://localhost/bucket"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }
 
 // TestMultipleBuckets verifies builder can generate URLs for different buckets
@@ -212,9 +190,7 @@ func TestMultipleBuckets(t *testing.T) {
 
 	for _, tt := range tests {
 		url := b.BucketURL(req, tt.bucket)
-		if url != tt.expected {
-			t.Errorf("bucket %s: expected %s, got %s", tt.bucket, tt.expected, url)
-		}
+		assert.Equal(t, tt.expected, url, "bucket %s", tt.bucket)
 	}
 }
 
@@ -236,9 +212,7 @@ func TestMultipleObjects(t *testing.T) {
 
 	for _, tt := range tests {
 		url := b.ObjectURL(req, tt.bucket, tt.key)
-		if url != tt.expected {
-			t.Errorf("bucket=%s, key=%s: expected %s, got %s", tt.bucket, tt.key, tt.expected, url)
-		}
+		assert.Equal(t, tt.expected, url, "bucket=%s, key=%s", tt.bucket, tt.key)
 	}
 }
 
@@ -260,9 +234,7 @@ func TestBuildURL(t *testing.T) {
 
 	for _, tt := range tests {
 		url := b.BuildURL(req, tt.path)
-		if url != tt.expected {
-			t.Errorf("path=%s: expected %s, got %s", tt.path, tt.expected, url)
-		}
+		assert.Equal(t, tt.expected, url, "path=%s", tt.path)
 	}
 }
 
@@ -276,9 +248,7 @@ func TestBuildURLFromRequest(t *testing.T) {
 	url := b.BuildURL(req, "/mybucket/mykey")
 	expected := "http://localhost:9000/mybucket/mykey"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }
 
 // TestBuildURLWithTLS verifies BuildURL respects TLS
@@ -292,7 +262,5 @@ func TestBuildURLWithTLS(t *testing.T) {
 	url := b.BuildURL(req, "/mybucket")
 	expected := "https://example.com/mybucket"
 
-	if url != expected {
-		t.Errorf("expected %s, got %s", expected, url)
-	}
+	assert.Equal(t, expected, url)
 }

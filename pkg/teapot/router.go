@@ -613,15 +613,15 @@ func (r *Router) Routes() []RouteInfo {
 	return infos
 }
 
-// RoutesHandler returns an HTTP handler that displays all registered routes.
+// ListRoutesHandler returns an HTTP handler that displays all registered routes.
 // The handler responds with JSON or HTML based on the Accept header.
 //
 // Example:
 //
 //	if debug {
-//	    r.GET("/.internal/routes", r.RoutesHandler()).Name("debug.routes")
+//	    r.GET("/.internal/routes", r.ListRoutesHandler()).Name("debug.routes")
 //	}
-func (r *Router) RoutesHandler() http.HandlerFunc {
+func (r *Router) ListRoutesHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		routes := r.Routes()
 
@@ -634,7 +634,8 @@ func (r *Router) RoutesHandler() http.HandlerFunc {
 				"routes": routes,
 			})
 			if err != nil {
-				// todo log error
+				log.Printf("[teapot-router] failed to encode routes as JSON: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 			return
@@ -719,7 +720,7 @@ func (r *Router) RoutesHandler() http.HandlerFunc {
 //	    r.RegisterDebugRoute("/.internal/routes", "debug.routes")
 //	}
 func (r *Router) RegisterDebugRoute(path, name string) *RouteBuilder {
-	return r.GET(path, r.RoutesHandler()).Name(name)
+	return r.GET(path, r.ListRoutesHandler()).Name(name)
 }
 
 // GetAction retrieves the S3 action from the request context

@@ -37,3 +37,15 @@ func GetRouteName(ctx context.Context) string {
 	}
 	return ""
 }
+
+// InjectRouteMetadata adds route metadata (Action, Name) to the context if present.
+// Returns the updated context.
+func InjectRouteMetadata(ctx context.Context, route *Route) context.Context {
+	if route.Action != "" {
+		ctx = SetAction(ctx, route.Action)
+	}
+	if route.Name != "" {
+		ctx = SetRouteName(ctx, route.Name)
+	}
+	return ctx
+}

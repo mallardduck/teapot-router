@@ -23,7 +23,7 @@ func TestRoutesHandler(t *testing.T) {
 	r.DELETE("/users/{id}", dummyHandler).Name("users.destroy")
 
 	// Get the handler
-	handler := r.RoutesHandler()
+	handler := r.ListRoutesHandler()
 
 	// Test JSON response (with Accept header)
 	req := httptest.NewRequest("GET", "/.internal/routes", nil)
@@ -65,7 +65,7 @@ func TestRoutesHandlerHTML(t *testing.T) {
 	r.GET("/users", dummyHandler).Name("users.index")
 	r.GET("/posts", dummyHandler).Name("posts.index")
 
-	handler := r.RoutesHandler()
+	handler := r.ListRoutesHandler()
 
 	// Test HTML response (no Accept header defaults to HTML)
 	req := httptest.NewRequest("GET", "/.internal/routes", nil)

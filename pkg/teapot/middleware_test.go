@@ -8,7 +8,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 
+	"github.com/mallardduck/teapot-router/internal/core"
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -452,5 +455,434 @@ func TestRouteContextWithNilCases(t *testing.T) {
 		r.ServeHTTP(w, req)
 
 		// Should handle gracefully (fallback to pattern matching)
+	})
+}
+
+// TestTryFastPath tests the TryFastPath function directly
+func TestTryFastPath(t *testing.T) {
+	t.Run("nil chi context returns nil", func(t *testing.T) {
+		r := teapot.New()
+		ctx := context.Background()
+
+		route := r.TryFastPath(ctx)
+		assert.Nil(t, route)
+	})
+
+	t.Run("chi context with empty route pattern returns nil", func(t *testing.T) {
+		r := teapot.New()
+		rctx := chi.NewRouteContext()
+		ctx := context.WithValue(context.Background(), chi.RouteCtxKey, rctx)
+
+		route := r.TryFastPath(ctx)
+		assert.Nil(t, route)
+	})
+
+	t.Run("finds direct route via chi context", func(t *testing.T) {
+		r := teapot.New()
+		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Action("test:Action").Name("test.name")
+		r.Finalize()
+
+		// Simulate Chi's RouteContext
+		rctx := chi.NewRouteContext()
+		rctx.RouteMethod = "GET"
+		rctx.RoutePatterns = []string{"/test"}
+		ctx := context.WithValue(context.Background(), chi.RouteCtxKey, rctx)
+
+		route := r.TryFastPath(ctx)
+		require.NotNil(t, route)
+		assert.Equal(t, "test:Action", route.Action)
+		assert.Equal(t, "test.name", route.Name)
+	})
+
+	t.Run("finds dispatcher route via chi context", func(t *testing.T) {
+		r := teapot.New()
+		r.QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {}).Action("s3:ListBucket")
+		r.QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {}).Action("s3:GetBucketAcl").Query("acl")
+		r.Finalize()
+
+		// Simulate Chi's RouteContext
+		rctx := chi.NewRouteContext()
+		rctx.RouteMethod = "GET"
+		rctx.RoutePatterns = []string{"/bucket"}
+		ctx := context.WithValue(context.Background(), chi.RouteCtxKey, rctx)
+
+		route := r.TryFastPath(ctx)
+		require.NotNil(t, route)
+		// Should return fallback route (no query matchers)
+		assert.Equal(t, "s3:ListBucket", route.Action)
+	})
+
+	t.Run("returns nil for non-existent route", func(t *testing.T) {
+		r := teapot.New()
+		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {})
+		r.Finalize()
+
+		// Simulate Chi's RouteContext for different route
+		rctx := chi.NewRouteContext()
+		rctx.RouteMethod = "GET"
+		rctx.RoutePatterns = []string{"/other"}
+		ctx := context.WithValue(context.Background(), chi.RouteCtxKey, rctx)
+
+		route := r.TryFastPath(ctx)
+		assert.Nil(t, route)
+	})
+}
+
+// TestTryFallbackPath tests the TryFallbackPath function directly
+func TestTryFallbackPath(t *testing.T) {
+	t.Run("exact match on direct route", func(t *testing.T) {
+		r := teapot.New()
+		r.GET("/exact", func(w http.ResponseWriter, req *http.Request) {}).Action("exact:Action")
+		r.Finalize()
+
+		route := r.TryFallbackPath("GET", "/exact")
+		require.NotNil(t, route)
+		assert.Equal(t, "exact:Action", route.Action)
+	})
+
+	t.Run("pattern match with path parameters", func(t *testing.T) {
+		r := teapot.New()
+		r.GET("/users/{id}", func(w http.ResponseWriter, req *http.Request) {}).Action("users:Get")
+		r.Finalize()
+
+		route := r.TryFallbackPath("GET", "/users/123")
+		require.NotNil(t, route)
+		assert.Equal(t, "users:Get", route.Action)
+	})
+
+	t.Run("wildcard pattern match", func(t *testing.T) {
+		r := teapot.New()
+		r.GET("/files/*", func(w http.ResponseWriter, req *http.Request) {}).Action("files:Get")
+		r.Finalize()
+
+		route := r.TryFallbackPath("GET", "/files/a/b/c")
+		require.NotNil(t, route)
+		assert.Equal(t, "files:Get", route.Action)
+	})
+
+	t.Run("returns nil for non-matching route", func(t *testing.T) {
+		r := teapot.New()
+		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {})
+		r.Finalize()
+
+		route := r.TryFallbackPath("GET", "/other")
+		assert.Nil(t, route)
+	})
+
+	t.Run("returns nil for different method", func(t *testing.T) {
+		r := teapot.New()
+		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {})
+		r.Finalize()
+
+		route := r.TryFallbackPath("POST", "/test")
+		assert.Nil(t, route)
+	})
+}
+
+// TestFindBestDispatcherRoute tests the FindBestDispatcherRoute function directly
+func TestFindBestDispatcherRoute(t *testing.T) {
+	t.Run("returns fallback route when available", func(t *testing.T) {
+		dispatcher := &core.Dispatcher{
+			Routes: []*core.Route{
+				{Action: "s3:GetBucketAcl", QueryMatchers: []core.QueryMatcher{&core.QueryExistsMatcher{Key: "acl"}}},
+				{Action: "s3:ListBucket", QueryMatchers: []core.QueryMatcher{}}, // fallback
+				{Action: "s3:GetBucketVersioning", QueryMatchers: []core.QueryMatcher{&core.QueryExistsMatcher{Key: "versioning"}}},
+			},
+		}
+
+		route := core.FindBestDispatcherRoute(dispatcher)
+		require.NotNil(t, route)
+		assert.Equal(t, "s3:ListBucket", route.Action)
+		assert.Empty(t, route.QueryMatchers)
+	})
+
+	t.Run("returns first route when no fallback", func(t *testing.T) {
+		dispatcher := &core.Dispatcher{
+			Routes: []*core.Route{
+				{Action: "s3:GetBucketAcl", QueryMatchers: []core.QueryMatcher{&core.QueryExistsMatcher{Key: "acl"}}},
+				{Action: "s3:GetBucketVersioning", QueryMatchers: []core.QueryMatcher{&core.QueryExistsMatcher{Key: "versioning"}}},
+			},
+		}
+
+		route := core.FindBestDispatcherRoute(dispatcher)
+		require.NotNil(t, route)
+		assert.Equal(t, "s3:GetBucketAcl", route.Action)
+	})
+
+	t.Run("returns nil for empty dispatcher", func(t *testing.T) {
+		dispatcher := &core.Dispatcher{
+			Routes: []*core.Route{},
+		}
+
+		route := core.FindBestDispatcherRoute(dispatcher)
+		assert.Nil(t, route)
+	})
+
+	t.Run("prefers fallback over first when both exist", func(t *testing.T) {
+		dispatcher := &core.Dispatcher{
+			Routes: []*core.Route{
+				{Action: "first:WithQuery", QueryMatchers: []core.QueryMatcher{&core.QueryExistsMatcher{Key: "q"}}},
+				{Action: "second:Fallback", QueryMatchers: []core.QueryMatcher{}},
+			},
+		}
+
+		route := core.FindBestDispatcherRoute(dispatcher)
+		require.NotNil(t, route)
+		assert.Equal(t, "second:Fallback", route.Action)
+	})
+}
+
+// TestInjectRouteMetadata tests the InjectRouteMetadata function directly
+func TestInjectRouteMetadata(t *testing.T) {
+	t.Run("injects both action and name", func(t *testing.T) {
+		ctx := context.Background()
+		route := &core.Route{
+			Action: "test:Action",
+			Name:   "test.name",
+		}
+
+		ctx = core.InjectRouteMetadata(ctx, route)
+
+		assert.Equal(t, "test:Action", core.GetAction(ctx))
+		assert.Equal(t, "test.name", core.GetRouteName(ctx))
+	})
+
+	t.Run("injects only action when name is empty", func(t *testing.T) {
+		ctx := context.Background()
+		route := &core.Route{
+			Action: "test:Action",
+			Name:   "",
+		}
+
+		ctx = core.InjectRouteMetadata(ctx, route)
+
+		assert.Equal(t, "test:Action", core.GetAction(ctx))
+		assert.Equal(t, "", core.GetRouteName(ctx))
+	})
+
+	t.Run("injects only name when action is empty", func(t *testing.T) {
+		ctx := context.Background()
+		route := &core.Route{
+			Action: "",
+			Name:   "test.name",
+		}
+
+		ctx = core.InjectRouteMetadata(ctx, route)
+
+		assert.Equal(t, "", core.GetAction(ctx))
+		assert.Equal(t, "test.name", core.GetRouteName(ctx))
+	})
+
+	t.Run("handles empty route gracefully", func(t *testing.T) {
+		ctx := context.Background()
+		route := &core.Route{
+			Action: "",
+			Name:   "",
+		}
+
+		ctx = core.InjectRouteMetadata(ctx, route)
+
+		assert.Equal(t, "", core.GetAction(ctx))
+		assert.Equal(t, "", core.GetRouteName(ctx))
+	})
+
+	t.Run("overwrites existing context values", func(t *testing.T) {
+		ctx := context.Background()
+		ctx = core.SetAction(ctx, "old:Action")
+		ctx = core.SetRouteName(ctx, "old.name")
+
+		route := &core.Route{
+			Action: "new:Action",
+			Name:   "new.name",
+		}
+
+		ctx = core.InjectRouteMetadata(ctx, route)
+
+		assert.Equal(t, "new:Action", core.GetAction(ctx))
+		assert.Equal(t, "new.name", core.GetRouteName(ctx))
+	})
+}
+
+// MockHandler is a mock http.Handler for testing
+type MockHandler struct {
+	mock.Mock
+}
+
+func (m *MockHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	m.Called(w, r)
+}
+
+// TestRouteContextMiddlewareFactory tests the RouteContextMiddleware factory function
+func TestRouteContextMiddlewareFactory(t *testing.T) {
+	t.Run("returns middleware function", func(t *testing.T) {
+		r := teapot.New()
+		middleware := teapot.RouteContextMiddleware(r)
+
+		assert.NotNil(t, middleware)
+
+		// Verify it returns a handler
+		mockNext := new(MockHandler)
+		handler := middleware(mockNext)
+		assert.NotNil(t, handler)
+	})
+
+	t.Run("created middleware injects context", func(t *testing.T) {
+		r := teapot.New()
+		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Action("test:Action").Name("test.name")
+		r.Finalize()
+
+		// Create middleware
+		middleware := teapot.RouteContextMiddleware(r)
+
+		// Mock next handler that captures context
+		var capturedAction, capturedName string
+		mockNext := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			capturedAction = core.GetAction(req.Context())
+			capturedName = core.GetRouteName(req.Context())
+		})
+
+		handler := middleware(mockNext)
+
+		// Create request with Chi context
+		req := httptest.NewRequest("GET", "/test", nil)
+		rctx := chi.NewRouteContext()
+		rctx.RouteMethod = "GET"
+		rctx.RoutePatterns = []string{"/test"}
+		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		assert.Equal(t, "test:Action", capturedAction)
+		assert.Equal(t, "test.name", capturedName)
+	})
+}
+
+// TestServeHTTP tests the ServeHTTP method through the middleware
+func TestServeHTTP(t *testing.T) {
+	t.Run("fast path - injects context and calls next", func(t *testing.T) {
+		r := teapot.New()
+		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Action("test:Action").Name("test.name")
+		r.Finalize()
+
+		// Create middleware
+		middleware := teapot.RouteContextMiddleware(r)
+
+		// Track if next handler was called
+		nextCalled := false
+		var capturedAction, capturedName string
+		mockNext := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			nextCalled = true
+			capturedAction = core.GetAction(req.Context())
+			capturedName = core.GetRouteName(req.Context())
+		})
+
+		handler := middleware(mockNext)
+
+		// Create request with Chi context (fast path)
+		req := httptest.NewRequest("GET", "/test", nil)
+		rctx := chi.NewRouteContext()
+		rctx.RouteMethod = "GET"
+		rctx.RoutePatterns = []string{"/test"}
+		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		assert.True(t, nextCalled)
+		assert.Equal(t, "test:Action", capturedAction)
+		assert.Equal(t, "test.name", capturedName)
+	})
+
+	t.Run("fallback path - injects context and calls next", func(t *testing.T) {
+		r := teapot.New()
+		r.GET("/users/{id}", func(w http.ResponseWriter, req *http.Request) {}).Action("users:Get").Name("users.get")
+		r.Finalize()
+
+		// Create middleware
+		middleware := teapot.RouteContextMiddleware(r)
+
+		// Track if next handler was called
+		nextCalled := false
+		var capturedAction, capturedName string
+		mockNext := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			nextCalled = true
+			capturedAction = core.GetAction(req.Context())
+			capturedName = core.GetRouteName(req.Context())
+		})
+
+		handler := middleware(mockNext)
+
+		// Create request without Chi context (fallback path)
+		req := httptest.NewRequest("GET", "/users/123", nil)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		assert.True(t, nextCalled)
+		assert.Equal(t, "users:Get", capturedAction)
+		assert.Equal(t, "users.get", capturedName)
+	})
+
+	t.Run("no matching route - still calls next without context", func(t *testing.T) {
+		r := teapot.New()
+		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {})
+		r.Finalize()
+
+		// Create middleware
+		middleware := teapot.RouteContextMiddleware(r)
+
+		// Track if next handler was called
+		nextCalled := false
+		var capturedAction, capturedName string
+		mockNext := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			nextCalled = true
+			capturedAction = core.GetAction(req.Context())
+			capturedName = core.GetRouteName(req.Context())
+		})
+
+		handler := middleware(mockNext)
+
+		// Create request for non-existent route
+		req := httptest.NewRequest("GET", "/nonexistent", nil)
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		assert.True(t, nextCalled)
+		assert.Equal(t, "", capturedAction)
+		assert.Equal(t, "", capturedName)
+	})
+
+	t.Run("dispatcher route - injects early fallback context", func(t *testing.T) {
+		r := teapot.New()
+		r.QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {}).Action("s3:ListBucket")
+		r.QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {}).Action("s3:GetBucketAcl").Query("acl")
+		r.Finalize()
+
+		// Create middleware
+		middleware := teapot.RouteContextMiddleware(r)
+
+		// Track if next handler was called
+		nextCalled := false
+		var capturedAction string
+		mockNext := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			nextCalled = true
+			capturedAction = core.GetAction(req.Context())
+		})
+
+		handler := middleware(mockNext)
+
+		// Create request with Chi context for dispatcher route
+		req := httptest.NewRequest("GET", "/bucket", nil)
+		rctx := chi.NewRouteContext()
+		rctx.RouteMethod = "GET"
+		rctx.RoutePatterns = []string{"/bucket"}
+		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, req)
+
+		assert.True(t, nextCalled)
+		// Should inject fallback route action
+		assert.Equal(t, "s3:ListBucket", capturedAction)
 	})
 }

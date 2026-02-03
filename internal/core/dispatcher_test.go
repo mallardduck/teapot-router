@@ -256,3 +256,57 @@ func TestDispatcherUpdateSpecificity(t *testing.T) {
 	// route2 should now be first due to higher specificity
 	assert.Equal(t, 1, dispatcher.routeSpecificity(dispatcher.Routes[0]))
 }
+
+func TestFindBestDispatcherRoute(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+
+	t.Run("returns fallback route when available", func(t *testing.T) {
+		dispatcher := &Dispatcher{
+			Routes: []*Route{
+				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:GetBucketAcl", QueryMatchers: []QueryMatcher{&QueryExistsMatcher{Key: "acl"}}},
+				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:ListBucket", QueryMatchers: []QueryMatcher{}}, // fallback
+				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:GetBucketVersioning", QueryMatchers: []QueryMatcher{&QueryExistsMatcher{Key: "versioning"}}},
+			},
+		}
+
+		route := FindBestDispatcherRoute(dispatcher)
+		assert.NotNil(t, route)
+		assert.Equal(t, "s3:ListBucket", route.Action)
+		assert.Empty(t, route.QueryMatchers)
+	})
+
+	t.Run("returns first route when no fallback", func(t *testing.T) {
+		dispatcher := &Dispatcher{
+			Routes: []*Route{
+				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:GetBucketAcl", QueryMatchers: []QueryMatcher{&QueryExistsMatcher{Key: "acl"}}},
+				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:GetBucketVersioning", QueryMatchers: []QueryMatcher{&QueryExistsMatcher{Key: "versioning"}}},
+			},
+		}
+
+		route := FindBestDispatcherRoute(dispatcher)
+		assert.NotNil(t, route)
+		assert.Equal(t, "s3:GetBucketAcl", route.Action)
+	})
+
+	t.Run("returns nil for empty dispatcher", func(t *testing.T) {
+		dispatcher := &Dispatcher{
+			Routes: []*Route{},
+		}
+
+		route := FindBestDispatcherRoute(dispatcher)
+		assert.Nil(t, route)
+	})
+
+	t.Run("prefers fallback over first when both exist", func(t *testing.T) {
+		dispatcher := &Dispatcher{
+			Routes: []*Route{
+				{Method: "GET", Pattern: "/test", Handler: handler, Action: "first:WithQuery", QueryMatchers: []QueryMatcher{&QueryExistsMatcher{Key: "q"}}},
+				{Method: "GET", Pattern: "/test", Handler: handler, Action: "second:Fallback", QueryMatchers: []QueryMatcher{}},
+			},
+		}
+
+		route := FindBestDispatcherRoute(dispatcher)
+		assert.NotNil(t, route)
+		assert.Equal(t, "second:Fallback", route.Action)
+	})
+}

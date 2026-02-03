@@ -53,3 +53,73 @@ func TestMultipleContextValues(t *testing.T) {
 	asserts.Equal("s3:PutObject", GetAction(ctx))
 	asserts.Equal("object.put", GetRouteName(ctx))
 }
+
+func TestInjectRouteMetadata(t *testing.T) {
+	t.Run("injects both action and name", func(t *testing.T) {
+		ctx := context.Background()
+		route := &Route{
+			Action: "test:Action",
+			Name:   "test.name",
+		}
+
+		ctx = InjectRouteMetadata(ctx, route)
+
+		assert.Equal(t, "test:Action", GetAction(ctx))
+		assert.Equal(t, "test.name", GetRouteName(ctx))
+	})
+
+	t.Run("injects only action when name is empty", func(t *testing.T) {
+		ctx := context.Background()
+		route := &Route{
+			Action: "test:Action",
+			Name:   "",
+		}
+
+		ctx = InjectRouteMetadata(ctx, route)
+
+		assert.Equal(t, "test:Action", GetAction(ctx))
+		assert.Equal(t, "", GetRouteName(ctx))
+	})
+
+	t.Run("injects only name when action is empty", func(t *testing.T) {
+		ctx := context.Background()
+		route := &Route{
+			Action: "",
+			Name:   "test.name",
+		}
+
+		ctx = InjectRouteMetadata(ctx, route)
+
+		assert.Equal(t, "", GetAction(ctx))
+		assert.Equal(t, "test.name", GetRouteName(ctx))
+	})
+
+	t.Run("handles empty route gracefully", func(t *testing.T) {
+		ctx := context.Background()
+		route := &Route{
+			Action: "",
+			Name:   "",
+		}
+
+		ctx = InjectRouteMetadata(ctx, route)
+
+		assert.Equal(t, "", GetAction(ctx))
+		assert.Equal(t, "", GetRouteName(ctx))
+	})
+
+	t.Run("overwrites existing context values", func(t *testing.T) {
+		ctx := context.Background()
+		ctx = SetAction(ctx, "old:Action")
+		ctx = SetRouteName(ctx, "old.name")
+
+		route := &Route{
+			Action: "new:Action",
+			Name:   "new.name",
+		}
+
+		ctx = InjectRouteMetadata(ctx, route)
+
+		assert.Equal(t, "new:Action", GetAction(ctx))
+		assert.Equal(t, "new.name", GetRouteName(ctx))
+	})
+}

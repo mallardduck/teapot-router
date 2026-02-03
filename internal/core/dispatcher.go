@@ -51,13 +51,7 @@ func (d *Dispatcher) matchesQuery(r *http.Request, rt *Route) bool {
 
 func (d *Dispatcher) executeRoute(w http.ResponseWriter, r *http.Request, rt *Route) {
 	// Inject context values
-	ctx := r.Context()
-	if rt.Action != "" {
-		ctx = SetAction(ctx, rt.Action)
-	}
-	if rt.Name != "" {
-		ctx = SetRouteName(ctx, rt.Name)
-	}
+	ctx := InjectRouteMetadata(r.Context(), rt)
 
 	// Handle wildcard parameter remapping
 	// If route has wildcard params (e.g., {key:.*}), copy from chi's "*" param
@@ -107,4 +101,22 @@ func (d *Dispatcher) UpdateSpecificity() {
 	sort.Slice(d.Routes, func(i, j int) bool {
 		return d.routeSpecificity(d.Routes[i]) > d.routeSpecificity(d.Routes[j])
 	})
+}
+
+// FindBestDispatcherRoute finds the best route from a dispatcher for early context injection.
+// Prefers routes without query matchers (fallback routes), otherwise uses the first (most specific).
+func FindBestDispatcherRoute(dispatcher *Dispatcher) *Route {
+	// Find fallback route (no query matchers)
+	for _, rt := range dispatcher.Routes {
+		if len(rt.QueryMatchers) == 0 {
+			return rt
+		}
+	}
+
+	// If no fallback, use first route (most specific)
+	if len(dispatcher.Routes) > 0 {
+		return dispatcher.Routes[0]
+	}
+
+	return nil
 }

@@ -21,25 +21,25 @@ func (m *routeContextMiddleware) ServeHTTP(w http.ResponseWriter, req *http.Requ
 	ctx := req.Context()
 
 	// Try fast path first (Chi's RouteContext available in Route() groups)
-	if route := m.tryFastPath(ctx); route != nil {
-		ctx = m.injectRouteMetadata(ctx, route)
+	if route := m.router.TryFastPath(ctx); route != nil {
+		ctx = core.InjectRouteMetadata(ctx, route)
 		req = req.WithContext(ctx)
 		m.next.ServeHTTP(w, req)
 		return
 	}
 
 	// Fallback: manually match route when RouteContext unavailable
-	if route := m.tryFallbackPath(req.Method, req.URL.Path); route != nil {
-		ctx = m.injectRouteMetadata(ctx, route)
+	if route := m.router.TryFallbackPath(req.Method, req.URL.Path); route != nil {
+		ctx = core.InjectRouteMetadata(ctx, route)
 		req = req.WithContext(ctx)
 	}
 
 	m.next.ServeHTTP(w, req)
 }
 
-// tryFastPath attempts to find a route using Chi's RouteContext (fast path).
+// TryFastPath attempts to find a route using Chi's RouteContext (fast path).
 // Returns the route if found, nil otherwise.
-func (m *routeContextMiddleware) tryFastPath(ctx context.Context) *core.Route {
+func (r *Router) TryFastPath(ctx context.Context) *core.Route {
 	rctx := chi.RouteContext(ctx)
 	if rctx == nil || rctx.RoutePattern() == "" {
 		return nil
@@ -50,59 +50,29 @@ func (m *routeContextMiddleware) tryFastPath(ctx context.Context) *core.Route {
 	key := method + ":" + pattern
 
 	// Check if this is a dispatcher route (query-multiplexed)
-	if disp, exists := m.router.dispatchers[key]; exists && len(disp.Routes) > 0 {
-		return m.findBestDispatcherRoute(disp)
+	if disp, exists := r.dispatchers[key]; exists && len(disp.Routes) > 0 {
+		return core.FindBestDispatcherRoute(disp)
 	}
 
 	// Check if this is a direct route
-	if route, exists := m.router.directRoutes[key]; exists {
+	if route, exists := r.directRoutes[key]; exists {
 		return route
 	}
 
 	return nil
 }
 
-// tryFallbackPath manually matches a route when Chi's RouteContext is unavailable.
+// TryFallbackPath manually matches a route when Chi's RouteContext is unavailable.
 // Returns the route if found, nil otherwise.
-func (m *routeContextMiddleware) tryFallbackPath(method, path string) *core.Route {
+func (r *Router) TryFallbackPath(method, path string) *core.Route {
 	// Try exact match first (fast)
 	key := method + ":" + path
-	if route, exists := m.router.directRoutes[key]; exists {
+	if route, exists := r.directRoutes[key]; exists {
 		return route
 	}
 
 	// Pattern matching (slower)
-	return m.router.findMatchingRoute(method, path)
-}
-
-// findBestDispatcherRoute finds the best route from a dispatcher for early context injection.
-// Prefers routes without query matchers (fallback routes), otherwise uses the first (most specific).
-func (m *routeContextMiddleware) findBestDispatcherRoute(disp *core.Dispatcher) *core.Route {
-	// Find fallback route (no query matchers)
-	for _, rt := range disp.Routes {
-		if len(rt.QueryMatchers) == 0 {
-			return rt
-		}
-	}
-
-	// If no fallback, use first route (most specific)
-	if len(disp.Routes) > 0 {
-		return disp.Routes[0]
-	}
-
-	return nil
-}
-
-// injectRouteMetadata adds route metadata (Action, Name) to the context if present.
-// Returns the updated context.
-func (m *routeContextMiddleware) injectRouteMetadata(ctx context.Context, route *core.Route) context.Context {
-	if route.Action != "" {
-		ctx = core.SetAction(ctx, route.Action)
-	}
-	if route.Name != "" {
-		ctx = core.SetRouteName(ctx, route.Name)
-	}
-	return ctx
+	return r.findMatchingRoute(method, path)
 }
 
 // RouteContextMiddleware returns middleware that injects teapot route metadata (Name, Action)

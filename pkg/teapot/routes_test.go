@@ -90,6 +90,28 @@ func TestNewListRoutesHandlerHTML(t *testing.T) {
 	}
 }
 
+// TestNewListRoutesHandlerHTMLQueryParams verifies HTML output includes query params
+func TestNewListRoutesHandlerHTMLQueryParams(t *testing.T) {
+	r := teapot.New()
+
+	r.QueryGET("/bucket", dummyHandler).Query("acl").Name("bucket.get-acl")
+	r.QueryGET("/bucket", dummyHandler).QueryValue("list-type", "v2").Name("bucket.list-v2")
+
+	handler := teapot.NewListRoutesHandler(r, nil)
+
+	req := httptest.NewRequest("GET", "/.internal/routes", nil)
+	w := httptest.NewRecorder()
+	handler(w, req)
+
+	assert.Equal(t, 200, w.Code)
+	body := w.Body.String()
+	assert.Contains(t, body, "<th>Query</th>")
+	// Existence-only param: just the key
+	assert.Contains(t, body, `<td class="query">acl</td>`)
+	// Value param: key=value
+	assert.Contains(t, body, `<td class="query">list-type=v2</td>`)
+}
+
 // TestNewListRoutesHandlerAsRoute verifies wiring NewListRoutesHandler into a route
 func TestNewListRoutesHandlerAsRoute(t *testing.T) {
 	r := teapot.New()

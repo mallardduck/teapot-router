@@ -81,6 +81,7 @@ func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
         tr:hover { background-color: #f9f9f9; }
         .method { font-family: monospace; font-weight: 600; }
         .pattern { font-family: monospace; color: #0066cc; }
+        .query { font-family: monospace; color: #6c757d; }
         .name { color: #666; }
         .action { color: #888; font-size: 0.9em; }
         .count { color: #666; font-size: 0.9em; }
@@ -101,6 +102,7 @@ func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
             <tr>
                 <th>Method</th>
                 <th>Pattern</th>
+                <th>Query</th>
                 <th>Name</th>
                 <th>Action</th>
             </tr>
@@ -118,14 +120,16 @@ func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
 			if action == "" {
 				action = "-"
 			}
+			query := formatQueryParams(route.QueryParams)
 
 			_, _ = fmt.Fprintf(w, `            <tr>
                 <td class="method %s">%s</td>
                 <td class="pattern">%s</td>
+                <td class="query">%s</td>
                 <td class="name">%s</td>
                 <td class="action">%s</td>
             </tr>
-`, methodClass, route.Method, route.Pattern, name, action)
+`, methodClass, route.Method, route.Pattern, query, name, action)
 		}
 
 		_, _ = fmt.Fprintf(w, `        </tbody>

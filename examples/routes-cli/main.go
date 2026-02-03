@@ -81,7 +81,7 @@ func setupRoutes() *teapot.Router {
 
 	// Query-based bucket operations
 	// ListObjectsV2 (preferred over v1)
-	router.QueryGET("/{bucket}", listObjectsV2).Query("list-type").Name("s3.bucket.list-objects-v2").Action("api:s3:ListObjectsV2")
+	router.QueryGET("/{bucket}", listObjectsV2).QueryValue("list-type", "2").Name("s3.bucket.list-objects-v2").Action("api:s3:ListObjectsV2")
 
 	// Bucket configuration endpoints
 	router.QueryGET("/{bucket}", getBucketLocation).Query("location").Name("s3.bucket.get-location").Action("api:s3:GetBucketLocation")

@@ -534,7 +534,6 @@ go vet ./...
     - [URLBUILDER.md](docs/URLBUILDER.md) - URL builder guide
     - [ROUTES-LISTING.md](docs/ROUTES-LISTING.md) - Route listing guide
     - [TEST-ORGANIZATION.md](docs/TEST-ORGANIZATION.md) - Test organization
-    - [s3-api-router-info.md](docs/s3-api-router-info.md) - S3 routing info
 
 ## Getting Help
 

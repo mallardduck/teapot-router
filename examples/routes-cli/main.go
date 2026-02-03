@@ -90,6 +90,34 @@ func setupRoutes() *teapot.Router {
 	router.QueryGET("/{bucket}", getBucketAcl).Query("acl").Name("s3.bucket.get-acl").Action("api:s3:GetBucketAcl")
 	router.QueryPUT("/{bucket}", putBucketAcl).Query("acl").Name("s3.bucket.put-acl").Action("api:s3:PutBucketAcl")
 
+	// Bucket policy endpoints
+	router.QueryGET("/{bucket}", getBucketPolicy).Query("policy").Name("s3.bucket.get-policy").Action("api:s3:GetBucketPolicy")
+	router.QueryPUT("/{bucket}", putBucketPolicy).Query("policy").Name("s3.bucket.put-policy").Action("api:s3:PutBucketPolicy")
+	router.QueryDELETE("/{bucket}", deleteBucketPolicy).Query("policy").Name("s3.bucket.delete-policy").Action("api:s3:DeleteBucketPolicy")
+
+	// Bucket CORS endpoints
+	router.QueryGET("/{bucket}", getBucketCors).Query("cors").Name("s3.bucket.get-cors").Action("api:s3:GetBucketCors")
+	router.QueryPUT("/{bucket}", putBucketCors).Query("cors").Name("s3.bucket.put-cors").Action("api:s3:PutBucketCors")
+
+	// Bucket lifecycle configuration
+	// Note: Legacy GetBucketLifecycle/PutBucketLifecycle share the same path and query param
+	//       as the modern *Configuration variants; one route per method covers both.
+	router.QueryGET("/{bucket}", getBucketLifecycleConfiguration).Query("lifecycle").Name("s3.bucket.get-lifecycle-configuration").Action("api:s3:GetBucketLifecycleConfiguration")
+	router.QueryPUT("/{bucket}", putBucketLifecycleConfiguration).Query("lifecycle").Name("s3.bucket.put-lifecycle-configuration").Action("api:s3:PutBucketLifecycleConfiguration")
+
+	// Public access block
+	router.QueryGET("/{bucket}", getPublicAccessBlock).Query("publicAccessBlock").Name("s3.bucket.get-public-access-block").Action("api:s3:GetPublicAccessBlock")
+	router.QueryPUT("/{bucket}", putPublicAccessBlock).Query("publicAccessBlock").Name("s3.bucket.put-public-access-block").Action("api:s3:PutPublicAccessBlock")
+
+	// Object lock configuration
+	router.QueryPUT("/{bucket}", putObjectLockConfiguration).Query("object-lock").Name("s3.bucket.put-object-lock-configuration").Action("api:s3:PutObjectLockConfiguration")
+
+	// Logging, events, payment, and analytics
+	router.QueryPUT("/{bucket}", putBucketLogging).Query("logging").Name("s3.bucket.put-logging").Action("api:s3:PutBucketLogging")
+	router.QueryPUT("/{bucket}", putBucketNotification).Query("notification").Name("s3.bucket.put-notification").Action("api:s3:PutBucketNotification")
+	router.QueryGET("/{bucket}", getBucketRequestPayment).Query("requestPayment").Name("s3.bucket.get-request-payment").Action("api:s3:GetBucketRequestPayment")
+	router.QueryGET("/{bucket}", getBucketAnalyticsConfiguration).Query("analytics").Name("s3.bucket.get-analytics-configuration").Action("api:s3:GetBucketAnalyticsConfiguration")
+
 	// List object versions (for versioned buckets)
 	router.QueryGET("/{bucket}", listObjectVersions).Query("versions").Name("s3.bucket.list-object-versions").Action("api:s3:ListObjectVersions")
 
@@ -112,6 +140,22 @@ func setupRoutes() *teapot.Router {
 	// Query-based object operations
 	router.QueryGET("/{bucket}/{key:.*}", getObjectAcl).Query("acl").Name("s3.object.get-acl").Action("api:s3:GetObjectAcl")
 	router.QueryPUT("/{bucket}/{key:.*}", putObjectAcl).Query("acl").Name("s3.object.put-acl").Action("api:s3:PutObjectAcl")
+
+	// Object tagging
+	router.QueryGET("/{bucket}/{key:.*}", getObjectTagging).Query("tagging").Name("s3.object.get-tagging").Action("api:s3:GetObjectTagging")
+	router.QueryPUT("/{bucket}/{key:.*}", putObjectTagging).Query("tagging").Name("s3.object.put-tagging").Action("api:s3:PutObjectTagging")
+
+	// Object legal hold and retention (compliance)
+	// Note: PutObjectRetention appears under both "Object" and "Locking" scopes in the
+	//       S3 API docs; it is a single route here, as is PutObjectLegalHold.
+	router.QueryGET("/{bucket}/{key:.*}", getObjectLegalHold).Query("legal-hold").Name("s3.object.get-legal-hold").Action("api:s3:GetObjectLegalHold")
+	router.QueryPUT("/{bucket}/{key:.*}", putObjectLegalHold).Query("legal-hold").Name("s3.object.put-legal-hold").Action("api:s3:PutObjectLegalHold")
+	router.QueryGET("/{bucket}/{key:.*}", getObjectRetention).Query("retention").Name("s3.object.get-retention").Action("api:s3:GetObjectRetention")
+	router.QueryPUT("/{bucket}/{key:.*}", putObjectRetention).Query("retention").Name("s3.object.put-retention").Action("api:s3:PutObjectRetention")
+
+	// Object attributes and torrent (legacy)
+	router.QueryGET("/{bucket}/{key:.*}", getObjectAttributes).Query("attributes").Name("s3.object.get-attributes").Action("api:s3:GetObjectAttributes")
+	router.QueryGET("/{bucket}/{key:.*}", getObjectTorrent).Query("torrent").Name("s3.object.get-torrent").Action("api:s3:GetObjectTorrent")
 
 	// ==================== MULTIPART UPLOAD OPERATIONS ====================
 	// Initiate multipart upload
@@ -161,6 +205,22 @@ func listObjectVersions(_ http.ResponseWriter, _ *http.Request)   {}
 func listMultipartUploads(_ http.ResponseWriter, _ *http.Request) {}
 func deleteObjects(_ http.ResponseWriter, _ *http.Request)        {}
 
+// Bucket configuration and management
+func getBucketPolicy(_ http.ResponseWriter, _ *http.Request)                 {}
+func putBucketPolicy(_ http.ResponseWriter, _ *http.Request)                 {}
+func deleteBucketPolicy(_ http.ResponseWriter, _ *http.Request)              {}
+func getBucketCors(_ http.ResponseWriter, _ *http.Request)                   {}
+func putBucketCors(_ http.ResponseWriter, _ *http.Request)                   {}
+func getBucketLifecycleConfiguration(_ http.ResponseWriter, _ *http.Request) {}
+func putBucketLifecycleConfiguration(_ http.ResponseWriter, _ *http.Request) {}
+func getPublicAccessBlock(_ http.ResponseWriter, _ *http.Request)            {}
+func putPublicAccessBlock(_ http.ResponseWriter, _ *http.Request)            {}
+func putObjectLockConfiguration(_ http.ResponseWriter, _ *http.Request)      {}
+func putBucketLogging(_ http.ResponseWriter, _ *http.Request)                {}
+func putBucketNotification(_ http.ResponseWriter, _ *http.Request)           {}
+func getBucketRequestPayment(_ http.ResponseWriter, _ *http.Request)         {}
+func getBucketAnalyticsConfiguration(_ http.ResponseWriter, _ *http.Request) {}
+
 // Object operations
 func getObject(_ http.ResponseWriter, _ *http.Request)    {}
 func putObject(_ http.ResponseWriter, _ *http.Request)    {}
@@ -168,6 +228,16 @@ func deleteObject(_ http.ResponseWriter, _ *http.Request) {}
 func headObject(_ http.ResponseWriter, _ *http.Request)   {}
 func getObjectAcl(_ http.ResponseWriter, _ *http.Request) {}
 func putObjectAcl(_ http.ResponseWriter, _ *http.Request) {}
+
+// Object tagging, compliance, and metadata
+func getObjectTagging(_ http.ResponseWriter, _ *http.Request)    {}
+func putObjectTagging(_ http.ResponseWriter, _ *http.Request)    {}
+func getObjectLegalHold(_ http.ResponseWriter, _ *http.Request)  {}
+func putObjectLegalHold(_ http.ResponseWriter, _ *http.Request)  {}
+func getObjectRetention(_ http.ResponseWriter, _ *http.Request)  {}
+func putObjectRetention(_ http.ResponseWriter, _ *http.Request)  {}
+func getObjectAttributes(_ http.ResponseWriter, _ *http.Request) {}
+func getObjectTorrent(_ http.ResponseWriter, _ *http.Request)    {}
 
 // Multipart upload operations
 func createMultipartUpload(_ http.ResponseWriter, _ *http.Request)   {}

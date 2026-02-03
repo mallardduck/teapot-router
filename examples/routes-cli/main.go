@@ -134,7 +134,7 @@ func setupRoutes() *teapot.Router {
 	// ==================== DEBUG ROUTES ====================
 	// Debug route (conditionally registered)
 	if isDebug() {
-		router.RegisterDebugRoute("/.internal/routes", "debug.routes")
+		router.GET("/.internal/routes", teapot.NewListRoutesHandler(router, nil)).Name("debug.routes")
 	}
 
 	router.GET("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {}).Name("favicon")

@@ -12,8 +12,8 @@ import (
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
-// TestRoutesHandler verifies the HTTP routes handler returns JSON
-func TestRoutesHandler(t *testing.T) {
+// TestNewListRoutesHandler verifies the HTTP routes handler returns JSON
+func TestNewListRoutesHandler(t *testing.T) {
 	r := teapot.New()
 
 	// Register some routes
@@ -22,8 +22,8 @@ func TestRoutesHandler(t *testing.T) {
 	r.GET("/users/{id}", dummyHandler).Name("users.show").Action("s3:GetObject")
 	r.DELETE("/users/{id}", dummyHandler).Name("users.destroy")
 
-	// Get the handler
-	handler := r.ListRoutesHandler()
+	// Get the handler (no filter - show all)
+	handler := teapot.NewListRoutesHandler(r, nil)
 
 	// Test JSON response (with Accept header)
 	req := httptest.NewRequest("GET", "/.internal/routes", nil)
@@ -58,14 +58,14 @@ func TestRoutesHandler(t *testing.T) {
 	}
 }
 
-// TestRoutesHandlerHTML verifies HTML output for browsers
-func TestRoutesHandlerHTML(t *testing.T) {
+// TestNewListRoutesHandlerHTML verifies HTML output for browsers
+func TestNewListRoutesHandlerHTML(t *testing.T) {
 	r := teapot.New()
 
 	r.GET("/users", dummyHandler).Name("users.index")
 	r.GET("/posts", dummyHandler).Name("posts.index")
 
-	handler := r.ListRoutesHandler()
+	handler := teapot.NewListRoutesHandler(r, nil)
 
 	// Test HTML response (no Accept header defaults to HTML)
 	req := httptest.NewRequest("GET", "/.internal/routes", nil)
@@ -90,18 +90,15 @@ func TestRoutesHandlerHTML(t *testing.T) {
 	}
 }
 
-// TestRegisterDebugRoute verifies convenience method
-func TestRegisterDebugRoute(t *testing.T) {
+// TestNewListRoutesHandlerAsRoute verifies wiring NewListRoutesHandler into a route
+func TestNewListRoutesHandlerAsRoute(t *testing.T) {
 	r := teapot.New()
 
-	// Register some routes
 	r.GET("/api/users", dummyHandler).Name("api.users")
 	r.GET("/api/posts", dummyHandler).Name("api.posts")
+	r.GET("/.internal/routes", teapot.NewListRoutesHandler(r, nil)).Name("debug.routes")
 
-	// Register debug route
-	r.RegisterDebugRoute("/.internal/routes", "debug.routes")
-
-	// Test it works
+	// Test it works via ServeHTTP
 	req := httptest.NewRequest("GET", "/.internal/routes", nil)
 	req.Header.Set("Accept", "application/json")
 	w := httptest.NewRecorder()
@@ -274,25 +271,43 @@ func TestRoutesSorting(t *testing.T) {
 	}
 }
 
-// TestConditionalDebugRoute demonstrates conditional registration
-func TestConditionalDebugRoute(t *testing.T) {
-	debug := true // In real app, this would be from config/env
-
+// TestNewListRoutesHandlerWithFilter verifies the filter excludes routes
+func TestNewListRoutesHandlerWithFilter(t *testing.T) {
 	r := teapot.New()
+
 	r.GET("/api/users", dummyHandler).Name("api.users")
+	r.GET("/api/posts", dummyHandler).Name("api.posts")
+	r.GET("/.internal/routes", teapot.NewListRoutesHandler(r, func(route teapot.RouteInfo) bool {
+		return !strings.HasPrefix(route.Pattern, "/.internal/")
+	})).Name("debug.routes")
 
-	// Conditionally register debug route
-	if debug {
-		r.RegisterDebugRoute("/.internal/routes", "debug.routes")
-	}
-
-	// Verify debug route exists
 	req := httptest.NewRequest("GET", "/.internal/routes", nil)
 	req.Header.Set("Accept", "application/json")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	if w.Code != 200 {
-		t.Errorf("expected debug route to work, got status %d", w.Code)
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	var response map[string]any
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("failed to decode JSON: %v", err)
+	}
+
+	// Should have 2 routes - the /.internal/routes route is filtered out
+	count, ok := response["count"].(float64)
+	if !ok || count != 2 {
+		t.Errorf("expected count=2, got %v", response["count"])
+	}
+
+	// Verify no internal routes leaked through
+	routes, _ := response["routes"].([]any)
+	for _, route := range routes {
+		r, _ := route.(map[string]any)
+		pattern, _ := r["Pattern"].(string)
+		if strings.HasPrefix(pattern, "/.internal/") {
+			t.Errorf("internal route %q should have been filtered out", pattern)
+		}
 	}
 }

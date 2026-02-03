@@ -4,9 +4,136 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
+	"net/http"
 	"sort"
+	"strings"
 	"text/tabwriter"
 )
+
+// RouteFilter is a predicate function that determines whether a route
+// should be included in output. Return true to include the route.
+type RouteFilter func(RouteInfo) bool
+
+// FilterRoutes applies a filter to a slice of routes, returning only
+// those for which the filter returns true. If filter is nil, all routes
+// are returned unchanged.
+func FilterRoutes(routes []RouteInfo, filter RouteFilter) []RouteInfo {
+	if filter == nil {
+		return routes
+	}
+	filtered := make([]RouteInfo, 0, len(routes))
+	for _, route := range routes {
+		if filter(route) {
+			filtered = append(filtered, route)
+		}
+	}
+	return filtered
+}
+
+// NewListRoutesHandler returns an HTTP handler that displays registered routes.
+// The handler responds with JSON or HTML based on the Accept header.
+// If filter is non-nil, only routes for which filter returns true are included.
+// Pass nil to show all routes.
+//
+// Example:
+//
+//	// Show all routes
+//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, nil))
+//
+//	// Exclude internal routes
+//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, func(route teapot.RouteInfo) bool {
+//	    return !strings.HasPrefix(route.Pattern, "/.internal/")
+//	}))
+func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		routes := FilterRoutes(router.Routes(), filter)
+
+		// Check Accept header for JSON vs HTML
+		accept := req.Header.Get("Accept")
+		if strings.Contains(accept, "application/json") {
+			w.Header().Set("Content-Type", "application/json")
+			err := json.NewEncoder(w).Encode(map[string]any{
+				"count":  len(routes),
+				"routes": routes,
+			})
+			if err != nil {
+				log.Printf("[teapot-router] failed to encode routes as JSON: %v", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			return
+		}
+
+		// Default to HTML
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = fmt.Fprintf(w, `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Routes</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 2rem; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%%; margin-top: 1rem; }
+        th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid #ddd; }
+        th { background-color: #f5f5f5; font-weight: 600; }
+        tr:hover { background-color: #f9f9f9; }
+        .method { font-family: monospace; font-weight: 600; }
+        .pattern { font-family: monospace; color: #0066cc; }
+        .name { color: #666; }
+        .action { color: #888; font-size: 0.9em; }
+        .count { color: #666; font-size: 0.9em; }
+        .get { color: #28a745; }
+        .post { color: #007bff; }
+        .put { color: #ffc107; }
+        .delete { color: #dc3545; }
+        .head { color: #6c757d; }
+        .patch { color: #17a2b8; }
+        .options { color: #6610f2; }
+    </style>
+</head>
+<body>
+    <h1>Registered Routes</h1>
+    <p class="count">Total: %d routes</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Method</th>
+                <th>Pattern</th>
+                <th>Name</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+`, len(routes))
+
+		for _, route := range routes {
+			methodClass := strings.ToLower(route.Method)
+			name := route.Name
+			if name == "" {
+				name = "-"
+			}
+			action := route.Action
+			if action == "" {
+				action = "-"
+			}
+
+			_, _ = fmt.Fprintf(w, `            <tr>
+                <td class="method %s">%s</td>
+                <td class="pattern">%s</td>
+                <td class="name">%s</td>
+                <td class="action">%s</td>
+            </tr>
+`, methodClass, route.Method, route.Pattern, name, action)
+		}
+
+		_, _ = fmt.Fprintf(w, `        </tbody>
+    </table>
+</body>
+</html>`)
+	}
+}
 
 // FormatRoutesJSON writes routes as JSON to the writer.
 // This is useful for CLI commands with --json flag.

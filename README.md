@@ -1,4 +1,4 @@
-# teapot-router ☕️
+# teapot-router ☕️ [![codecov](https://codecov.io/gh/mallardduck/teapot-router/graph/badge.svg?token=EJ2ZUN8J8N)](https://codecov.io/gh/mallardduck/teapot-router)
 
 **teapot-router** is an expressive routing layer built on top of [`chi`](https://github.com/go-chi/chi), inspired by
 Laravel's router.

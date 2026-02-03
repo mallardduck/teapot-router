@@ -46,6 +46,57 @@ More specific matchers take priority (2 query params beats 1).
 
 ---
 
+## Grouped Dispatch
+
+For paths with many query-parameter variants, `Dispatch` groups them into a
+single block — clearer than scattering individual calls across many lines:
+
+```go
+import "github.com/mallardduck/teapot-router/pkg/dispatch"
+
+r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder) {
+    d.Default(listObjects).Name("bucket.list").Action("s3:ListBucket")
+    d.When(dispatch.QueryEquals("list-type", "2")).Do(listObjectsV2).Name("bucket.list-v2").Action("s3:ListObjectsV2")
+    d.When(dispatch.QueryExists("acl")).Do(getBucketAcl).Name("bucket.acl").Action("s3:GetBucketAcl")
+    d.When(dispatch.QueryExists("versioning")).Do(getVersioning).Name("bucket.versioning").Action("s3:GetBucketVersioning")
+})
+```
+
+- `Default(handler)` — the fallback, matches when no other route's conditions match
+- `When(matchers...).Do(handler)` — a conditional route; all matchers must match (AND)
+- `.Name()`, `.Action()`, `.With()` — same fluent chain as the scattered API, available on both `Default` and `When` routes
+
+Matcher constructors live in `pkg/dispatch`:
+
+- `dispatch.QueryExists("key")` — matches if the query param is present (any value)
+- `dispatch.QueryEquals("key", "value")` — matches if the query param equals a specific value
+- Multiple matchers in one `When` are ANDed: `When(dispatch.QueryExists("partNumber"), dispatch.QueryExists("uploadId"))`
+
+Both styles coexist in the same router — use `Dispatch` where you have a dense
+cluster of variants on one path, and the fluent style elsewhere.
+
+### Router-Agnostic Dispatcher
+
+The `dispatch` package works independently of teapot with any Go HTTP router:
+
+```go
+import "github.com/mallardduck/teapot-router/pkg/dispatch"
+
+d := dispatch.New(func(b *dispatch.Builder) {
+    b.Default(listHandler)
+    b.When(dispatch.QueryEquals("format", "xml")).Do(xmlHandler)
+    b.When(dispatch.QueryExists("search")).Do(searchHandler)
+})
+
+// d implements http.Handler — works with stdlib, chi, gorilla, or anything else
+http.Handle("/api/items", d)
+```
+
+Same dispatching logic that `r.Dispatch` uses internally, without the
+teapot-specific features (named routes, action context, URL generation).
+
+---
+
 ## S3 Action Context
 
 Each route can define an S3 action that's injected into the request context:
@@ -155,7 +206,9 @@ r.Finalize()
 http.ListenAndServe(":8080", r)
 ```
 
-Finalize is optional but recommended — routes work without it, just with slightly more overhead.
+Finalize is optional but recommended — it pre-computes handler chains for direct
+routes and eagerly builds all dispatchers, avoiding any per-request setup on the
+first call.
 
 ---
 
@@ -192,6 +245,20 @@ r.POST("", createMultipartUpload).Name("upload.create").Action("s3:CreateMultipa
 })
 
 http.ListenAndServe(":8080", r)
+```
+
+The GET bucket operations above could equivalently use `Dispatch` to group all
+the query variants explicitly:
+
+```go
+import "github.com/mallardduck/teapot-router/pkg/dispatch"
+
+// Inside the NamedGroup("/{bucket}", ...) callback:
+r.Dispatch("GET", "", func(d *teapot.DispatchBuilder) {
+    d.Default(listObjects).Name("list").Action("s3:ListBucket")
+    d.When(dispatch.QueryExists("acl")).Do(getBucketAcl).Name("acl.get").Action("s3:GetBucketAcl")
+    d.When(dispatch.QueryExists("versions")).Do(listObjectVersions).Name("versions").Action("s3:ListBucketVersions")
+})
 ```
 
 ---

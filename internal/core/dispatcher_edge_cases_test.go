@@ -8,6 +8,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mallardduck/teapot-router/pkg/dispatch"
 )
 
 // TestDispatcherFastPathEdgeCases tests the fast path condition that gremlins
@@ -23,7 +25,7 @@ func TestDispatcherFastPathEdgeCases(t *testing.T) {
 			Method:         "GET",
 			Pattern:        "/test",
 			Handler:        handler,
-			QueryMatchers:  []QueryMatcher{}, // Explicitly empty
+			QueryMatchers:  []dispatch.Matcher{}, // Explicitly empty
 			WildcardParams: map[string]bool{},
 		}
 
@@ -48,7 +50,7 @@ func TestDispatcherFastPathEdgeCases(t *testing.T) {
 			Method:        "GET",
 			Pattern:       "/test",
 			Handler:       handler,
-			QueryMatchers: []QueryMatcher{QueryExistsMatcher{Key: "foo"}},
+			QueryMatchers: []dispatch.Matcher{dispatch.QueryExistsMatcher{Key: "foo"}},
 		}
 
 		dispatcher := &Dispatcher{
@@ -198,7 +200,7 @@ func TestDispatcherBoundaryConditions(t *testing.T) {
 			Method:        "GET",
 			Pattern:       "/test",
 			Handler:       handler,
-			QueryMatchers: []QueryMatcher{QueryExistsMatcher{Key: "foo"}},
+			QueryMatchers: []dispatch.Matcher{dispatch.QueryExistsMatcher{Key: "foo"}},
 		}
 
 		dispatcher := &Dispatcher{}
@@ -217,15 +219,15 @@ func TestDispatcherBoundaryConditions(t *testing.T) {
 			Method:        "GET",
 			Pattern:       "/test",
 			Handler:       handler,
-			QueryMatchers: []QueryMatcher{QueryExistsMatcher{Key: "a"}},
+			QueryMatchers: []dispatch.Matcher{dispatch.QueryExistsMatcher{Key: "a"}},
 		}
 		route2 := &Route{
 			Method:  "GET",
 			Pattern: "/test",
 			Handler: handler,
-			QueryMatchers: []QueryMatcher{
-				QueryExistsMatcher{Key: "a"},
-				QueryExistsMatcher{Key: "b"},
+			QueryMatchers: []dispatch.Matcher{
+				dispatch.QueryExistsMatcher{Key: "a"},
+				dispatch.QueryExistsMatcher{Key: "b"},
 			},
 		}
 

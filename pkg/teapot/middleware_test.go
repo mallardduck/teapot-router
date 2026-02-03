@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/mallardduck/teapot-router/internal/core"
+	"github.com/mallardduck/teapot-router/pkg/dispatch"
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -584,9 +585,9 @@ func TestFindBestDispatcherRoute(t *testing.T) {
 	t.Run("returns fallback route when available", func(t *testing.T) {
 		dispatcher := &core.Dispatcher{
 			Routes: []*core.Route{
-				{Action: "s3:GetBucketAcl", QueryMatchers: []core.QueryMatcher{&core.QueryExistsMatcher{Key: "acl"}}},
-				{Action: "s3:ListBucket", QueryMatchers: []core.QueryMatcher{}}, // fallback
-				{Action: "s3:GetBucketVersioning", QueryMatchers: []core.QueryMatcher{&core.QueryExistsMatcher{Key: "versioning"}}},
+				{Action: "s3:GetBucketAcl", QueryMatchers: []dispatch.Matcher{&dispatch.QueryExistsMatcher{Key: "acl"}}},
+				{Action: "s3:ListBucket", QueryMatchers: []dispatch.Matcher{}}, // fallback
+				{Action: "s3:GetBucketVersioning", QueryMatchers: []dispatch.Matcher{&dispatch.QueryExistsMatcher{Key: "versioning"}}},
 			},
 		}
 
@@ -599,8 +600,8 @@ func TestFindBestDispatcherRoute(t *testing.T) {
 	t.Run("returns first route when no fallback", func(t *testing.T) {
 		dispatcher := &core.Dispatcher{
 			Routes: []*core.Route{
-				{Action: "s3:GetBucketAcl", QueryMatchers: []core.QueryMatcher{&core.QueryExistsMatcher{Key: "acl"}}},
-				{Action: "s3:GetBucketVersioning", QueryMatchers: []core.QueryMatcher{&core.QueryExistsMatcher{Key: "versioning"}}},
+				{Action: "s3:GetBucketAcl", QueryMatchers: []dispatch.Matcher{&dispatch.QueryExistsMatcher{Key: "acl"}}},
+				{Action: "s3:GetBucketVersioning", QueryMatchers: []dispatch.Matcher{&dispatch.QueryExistsMatcher{Key: "versioning"}}},
 			},
 		}
 
@@ -621,8 +622,8 @@ func TestFindBestDispatcherRoute(t *testing.T) {
 	t.Run("prefers fallback over first when both exist", func(t *testing.T) {
 		dispatcher := &core.Dispatcher{
 			Routes: []*core.Route{
-				{Action: "first:WithQuery", QueryMatchers: []core.QueryMatcher{&core.QueryExistsMatcher{Key: "q"}}},
-				{Action: "second:Fallback", QueryMatchers: []core.QueryMatcher{}},
+				{Action: "first:WithQuery", QueryMatchers: []dispatch.Matcher{&dispatch.QueryExistsMatcher{Key: "q"}}},
+				{Action: "second:Fallback", QueryMatchers: []dispatch.Matcher{}},
 			},
 		}
 

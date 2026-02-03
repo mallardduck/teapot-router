@@ -33,18 +33,18 @@ go get github.com/mallardduck/teapot-router
 
 ```go
 import (
-"net/http"
-
-teapot "github.com/mallardduck/teapot-router"
+    "net/http"
+    
+    teapot "github.com/mallardduck/teapot-router"
 )
 
 func main() {
-r := teapot.New()
-
-r.GET("/users", listUsers).Name("users.index")
-r.GET("/users/{id}", showUser).Name("users.show")
-
-http.ListenAndServe(":3000", r)
+    r := teapot.New()
+    
+    r.GET("/users", listUsers).Name("users.index")
+    r.GET("/users/{id}", showUser).Name("users.show")
+    
+    http.ListenAndServe(":3000", r)
 }
 ```
 

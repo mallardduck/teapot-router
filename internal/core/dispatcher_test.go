@@ -8,6 +8,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/mallardduck/teapot-router/pkg/dispatch"
 )
 
 func TestDispatcherSingleRoute(t *testing.T) {
@@ -46,7 +48,7 @@ func TestDispatcherQueryMatching(t *testing.T) {
 		Method:        "GET",
 		Pattern:       "/test",
 		Handler:       handler1,
-		QueryMatchers: []QueryMatcher{QueryExistsMatcher{Key: "foo"}},
+		QueryMatchers: []dispatch.Matcher{dispatch.QueryExistsMatcher{Key: "foo"}},
 	}
 	route2 := &Route{
 		Method:  "GET",
@@ -82,7 +84,7 @@ func TestDispatcherNoMatch(t *testing.T) {
 		Method:        "GET",
 		Pattern:       "/test",
 		Handler:       handler,
-		QueryMatchers: []QueryMatcher{QueryExistsMatcher{Key: "required"}},
+		QueryMatchers: []dispatch.Matcher{dispatch.QueryExistsMatcher{Key: "required"}},
 	}
 
 	dispatcher := &Dispatcher{
@@ -207,13 +209,13 @@ func TestDispatcherAddRouteSpecificity(t *testing.T) {
 		Method:        "GET",
 		Pattern:       "/test",
 		Handler:       handler,
-		QueryMatchers: []QueryMatcher{QueryExistsMatcher{Key: "foo"}},
+		QueryMatchers: []dispatch.Matcher{dispatch.QueryExistsMatcher{Key: "foo"}},
 	}
 	route3 := &Route{
 		Method:        "GET",
 		Pattern:       "/test",
 		Handler:       handler,
-		QueryMatchers: []QueryMatcher{QueryValueMatcher{Key: "type", Value: "full"}},
+		QueryMatchers: []dispatch.Matcher{dispatch.QueryValueMatcher{Key: "type", Value: "full"}},
 	}
 
 	dispatcher := &Dispatcher{}
@@ -240,7 +242,7 @@ func TestDispatcherUpdateSpecificity(t *testing.T) {
 		Method:        "GET",
 		Pattern:       "/test",
 		Handler:       handler,
-		QueryMatchers: []QueryMatcher{},
+		QueryMatchers: []dispatch.Matcher{},
 	}
 
 	dispatcher := &Dispatcher{
@@ -248,7 +250,7 @@ func TestDispatcherUpdateSpecificity(t *testing.T) {
 	}
 
 	// Add query matcher to route2
-	route2.QueryMatchers = append(route2.QueryMatchers, QueryExistsMatcher{Key: "foo"})
+	route2.QueryMatchers = append(route2.QueryMatchers, dispatch.QueryExistsMatcher{Key: "foo"})
 
 	// Update specificity
 	dispatcher.UpdateSpecificity()
@@ -263,9 +265,9 @@ func TestFindBestDispatcherRoute(t *testing.T) {
 	t.Run("returns fallback route when available", func(t *testing.T) {
 		dispatcher := &Dispatcher{
 			Routes: []*Route{
-				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:GetBucketAcl", QueryMatchers: []QueryMatcher{&QueryExistsMatcher{Key: "acl"}}},
-				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:ListBucket", QueryMatchers: []QueryMatcher{}}, // fallback
-				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:GetBucketVersioning", QueryMatchers: []QueryMatcher{&QueryExistsMatcher{Key: "versioning"}}},
+				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:GetBucketAcl", QueryMatchers: []dispatch.Matcher{&dispatch.QueryExistsMatcher{Key: "acl"}}},
+				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:ListBucket", QueryMatchers: []dispatch.Matcher{}}, // fallback
+				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:GetBucketVersioning", QueryMatchers: []dispatch.Matcher{&dispatch.QueryExistsMatcher{Key: "versioning"}}},
 			},
 		}
 
@@ -278,8 +280,8 @@ func TestFindBestDispatcherRoute(t *testing.T) {
 	t.Run("returns first route when no fallback", func(t *testing.T) {
 		dispatcher := &Dispatcher{
 			Routes: []*Route{
-				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:GetBucketAcl", QueryMatchers: []QueryMatcher{&QueryExistsMatcher{Key: "acl"}}},
-				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:GetBucketVersioning", QueryMatchers: []QueryMatcher{&QueryExistsMatcher{Key: "versioning"}}},
+				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:GetBucketAcl", QueryMatchers: []dispatch.Matcher{&dispatch.QueryExistsMatcher{Key: "acl"}}},
+				{Method: "GET", Pattern: "/bucket", Handler: handler, Action: "s3:GetBucketVersioning", QueryMatchers: []dispatch.Matcher{&dispatch.QueryExistsMatcher{Key: "versioning"}}},
 			},
 		}
 
@@ -300,8 +302,8 @@ func TestFindBestDispatcherRoute(t *testing.T) {
 	t.Run("prefers fallback over first when both exist", func(t *testing.T) {
 		dispatcher := &Dispatcher{
 			Routes: []*Route{
-				{Method: "GET", Pattern: "/test", Handler: handler, Action: "first:WithQuery", QueryMatchers: []QueryMatcher{&QueryExistsMatcher{Key: "q"}}},
-				{Method: "GET", Pattern: "/test", Handler: handler, Action: "second:Fallback", QueryMatchers: []QueryMatcher{}},
+				{Method: "GET", Pattern: "/test", Handler: handler, Action: "first:WithQuery", QueryMatchers: []dispatch.Matcher{&dispatch.QueryExistsMatcher{Key: "q"}}},
+				{Method: "GET", Pattern: "/test", Handler: handler, Action: "second:Fallback", QueryMatchers: []dispatch.Matcher{}},
 			},
 		}
 

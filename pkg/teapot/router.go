@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/mallardduck/teapot-router/internal/core"
+	"github.com/mallardduck/teapot-router/pkg/dispatch"
 )
 
 // Router wraps chi.Mux and adds named routes, query multiplexing, and S3 actions
@@ -85,7 +86,7 @@ func (rb *RouteBuilder) Query(key string) *RouteBuilder {
 	if rb.isDirect {
 		panic("teapot: Cannot use .Query() with standard methods (GET, POST, etc). Use QueryGET, QueryPOST, etc. instead for query multiplexing.")
 	}
-	rb.route.QueryMatchers = append(rb.route.QueryMatchers, core.QueryExistsMatcher{Key: key})
+	rb.route.QueryMatchers = append(rb.route.QueryMatchers, dispatch.QueryExistsMatcher{Key: key})
 	rb.dispatcher.UpdateSpecificity()
 	return rb
 }
@@ -95,7 +96,7 @@ func (rb *RouteBuilder) QueryValue(key, value string) *RouteBuilder {
 	if rb.isDirect {
 		panic("teapot: Cannot use .QueryValue() with standard methods (GET, POST, etc). Use QueryGET, QueryPOST, etc. instead for query multiplexing.")
 	}
-	rb.route.QueryMatchers = append(rb.route.QueryMatchers, core.QueryValueMatcher{Key: key, Value: value})
+	rb.route.QueryMatchers = append(rb.route.QueryMatchers, dispatch.QueryValueMatcher{Key: key, Value: value})
 	rb.dispatcher.UpdateSpecificity()
 	return rb
 }
@@ -227,7 +228,7 @@ func (r *Router) handleDirect(method, pattern string, handler http.HandlerFunc) 
 		Pattern:        fullPattern,
 		ChiPattern:     chiPattern,
 		Handler:        handler,
-		QueryMatchers:  make([]core.QueryMatcher, 0),
+		QueryMatchers:  make([]dispatch.Matcher, 0),
 		Middlewares:    make([]func(http.Handler) http.Handler, 0),
 		WildcardParams: wildcardParams,
 	}
@@ -291,7 +292,7 @@ func (r *Router) handleQuery(method, pattern string, handler http.HandlerFunc) *
 		Pattern:        fullPattern,
 		ChiPattern:     chiPattern,
 		Handler:        handler,
-		QueryMatchers:  make([]core.QueryMatcher, 0),
+		QueryMatchers:  make([]dispatch.Matcher, 0),
 		Middlewares:    make([]func(http.Handler) http.Handler, 0),
 		WildcardParams: wildcardParams,
 	}
@@ -588,12 +589,12 @@ func (r *Router) Routes() []RouteInfo {
 		var queryParams []QueryParam
 		for _, matcher := range rt.QueryMatchers {
 			switch m := matcher.(type) {
-			case core.QueryExistsMatcher:
+			case dispatch.QueryExistsMatcher:
 				queryParams = append(queryParams, QueryParam{
 					Key:   m.Key,
 					Value: "", // Empty means existence check
 				})
-			case core.QueryValueMatcher:
+			case dispatch.QueryValueMatcher:
 				queryParams = append(queryParams, QueryParam{
 					Key:   m.Key,
 					Value: m.Value,
@@ -655,6 +656,12 @@ func (r *Router) Finalize() {
 	for _, oh := range *r.optimizedHandlers {
 		oh.fastPath = r.createOptimizedHandler(oh.route)
 		oh.finalized.Store(true)
+	}
+
+	// Eagerly build all dispatchers so the lazy-build doesn't land on the
+	// first request
+	for _, disp := range r.dispatchers {
+		disp.Build()
 	}
 
 	r.finalized = true

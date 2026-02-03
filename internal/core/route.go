@@ -3,6 +3,8 @@ package core
 import (
 	"net/http"
 	"strings"
+
+	"github.com/mallardduck/teapot-router/pkg/dispatch"
 )
 
 // Route represents a single route with all its metadata
@@ -13,7 +15,7 @@ type Route struct {
 	Handler        http.HandlerFunc
 	Name           string
 	Action         string
-	QueryMatchers  []QueryMatcher // Will be defined in query_matchers.go
+	QueryMatchers  []dispatch.Matcher
 	Middlewares    []func(http.Handler) http.Handler
 	WildcardParams map[string]bool // Track which params are wildcards (e.g., "key" -> true)
 }

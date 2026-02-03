@@ -1,4 +1,4 @@
-package core
+package dispatch
 
 import (
 	"net/http/httptest"
@@ -60,4 +60,16 @@ func TestQueryValueMatcher(t *testing.T) {
 func TestQueryValueMatcherSpecificity(t *testing.T) {
 	matcher := QueryValueMatcher{Key: "type", Value: "test"}
 	assert.Equal(t, 2, matcher.Specificity())
+}
+
+func TestQueryExistsConstructor(t *testing.T) {
+	m := QueryExists("foo")
+	assert.IsType(t, QueryExistsMatcher{}, m)
+	assert.Equal(t, 1, m.Specificity())
+}
+
+func TestQueryEqualsConstructor(t *testing.T) {
+	m := QueryEquals("foo", "bar")
+	assert.IsType(t, QueryValueMatcher{}, m)
+	assert.Equal(t, 2, m.Specificity())
 }

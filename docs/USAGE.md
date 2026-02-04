@@ -52,13 +52,11 @@ For paths with many query-parameter variants, `Dispatch` groups them into a
 single block — clearer than scattering individual calls across many lines:
 
 ```go
-import "github.com/mallardduck/teapot-router/pkg/dispatch"
-
-r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder) {
+r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
     d.Default(listObjects).Name("bucket.list").Action("s3:ListBucket")
-    d.When(dispatch.QueryEquals("list-type", "2")).Do(listObjectsV2).Name("bucket.list-v2").Action("s3:ListObjectsV2")
-    d.When(dispatch.QueryExists("acl")).Do(getBucketAcl).Name("bucket.acl").Action("s3:GetBucketAcl")
-    d.When(dispatch.QueryExists("versioning")).Do(getVersioning).Name("bucket.versioning").Action("s3:GetBucketVersioning")
+    d.When(m.QueryEquals("list-type", "2")).Do(listObjectsV2).Name("bucket.list-v2").Action("s3:ListObjectsV2")
+    d.When(m.QueryExists("acl")).Do(getBucketAcl).Name("bucket.acl").Action("s3:GetBucketAcl")
+    d.When(m.QueryExists("versioning")).Do(getVersioning).Name("bucket.versioning").Action("s3:GetBucketVersioning")
 })
 ```
 
@@ -66,11 +64,14 @@ r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder) {
 - `When(matchers...).Do(handler)` — a conditional route; all matchers must match (AND)
 - `.Name()`, `.Action()`, `.With()` — same fluent chain as the scattered API, available on both `Default` and `When` routes
 
-Matcher constructors live in `pkg/dispatch`:
+The `m` parameter (type `teapot.Matchers`) exposes all built-in matcher constructors
+so that the `dispatch` package does not need to be imported separately:
 
-- `dispatch.QueryExists("key")` — matches if the query param is present (any value)
-- `dispatch.QueryEquals("key", "value")` — matches if the query param equals a specific value
-- Multiple matchers in one `When` are ANDed: `When(dispatch.QueryExists("partNumber"), dispatch.QueryExists("uploadId"))`
+- `m.QueryExists("key")` — matches if the query param is present (any value)
+- `m.QueryEquals("key", "value")` — matches if the query param equals a specific value
+- `m.HeaderExists("key")` — matches if the header is present with a non-empty value
+- `m.HeaderEquals("key", "value")` — matches if the header equals a specific value
+- Multiple matchers in one `When` are ANDed: `When(m.QueryExists("partNumber"), m.QueryExists("uploadId"))`
 
 Both styles coexist in the same router — use `Dispatch` where you have a dense
 cluster of variants on one path, and the fluent style elsewhere.
@@ -251,13 +252,11 @@ The GET bucket operations above could equivalently use `Dispatch` to group all
 the query variants explicitly:
 
 ```go
-import "github.com/mallardduck/teapot-router/pkg/dispatch"
-
 // Inside the NamedGroup("/{bucket}", ...) callback:
-r.Dispatch("GET", "", func(d *teapot.DispatchBuilder) {
+r.Dispatch("GET", "", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
     d.Default(listObjects).Name("list").Action("s3:ListBucket")
-    d.When(dispatch.QueryExists("acl")).Do(getBucketAcl).Name("acl.get").Action("s3:GetBucketAcl")
-    d.When(dispatch.QueryExists("versions")).Do(listObjectVersions).Name("versions").Action("s3:ListBucketVersions")
+    d.When(m.QueryExists("acl")).Do(getBucketAcl).Name("acl.get").Action("s3:GetBucketAcl")
+    d.When(m.QueryExists("versions")).Do(listObjectVersions).Name("versions").Action("s3:ListBucketVersions")
 })
 ```
 

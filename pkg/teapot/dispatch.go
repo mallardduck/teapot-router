@@ -8,6 +8,27 @@ import (
 	"github.com/mallardduck/teapot-router/pkg/dispatch"
 )
 
+// Matchers provides convenient access to all built-in matcher constructors.
+// A zero-value instance is passed as the second argument to the Dispatch
+// callback so that the dispatch package does not need to be imported.
+type Matchers struct{}
+
+// QueryExists returns a Matcher that matches when the given query parameter is present.
+func (Matchers) QueryExists(key string) dispatch.Matcher { return dispatch.QueryExists(key) }
+
+// QueryEquals returns a Matcher that matches when the given query parameter equals value.
+func (Matchers) QueryEquals(key, value string) dispatch.Matcher {
+	return dispatch.QueryEquals(key, value)
+}
+
+// HeaderExists returns a Matcher that matches when the given header is present with a non-empty value.
+func (Matchers) HeaderExists(key string) dispatch.Matcher { return dispatch.HeaderExists(key) }
+
+// HeaderEquals returns a Matcher that matches when the given header equals value.
+func (Matchers) HeaderEquals(key, value string) dispatch.Matcher {
+	return dispatch.HeaderEquals(key, value)
+}
+
 // DispatchBuilder configures routes for a Dispatch group.
 // Each route shares the same method and pattern but is distinguished by
 // query parameter conditions (or other Matchers).
@@ -34,18 +55,18 @@ type DispatchRoute struct {
 }
 
 // Dispatch registers a group of routes on the same method+pattern, distinguished
-// by query parameters (or other Matchers). The callback fn configures routes via
-// a DispatchBuilder. This is the explicit, grouped alternative to scattered
-// QueryGET/QueryPOST calls.
+// by query parameters (or other Matchers). The callback receives a DispatchBuilder
+// for route configuration and a Matchers value for creating matchers without
+// importing the dispatch package directly.
 //
 // Example:
 //
-//	r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder) {
+//	r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
 //	    d.Default(listV1).Name("s3.bucket.list-v1").Action("api:s3:ListObjects")
-//	    d.When(dispatch.QueryEquals("list-type", "2")).Do(listV2).Name("s3.bucket.list-v2").Action("api:s3:ListObjectsV2")
-//	    d.When(dispatch.QueryExists("location")).Do(getLocation).Name("s3.bucket.get-location")
+//	    d.When(m.QueryEquals("list-type", "2")).Do(listV2).Name("s3.bucket.list-v2").Action("api:s3:ListObjectsV2")
+//	    d.When(m.QueryExists("location")).Do(getLocation).Name("s3.bucket.get-location")
 //	})
-func (r *Router) Dispatch(method, pattern string, fn func(d *DispatchBuilder)) {
+func (r *Router) Dispatch(method, pattern string, fn func(d *DispatchBuilder, m Matchers)) {
 	fullPattern := r.pathPrefix + pattern
 	chiPattern, wildcardParams := core.TranslatePattern(fullPattern)
 	dispatcherKey := method + ":" + chiPattern
@@ -65,7 +86,7 @@ func (r *Router) Dispatch(method, pattern string, fn func(d *DispatchBuilder)) {
 		chiPattern: chiPattern,
 	}
 
-	fn(db)
+	fn(db, Matchers{})
 
 	// Validate that every route has a handler set
 	for _, cfg := range db.routes {

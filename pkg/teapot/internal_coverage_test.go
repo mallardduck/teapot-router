@@ -10,8 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/mallardduck/teapot-router/pkg/dispatch"
 )
 
 // --- SetDebugLog / debugLogf (0% / 50%) ---
@@ -219,10 +217,10 @@ func TestURLParamsNilRouteContext(t *testing.T) {
 func TestRoutesPopulatesHeaderParams(t *testing.T) {
 	r := New()
 
-	r.Dispatch("GET", "/header-info", func(d *DispatchBuilder) {
+	r.Dispatch("GET", "/header-info", func(d *DispatchBuilder, m Matchers) {
 		d.Default(func(_ http.ResponseWriter, _ *http.Request) {}).Name("hi.default")
-		d.When(dispatch.HeaderExists("X-Custom")).Do(func(_ http.ResponseWriter, _ *http.Request) {}).Name("hi.exists")
-		d.When(dispatch.HeaderEquals("Content-Type", "application/json")).Do(func(_ http.ResponseWriter, _ *http.Request) {}).Name("hi.value")
+		d.When(m.HeaderExists("X-Custom")).Do(func(_ http.ResponseWriter, _ *http.Request) {}).Name("hi.exists")
+		d.When(m.HeaderEquals("Content-Type", "application/json")).Do(func(_ http.ResponseWriter, _ *http.Request) {}).Name("hi.value")
 	})
 
 	routes := r.Routes()
@@ -315,7 +313,7 @@ func TestFormatRoutesCompactWithQueryAndHeaders(t *testing.T) {
 func TestDispatchRouteUnnamed(t *testing.T) {
 	r := New()
 
-	r.Dispatch("GET", "/unnamed", func(d *DispatchBuilder) {
+	r.Dispatch("GET", "/unnamed", func(d *DispatchBuilder, m Matchers) {
 		d.Default(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("unnamed-ok"))
 		})
@@ -334,9 +332,9 @@ func TestDispatchRouteUnnamed(t *testing.T) {
 func TestNewListRoutesHandlerHTMLWithHeaders(t *testing.T) {
 	r := New()
 
-	r.Dispatch("GET", "/hht", func(d *DispatchBuilder) {
+	r.Dispatch("GET", "/hht", func(d *DispatchBuilder, m Matchers) {
 		d.Default(func(_ http.ResponseWriter, _ *http.Request) {}).Name("hht.default")
-		d.When(dispatch.HeaderEquals("X-Copy", "source")).Do(func(_ http.ResponseWriter, _ *http.Request) {}).Name("hht.copy")
+		d.When(m.HeaderEquals("X-Copy", "source")).Do(func(_ http.ResponseWriter, _ *http.Request) {}).Name("hht.copy")
 	})
 
 	handler := NewListRoutesHandler(r, nil)

@@ -128,14 +128,21 @@ func setupRoutes() *teapot.Router {
 	router.QueryPOST("/{bucket}", deleteObjects).Query("delete").Name("s3.bucket.delete-objects").Action("api:s3:DeleteObjects")
 
 	// ==================== OBJECT OPERATIONS ====================
-	// Direct routes for operations without query params
 	router.GET("/{bucket}/{key:.*}", getObject).Name("s3.object.get").Action("api:s3:GetObject")
-	router.PUT("/{bucket}/{key:.*}", putObject).Name("s3.object.put").Action("api:s3:PutObject")
 	router.DELETE("/{bucket}/{key:.*}", deleteObject).Name("s3.object.delete").Action("api:s3:DeleteObject")
 	router.HEAD("/{bucket}/{key:.*}", headObject).Name("s3.object.head").Action("api:s3:HeadObject")
-	// Note: CopyObject uses PUT /{bucket}/{key} with x-amz-copy-source header.
-	//       The putObject handler detects this header and can adjust action context
-	//       for logging/metrics (e.g., override to "api:s3:CopyObject")
+
+	// PUT /{bucket}/{key} dispatches on X-Amz-Copy-Source header.
+	// UploadPart / UploadPartCopy also live here: same method+path, and header
+	// presence distinguishes the copy variant.  The remaining QueryPUT routes
+	// below (acl, tagging, …) are added to this same dispatcher automatically.
+	router.Dispatch("PUT", "/{bucket}/{key:.*}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
+		d.Default(putObject).Name("s3.object.put").Action("api:s3:PutObject")
+		d.When(m.HeaderExists("X-Amz-Copy-Source")).Do(copyObject).Name("s3.object.copy").Action("api:s3:CopyObject")
+
+		d.When(m.QueryExists("partNumber"), m.QueryExists("uploadId")).Do(uploadPart).Name("s3.multipart.upload-part").Action("api:s3:UploadPart")
+		d.When(m.QueryExists("partNumber"), m.QueryExists("uploadId"), m.HeaderExists("X-Amz-Copy-Source")).Do(uploadPartCopy).Name("s3.multipart.upload-part-copy").Action("api:s3:UploadPartCopy")
+	})
 
 	// Query-based object operations
 	router.QueryGET("/{bucket}/{key:.*}", getObjectAcl).Query("acl").Name("s3.object.get-acl").Action("api:s3:GetObjectAcl")
@@ -161,10 +168,7 @@ func setupRoutes() *teapot.Router {
 	// Initiate multipart upload
 	router.QueryPOST("/{bucket}/{key:.*}", createMultipartUpload).Query("uploads").Name("s3.multipart.create").Action("api:s3:CreateMultipartUpload")
 
-	// Upload part (requires both partNumber and uploadId query params)
-	// Note: UploadPartCopy uses the same route with x-amz-copy-source header.
-	//       The uploadPart handler detects this and can adjust action context accordingly.
-	router.QueryPUT("/{bucket}/{key:.*}", uploadPart).Query("partNumber").Query("uploadId").Name("s3.multipart.upload-part").Action("api:s3:UploadPart")
+	// UploadPart / UploadPartCopy are in the PUT dispatch block above.
 
 	// Complete multipart upload
 	router.QueryPOST("/{bucket}/{key:.*}", completeMultipartUpload).Query("uploadId").Name("s3.multipart.complete").Action("api:s3:CompleteMultipartUpload")
@@ -224,6 +228,7 @@ func getBucketAnalyticsConfiguration(_ http.ResponseWriter, _ *http.Request) {}
 // Object operations
 func getObject(_ http.ResponseWriter, _ *http.Request)    {}
 func putObject(_ http.ResponseWriter, _ *http.Request)    {}
+func copyObject(_ http.ResponseWriter, _ *http.Request)   {}
 func deleteObject(_ http.ResponseWriter, _ *http.Request) {}
 func headObject(_ http.ResponseWriter, _ *http.Request)   {}
 func getObjectAcl(_ http.ResponseWriter, _ *http.Request) {}
@@ -242,6 +247,7 @@ func getObjectTorrent(_ http.ResponseWriter, _ *http.Request)    {}
 // Multipart upload operations
 func createMultipartUpload(_ http.ResponseWriter, _ *http.Request)   {}
 func uploadPart(_ http.ResponseWriter, _ *http.Request)              {}
+func uploadPartCopy(_ http.ResponseWriter, _ *http.Request)          {}
 func completeMultipartUpload(_ http.ResponseWriter, _ *http.Request) {}
 func abortMultipartUpload(_ http.ResponseWriter, _ *http.Request)    {}
 func listParts(_ http.ResponseWriter, _ *http.Request)               {}

@@ -57,7 +57,7 @@ func (rb *RouteBuilder) Name(name string) *RouteBuilder {
 		if existingName == fullName {
 			// Same name found - check if it's the same method
 			if existingRoute.Method == rb.route.Method {
-				panic(fmt.Sprintf("teapot: duplicate route %s:%s (existing: %s, new: %s)",
+				panic(fmt.Sprintf("teapot: duplicate route %s:%s pattern(existing: %s, new: %s)",
 					rb.route.Method, fullName, existingRoute.Pattern, rb.route.Pattern))
 			}
 
@@ -528,11 +528,11 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (r *Router) URL(name string, params ...string) (string, error) {
 	rt, exists := r.nameIndex[name]
 	if !exists {
-		return "", fmt.Errorf("route %q not found", name)
+		return "", fmt.Errorf("route %q not found — check that .Name() was called during registration", name)
 	}
 
 	if len(params)%2 != 0 {
-		return "", fmt.Errorf("params must be key-value pairs")
+		return "", fmt.Errorf("URL() for route %q: params must be key-value pairs, got %d arg(s)", name, len(params))
 	}
 
 	// Build parameter map

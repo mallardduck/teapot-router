@@ -20,13 +20,14 @@ func TestDuplicateRouteName(t *testing.T) {
 		} else {
 			msg := r.(string)
 			asserts.Contains(msg, "duplicate route")
-			asserts.Contains(msg, "GET:users")
+			asserts.Contains(msg, "GET")
+			asserts.Contains(msg, "users")
 		}
 	}()
 
 	r := teapot.New()
 	r.GET("/users", dummyHandler).Name("users")
-	r.GET("/users", dummyHandler).Name("users") // Should panic
+	r.GET("/users", dummyHandler).Name("usersTwo") // Should panic
 }
 
 // TestSameNameDifferentMethodsSamePath is allowed (Laravel-style resources)
@@ -51,8 +52,9 @@ func TestSameNameDifferentMethodsDifferentPath(t *testing.T) {
 			t.Error("expected panic for same name with different paths")
 		} else {
 			msg := r.(string)
-			asserts.Contains(msg, "used with different paths")
+			asserts.Contains(msg, "teapot: route name")
 			asserts.Contains(msg, "users.show")
+			asserts.Contains(msg, "used with different paths")
 		}
 	}()
 

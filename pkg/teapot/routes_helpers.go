@@ -67,6 +67,22 @@ func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
 
 		// Default to HTML
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+		// Only show Query/Headers columns when at least one route uses them
+		hasQuery := false
+		hasHeaders := false
+		for _, rt := range routes {
+			if len(rt.QueryParams) > 0 {
+				hasQuery = true
+			}
+			if len(rt.HeaderParams) > 0 {
+				hasHeaders = true
+			}
+			if hasQuery && hasHeaders {
+				break
+			}
+		}
+
 		_, _ = fmt.Fprintf(w, `<!DOCTYPE html>
 <html>
 <head>
@@ -102,14 +118,21 @@ func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
             <tr>
                 <th>Method</th>
                 <th>Pattern</th>
-                <th>Query</th>
-                <th>Headers</th>
-                <th>Name</th>
+`, len(routes))
+		if hasQuery {
+			_, _ = fmt.Fprint(w, `                <th>Query</th>
+`)
+		}
+		if hasHeaders {
+			_, _ = fmt.Fprint(w, `                <th>Headers</th>
+`)
+		}
+		_, _ = fmt.Fprint(w, `                <th>Name</th>
                 <th>Action</th>
             </tr>
         </thead>
         <tbody>
-`, len(routes))
+`)
 
 		for _, route := range routes {
 			methodClass := strings.ToLower(route.Method)
@@ -121,18 +144,22 @@ func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
 			if action == "" {
 				action = "-"
 			}
-			query := formatQueryParams(route.QueryParams)
-			headers := formatHeaderParams(route.HeaderParams)
-
 			_, _ = fmt.Fprintf(w, `            <tr>
                 <td class="method %s">%s</td>
                 <td class="pattern">%s</td>
-                <td class="query">%s</td>
-                <td class="query">%s</td>
-                <td class="name">%s</td>
+`, methodClass, route.Method, route.Pattern)
+			if hasQuery {
+				_, _ = fmt.Fprintf(w, `                <td class="query">%s</td>
+`, formatQueryParams(route.QueryParams))
+			}
+			if hasHeaders {
+				_, _ = fmt.Fprintf(w, `                <td class="query">%s</td>
+`, formatHeaderParams(route.HeaderParams))
+			}
+			_, _ = fmt.Fprintf(w, `                <td class="name">%s</td>
                 <td class="action">%s</td>
             </tr>
-`, methodClass, route.Method, route.Pattern, query, headers, name, action)
+`, name, action)
 		}
 
 		_, _ = fmt.Fprintf(w, `        </tbody>

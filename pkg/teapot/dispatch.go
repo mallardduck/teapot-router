@@ -73,10 +73,20 @@ func (r *Router) Dispatch(method, pattern string, fn func(d *DispatchBuilder, m 
 
 	// Conflict checks — catch problems early rather than letting chi panic
 	if _, exists := r.dispatchers[dispatcherKey]; exists {
-		panic(fmt.Sprintf("teapot: Dispatch conflicts with existing dispatcher for %s %s", method, fullPattern))
+		panic(fmt.Sprintf(
+			"teapot: duplicate dispatch registration\n\n"+
+				"  route:  %s %s\n"+
+				"  cause:  a Dispatch() or query-multiplexed route already owns this method+pattern\n"+
+				"  help:   consolidate all variants for this route into a single Dispatch() block",
+			method, fullPattern))
 	}
 	if _, exists := r.directRoutes[dispatcherKey]; exists {
-		panic(fmt.Sprintf("teapot: Dispatch conflicts with existing direct route for %s %s", method, fullPattern))
+		panic(fmt.Sprintf(
+			"teapot: duplicate route registration\n\n"+
+				"  route:  %s %s\n"+
+				"  cause:  a direct route (GET, POST, etc.) is already registered for this method+pattern\n"+
+				"  help:   remove the direct route, or replace both with a single Dispatch() block",
+			method, fullPattern))
 	}
 
 	db := &DispatchBuilder{
@@ -91,7 +101,12 @@ func (r *Router) Dispatch(method, pattern string, fn func(d *DispatchBuilder, m 
 	// Validate that every route has a handler set
 	for _, cfg := range db.routes {
 		if cfg.handler == nil {
-			panic("teapot: Dispatch route missing handler — call Do() or pass handler to Default()")
+			panic(fmt.Sprintf(
+				"teapot: invalid dispatch route %q (%s): no handler configured\n"+
+					"hint: call Do(...) for this route or provide a handler via Default(...)",
+				cfg.name,
+				cfg.action,
+			))
 		}
 	}
 

@@ -20,7 +20,8 @@ func TestDuplicateRouteName(t *testing.T) {
 		} else {
 			msg := r.(string)
 			asserts.Contains(msg, "duplicate route")
-			asserts.Contains(msg, "GET:users")
+			asserts.Contains(msg, "GET")
+			asserts.Contains(msg, "users")
 		}
 	}()
 
@@ -51,8 +52,9 @@ func TestSameNameDifferentMethodsDifferentPath(t *testing.T) {
 			t.Error("expected panic for same name with different paths")
 		} else {
 			msg := r.(string)
-			asserts.Contains(msg, "used with different paths")
+			asserts.Contains(msg, "teapot: route name")
 			asserts.Contains(msg, "users.show")
+			asserts.Contains(msg, "used with different paths")
 		}
 	}()
 

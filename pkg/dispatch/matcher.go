@@ -50,3 +50,44 @@ func (m QueryValueMatcher) Specificity() int {
 func QueryEquals(key, value string) Matcher {
 	return QueryValueMatcher{Key: key, Value: value}
 }
+
+// HeaderExistsMatcher matches when a request header is present with a non-empty value.
+type HeaderExistsMatcher struct {
+	Key string
+}
+
+// Matches reports whether the header Key is present in the request.
+func (m HeaderExistsMatcher) Matches(r *http.Request) bool {
+	return r.Header.Get(m.Key) != ""
+}
+
+// Specificity returns 1 (existence check).
+func (m HeaderExistsMatcher) Specificity() int {
+	return 1
+}
+
+// HeaderExists returns a Matcher that matches when the given header is present.
+func HeaderExists(key string) Matcher {
+	return HeaderExistsMatcher{Key: key}
+}
+
+// HeaderValueMatcher matches when a request header equals a specific value.
+type HeaderValueMatcher struct {
+	Key   string
+	Value string
+}
+
+// Matches reports whether the header Key equals Value.
+func (m HeaderValueMatcher) Matches(r *http.Request) bool {
+	return r.Header.Get(m.Key) == m.Value
+}
+
+// Specificity returns 2 (value match is more specific than existence).
+func (m HeaderValueMatcher) Specificity() int {
+	return 2
+}
+
+// HeaderEquals returns a Matcher that matches when the given header equals value.
+func HeaderEquals(key, value string) Matcher {
+	return HeaderValueMatcher{Key: key, Value: value}
+}

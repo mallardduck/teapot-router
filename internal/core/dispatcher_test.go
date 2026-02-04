@@ -312,3 +312,26 @@ func TestFindBestDispatcherRoute(t *testing.T) {
 		assert.Equal(t, "second:Fallback", route.Action)
 	})
 }
+
+// TestDispatcherBuildEager exercises Build() directly (currently 0% because
+// existing tests only trigger the lazy path through ServeHTTP).
+func TestDispatcherBuildEager(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("EAGER"))
+	})
+
+	d := &Dispatcher{
+		Routes: []*Route{{Method: "GET", Pattern: "/test", Handler: handler}},
+	}
+
+	// Eager build — should be safe to call before any request
+	d.Build()
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	w := httptest.NewRecorder()
+	d.ServeHTTP(w, req)
+	assert.Equal(t, "EAGER", w.Body.String())
+
+	// Second Build() is a no-op (sync.Once) — must not panic
+	d.Build()
+}

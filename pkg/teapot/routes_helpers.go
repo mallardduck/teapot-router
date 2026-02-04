@@ -103,6 +103,7 @@ func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
                 <th>Method</th>
                 <th>Pattern</th>
                 <th>Query</th>
+                <th>Headers</th>
                 <th>Name</th>
                 <th>Action</th>
             </tr>
@@ -121,15 +122,17 @@ func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
 				action = "-"
 			}
 			query := formatQueryParams(route.QueryParams)
+			headers := formatHeaderParams(route.HeaderParams)
 
 			_, _ = fmt.Fprintf(w, `            <tr>
                 <td class="method %s">%s</td>
                 <td class="pattern">%s</td>
                 <td class="query">%s</td>
+                <td class="query">%s</td>
                 <td class="name">%s</td>
                 <td class="action">%s</td>
             </tr>
-`, methodClass, route.Method, route.Pattern, query, name, action)
+`, methodClass, route.Method, route.Pattern, query, headers, name, action)
 		}
 
 		_, _ = fmt.Fprintf(w, `        </tbody>
@@ -223,10 +226,8 @@ func formatQueryParams(params []QueryParam) string {
 	var parts []string
 	for _, p := range params {
 		if p.Value == "" {
-			// Existence check only
 			parts = append(parts, p.Key)
 		} else {
-			// Value check
 			parts = append(parts, fmt.Sprintf("%s=%s", p.Key, p.Value))
 		}
 	}
@@ -239,6 +240,23 @@ func formatQueryParams(params []QueryParam) string {
 		result += part
 	}
 	return result
+}
+
+// formatHeaderParams formats header parameters for display
+func formatHeaderParams(params []HeaderParam) string {
+	if len(params) == 0 {
+		return "-"
+	}
+
+	var parts []string
+	for _, p := range params {
+		if p.Value == "" {
+			parts = append(parts, p.Key)
+		} else {
+			parts = append(parts, fmt.Sprintf("%s: %s", p.Key, p.Value))
+		}
+	}
+	return strings.Join(parts, ", ")
 }
 
 // FormatRoutesCompact writes routes in a compact format (METHOD PATH?QUERY NAME).
@@ -269,6 +287,9 @@ func FormatRoutesCompact(w io.Writer, routes []RouteInfo) error {
 		pathWithQuery := route.Pattern
 		if len(route.QueryParams) > 0 {
 			pathWithQuery += "?" + formatQueryParams(route.QueryParams)
+		}
+		if len(route.HeaderParams) > 0 {
+			pathWithQuery += " [" + formatHeaderParams(route.HeaderParams) + "]"
 		}
 
 		_, _ = fmt.Fprintf(w, "%-7s %-50s %s\n",

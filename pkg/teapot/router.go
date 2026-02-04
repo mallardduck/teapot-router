@@ -568,11 +568,12 @@ func (r *Router) MustURL(name string, params ...string) string {
 
 // RouteInfo contains information about a registered route
 type RouteInfo struct {
-	Method      string
-	Pattern     string
-	Name        string
-	Action      string
-	QueryParams []QueryParam
+	Method       string
+	Pattern      string
+	Name         string
+	Action       string
+	QueryParams  []QueryParam
+	HeaderParams []HeaderParam
 }
 
 // QueryParam represents a query parameter matcher for a route
@@ -581,33 +582,38 @@ type QueryParam struct {
 	Value string // Empty string means "any value" (existence check only)
 }
 
+// HeaderParam represents a header matcher for a route
+type HeaderParam struct {
+	Key   string
+	Value string // Empty string means "any value" (existence check only)
+}
+
 // Routes returns information about all registered routes
 func (r *Router) Routes() []RouteInfo {
 	var infos []RouteInfo
 	for _, rt := range *r.routes {
-		// Extract query parameter information from QueryMatchers
 		var queryParams []QueryParam
+		var headerParams []HeaderParam
 		for _, matcher := range rt.QueryMatchers {
 			switch m := matcher.(type) {
 			case dispatch.QueryExistsMatcher:
-				queryParams = append(queryParams, QueryParam{
-					Key:   m.Key,
-					Value: "", // Empty means existence check
-				})
+				queryParams = append(queryParams, QueryParam{Key: m.Key})
 			case dispatch.QueryValueMatcher:
-				queryParams = append(queryParams, QueryParam{
-					Key:   m.Key,
-					Value: m.Value,
-				})
+				queryParams = append(queryParams, QueryParam{Key: m.Key, Value: m.Value})
+			case dispatch.HeaderExistsMatcher:
+				headerParams = append(headerParams, HeaderParam{Key: m.Key})
+			case dispatch.HeaderValueMatcher:
+				headerParams = append(headerParams, HeaderParam{Key: m.Key, Value: m.Value})
 			}
 		}
 
 		infos = append(infos, RouteInfo{
-			Method:      rt.Method,
-			Pattern:     rt.Pattern,
-			Name:        rt.Name,
-			Action:      rt.Action,
-			QueryParams: queryParams,
+			Method:       rt.Method,
+			Pattern:      rt.Pattern,
+			Name:         rt.Name,
+			Action:       rt.Action,
+			QueryParams:  queryParams,
+			HeaderParams: headerParams,
 		})
 	}
 	return infos

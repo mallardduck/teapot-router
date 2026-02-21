@@ -82,7 +82,7 @@ func wrapRoute(rt *Route) http.HandlerFunc {
 
 		r = r.WithContext(ctx)
 
-		h := http.Handler(handler)
+		h := handler
 		for i := len(middlewares) - 1; i >= 0; i-- {
 			h = middlewares[i](h)
 		}

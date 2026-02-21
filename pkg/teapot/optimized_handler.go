@@ -55,7 +55,7 @@ func (oh *optimizedHandler) slowPath(w http.ResponseWriter, r *http.Request) {
 	r = r.WithContext(ctx)
 
 	// Apply route-specific middleware at runtime
-	handler := http.Handler(oh.route.Handler)
+	handler := oh.route.Handler
 	for i := len(oh.route.Middlewares) - 1; i >= 0; i-- {
 		handler = oh.route.Middlewares[i](handler)
 	}
@@ -80,11 +80,11 @@ func (r *Router) createOptimizedHandler(rt *core.Route) http.Handler {
 	// Pre-apply middleware (do this once, not per request)
 	finalHandler := rt.Handler
 	if hasMiddleware {
-		handler := http.Handler(rt.Handler)
+		handler := rt.Handler
 		for i := len(rt.Middlewares) - 1; i >= 0; i-- {
 			handler = rt.Middlewares[i](handler)
 		}
-		finalHandler = handler.(http.HandlerFunc)
+		finalHandler = handler
 	}
 
 	// Fast path 2: No context injection needed

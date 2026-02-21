@@ -41,7 +41,7 @@ type DispatchBuilder struct {
 }
 
 type dispatchRouteConfig struct {
-	handler     http.HandlerFunc
+	handler     http.Handler
 	matchers    []dispatch.Matcher
 	name        string
 	action      string
@@ -162,10 +162,15 @@ func (r *Router) Dispatch(method, pattern string, fn func(d *DispatchBuilder, m 
 // Default sets the fallback handler for the dispatch group.
 // It matches when no other route's matchers match. Returns a DispatchRoute
 // for chaining Name, Action, and With.
-func (db *DispatchBuilder) Default(h http.HandlerFunc) *DispatchRoute {
+func (db *DispatchBuilder) Default(h http.Handler) *DispatchRoute {
 	cfg := &dispatchRouteConfig{handler: h}
 	db.routes = append(db.routes, cfg)
 	return &DispatchRoute{builder: db, config: cfg}
+}
+
+// FuncDefault sets the fallback handler using a plain function literal.
+func (db *DispatchBuilder) FuncDefault(h func(http.ResponseWriter, *http.Request)) *DispatchRoute {
+	return db.Default(http.HandlerFunc(h))
 }
 
 // When starts a conditional route with the given matchers (AND semantics).
@@ -177,9 +182,14 @@ func (db *DispatchBuilder) When(matchers ...dispatch.Matcher) *DispatchRoute {
 }
 
 // Do sets the handler for this conditional route. Required after When.
-func (dr *DispatchRoute) Do(h http.HandlerFunc) *DispatchRoute {
+func (dr *DispatchRoute) Do(h http.Handler) *DispatchRoute {
 	dr.config.handler = h
 	return dr
+}
+
+// FuncDo sets the handler for this conditional route using a plain function literal.
+func (dr *DispatchRoute) FuncDo(h func(http.ResponseWriter, *http.Request)) *DispatchRoute {
+	return dr.Do(http.HandlerFunc(h))
 }
 
 // Name assigns a name to this route for URL generation and route listing.

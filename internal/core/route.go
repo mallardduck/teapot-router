@@ -12,7 +12,7 @@ type Route struct {
 	Method         string
 	Pattern        string // Original pattern (e.g., "/{bucket}/{key:.*}")
 	ChiPattern     string // Chi-compatible pattern (e.g., "/{bucket}/*")
-	Handler        http.HandlerFunc
+	Handler        http.Handler
 	Name           string
 	Action         string
 	QueryMatchers  []dispatch.Matcher

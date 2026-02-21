@@ -137,85 +137,85 @@ func (r *Router) debugLogf(format string, args ...any) {
 
 // GET registers a GET route (direct, no query multiplexing)
 // For query multiplexing, use QueryGET instead
-func (r *Router) GET(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) GET(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleDirect("GET", pattern, handler)
 }
 
 // POST registers a POST route (direct, no query multiplexing)
 // For query multiplexing, use QueryPOST instead
-func (r *Router) POST(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) POST(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleDirect("POST", pattern, handler)
 }
 
 // PUT registers a PUT route (direct, no query multiplexing)
 // For query multiplexing, use QueryPUT instead
-func (r *Router) PUT(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) PUT(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleDirect("PUT", pattern, handler)
 }
 
 // DELETE registers a DELETE route (direct, no query multiplexing)
 // For query multiplexing, use QueryDELETE instead
-func (r *Router) DELETE(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) DELETE(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleDirect("DELETE", pattern, handler)
 }
 
 // HEAD registers a HEAD route (direct, no query multiplexing)
 // For query multiplexing, use QueryHEAD instead
-func (r *Router) HEAD(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) HEAD(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleDirect("HEAD", pattern, handler)
 }
 
 // PATCH registers a PATCH route (direct, no query multiplexing)
 // For query multiplexing, use QueryPATCH instead
-func (r *Router) PATCH(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) PATCH(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleDirect("PATCH", pattern, handler)
 }
 
 // OPTIONS registers an OPTIONS route (direct, no query multiplexing)
 // For query multiplexing, use QueryOPTIONS instead
-func (r *Router) OPTIONS(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) OPTIONS(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleDirect("OPTIONS", pattern, handler)
 }
 
 // QueryGET registers a GET route with query multiplexing support
-func (r *Router) QueryGET(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) QueryGET(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleQuery("GET", pattern, handler)
 }
 
 // QueryPOST registers a POST route with query multiplexing support
-func (r *Router) QueryPOST(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) QueryPOST(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleQuery("POST", pattern, handler)
 }
 
 // QueryPUT registers a PUT route with query multiplexing support
-func (r *Router) QueryPUT(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) QueryPUT(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleQuery("PUT", pattern, handler)
 }
 
 // QueryDELETE registers a DELETE route with query multiplexing support
-func (r *Router) QueryDELETE(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) QueryDELETE(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleQuery("DELETE", pattern, handler)
 }
 
 // QueryHEAD registers a HEAD route with query multiplexing support
-func (r *Router) QueryHEAD(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) QueryHEAD(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleQuery("HEAD", pattern, handler)
 }
 
 // QueryPATCH registers a PATCH route with query multiplexing support
-func (r *Router) QueryPATCH(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) QueryPATCH(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleQuery("PATCH", pattern, handler)
 }
 
 // QueryOPTIONS registers an OPTIONS route with query multiplexing support
-func (r *Router) QueryOPTIONS(pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) QueryOPTIONS(pattern string, handler http.Handler) *RouteBuilder {
 	return r.handleQuery("OPTIONS", pattern, handler)
 }
 
 // handleDirect registers a route directly with Chi (no dispatcher, best performance)
 // This is used by GET, POST, PUT, DELETE, etc.
 // Automatically promotes to dispatcher-based routing if multiple routes exist on same method+pattern
-func (r *Router) handleDirect(method, pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) handleDirect(method, pattern string, handler http.Handler) *RouteBuilder {
 	// Apply path prefix if in a group
 	fullPattern := r.pathPrefix + pattern
 
@@ -279,7 +279,7 @@ func (r *Router) handleDirect(method, pattern string, handler http.HandlerFunc) 
 
 // handleQuery is the internal method that registers routes with query multiplexing support
 // This is used by QueryGET, QueryPOST, etc.
-func (r *Router) handleQuery(method, pattern string, handler http.HandlerFunc) *RouteBuilder {
+func (r *Router) handleQuery(method, pattern string, handler http.Handler) *RouteBuilder {
 	// Apply path prefix if in a group
 	fullPattern := r.pathPrefix + pattern
 

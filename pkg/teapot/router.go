@@ -562,10 +562,10 @@ func (r *Router) URL(name string, params ...string) (string, error) {
 		return "", fmt.Errorf("URL() for route %q: params must be key-value pairs, got %d arg(s)", name, len(params))
 	}
 
-	// Build parameter map
-	paramMap := make(map[string]string)
-	for i := 0; i < len(params); i += 2 {
-		paramMap[params[i]] = params[i+1]
+	// Build parameter map from key-value pairs
+	paramMap := make(map[string]string, len(params)/2)
+	for len(params) >= 2 {
+		paramMap[params[0]], params = params[1], params[2:]
 	}
 
 	// Replace parameters in pattern

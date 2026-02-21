@@ -19,6 +19,10 @@ linters:
       - path: _test\.go
         linters:
           - errcheck
+      - path: _test\.go
+        linters:
+          - gosec
+        text: "G705"
 
   settings:
     # Linter-specific configurations are now nested here

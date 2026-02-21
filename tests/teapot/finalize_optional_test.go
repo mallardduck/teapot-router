@@ -22,18 +22,18 @@ func TestWithoutFinalize(t *testing.T) {
 
 	r.GET("/with-name", func(w http.ResponseWriter, r *http.Request) {
 		name := teapot.GetRouteName(r)
-		_, _ = w.Write([]byte("NAME:" + name)) //nolint:gosec // G705: name is internal router metadata, not user input
+		_, _ = w.Write([]byte("NAME:" + name))
 	}).Name("test.name")
 
 	r.GET("/with-action", func(w http.ResponseWriter, r *http.Request) {
 		action := teapot.GetAction(r)
-		_, _ = w.Write([]byte("ACTION:" + action)) //nolint:gosec // G705: action is internal router metadata, not user input
+		_, _ = w.Write([]byte("ACTION:" + action))
 	}).Action("s3:TestAction")
 
 	r.GET("/with-both", func(w http.ResponseWriter, r *http.Request) {
 		name := teapot.GetRouteName(r)
 		action := teapot.GetAction(r)
-		_, _ = w.Write([]byte(name + ":" + action)) //nolint:gosec // G705: name/action are internal router metadata, not user input
+		_, _ = w.Write([]byte(name + ":" + action))
 	}).Name("test.both").Action("s3:Both")
 
 	mw := func(next http.Handler) http.Handler {
@@ -100,18 +100,18 @@ func TestWithFinalize(t *testing.T) {
 
 	r.GET("/with-name", func(w http.ResponseWriter, r *http.Request) {
 		name := teapot.GetRouteName(r)
-		_, _ = w.Write([]byte("NAME:" + name)) //nolint:gosec // G705: name is internal router metadata, not user input
+		_, _ = w.Write([]byte("NAME:" + name))
 	}).Name("test.name")
 
 	r.GET("/with-action", func(w http.ResponseWriter, r *http.Request) {
 		action := teapot.GetAction(r)
-		_, _ = w.Write([]byte("ACTION:" + action)) //nolint:gosec // G705: action is internal router metadata, not user input
+		_, _ = w.Write([]byte("ACTION:" + action))
 	}).Action("s3:TestAction")
 
 	r.GET("/with-both", func(w http.ResponseWriter, r *http.Request) {
 		name := teapot.GetRouteName(r)
 		action := teapot.GetAction(r)
-		_, _ = w.Write([]byte(name + ":" + action)) //nolint:gosec // G705: name/action are internal router metadata, not user input
+		_, _ = w.Write([]byte(name + ":" + action))
 	}).Name("test.both").Action("s3:Both")
 
 	mw := func(next http.Handler) http.Handler {

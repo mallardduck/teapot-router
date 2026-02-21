@@ -17,38 +17,38 @@ func TestResourceRESTful(t *testing.T) {
 	var calls []string
 
 	r.Resource("photos", "/photos", "photo", teapot.ResourceHandlers{
-		Index: func(w http.ResponseWriter, r *http.Request) {
+		Index: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			calls = append(calls, "index")
 			w.WriteHeader(200)
-		},
-		Create: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Create: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			calls = append(calls, "create")
 			w.WriteHeader(200)
-		},
-		Store: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Store: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			calls = append(calls, "store")
 			w.WriteHeader(201)
-		},
-		Show: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Show: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			calls = append(calls, "show")
 			w.WriteHeader(200)
-		},
-		Edit: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Edit: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			calls = append(calls, "edit")
 			w.WriteHeader(200)
-		},
-		Update: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Update: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			calls = append(calls, "update")
 			w.WriteHeader(200)
-		},
-		Destroy: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Destroy: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			calls = append(calls, "destroy")
 			w.WriteHeader(204)
-		},
-		Head: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Head: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			calls = append(calls, "head")
 			w.WriteHeader(200)
-		},
+		}),
 	})
 
 	tests := []struct {
@@ -86,22 +86,22 @@ func TestResourceS3Style(t *testing.T) {
 
 	// S3-style bucket operations
 	r.Resource("buckets", "/buckets", "bucket", teapot.ResourceHandlers{
-		Index: func(w http.ResponseWriter, r *http.Request) {
+		Index: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			calls = append(calls, "list-buckets")
 			w.WriteHeader(200)
-		},
-		Store: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Store: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			calls = append(calls, "create-bucket")
 			w.WriteHeader(200)
-		},
-		Show: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Show: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			calls = append(calls, "head-bucket")
 			w.WriteHeader(200)
-		},
-		Destroy: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Destroy: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			calls = append(calls, "delete-bucket")
 			w.WriteHeader(204)
-		},
+		}),
 		StoreMethod: teapot.PUT, // S3 uses PUT to create buckets
 	})
 
@@ -134,12 +134,12 @@ func TestResourcePartialHandlers(t *testing.T) {
 
 	// Only provide Index and Show handlers
 	r.Resource("users", "/users", "user", teapot.ResourceHandlers{
-		Index: func(w http.ResponseWriter, r *http.Request) {
+		Index: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
-		},
-		Show: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Show: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
-		},
+		}),
 		// Store, Update, Destroy are nil - routes should not be registered
 	})
 
@@ -171,21 +171,21 @@ func TestResourceNaming(t *testing.T) {
 	r := teapot.New()
 
 	r.Resource("posts", "/posts", "post", teapot.ResourceHandlers{
-		Index: func(w http.ResponseWriter, r *http.Request) {
+		Index: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
-		},
-		Store: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Store: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(201)
-		},
-		Show: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Show: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
-		},
-		Update: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Update: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
-		},
-		Destroy: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Destroy: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(204)
-		},
+		}),
 	})
 
 	// Test URL generation
@@ -215,14 +215,14 @@ func TestResourceCustomMethods(t *testing.T) {
 	var storeCalls, updateCalls int
 
 	r.Resource("items", "/items", "item", teapot.ResourceHandlers{
-		Store: func(w http.ResponseWriter, r *http.Request) {
+		Store: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			storeCalls++
 			w.WriteHeader(201)
-		},
-		Update: func(w http.ResponseWriter, r *http.Request) {
+		}),
+		Update: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			updateCalls++
 			w.WriteHeader(200)
-		},
+		}),
 		StoreMethod:  teapot.PUT,  // Custom: PUT instead of POST
 		UpdateMethod: teapot.POST, // Custom: POST instead of PUT
 	})
@@ -261,10 +261,10 @@ func TestResourceURLParams(t *testing.T) {
 	var capturedParam string
 
 	r.Resource("products", "/products", "productId", teapot.ResourceHandlers{
-		Show: func(w http.ResponseWriter, r *http.Request) {
+		Show: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			capturedParam = teapot.URLParam(r, "productId")
 			w.WriteHeader(200)
-		},
+		}),
 	})
 
 	req := httptest.NewRequest("GET", "/products/abc-123", nil)
@@ -280,12 +280,12 @@ func TestResourceWithGroup(t *testing.T) {
 
 	r.NamedGroup("/api", "api", func(r *teapot.Router) {
 		r.Resource("users", "/users", "userId", teapot.ResourceHandlers{
-			Index: func(w http.ResponseWriter, r *http.Request) {
+			Index: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(200)
-			},
-			Show: func(w http.ResponseWriter, r *http.Request) {
+			}),
+			Show: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(200)
-			},
+			}),
 		})
 	})
 

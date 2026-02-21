@@ -19,7 +19,7 @@ func TestHeaderDispatchRouting(t *testing.T) {
 	r := teapot.New()
 
 	r.Dispatch("PUT", "/{bucket}/{key:.*}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
-		d.Default(func(w http.ResponseWriter, req *http.Request) {
+		d.FuncDefault(func(w http.ResponseWriter, req *http.Request) {
 			fmt.Fprintf(w, "PUT_OBJECT|bucket=%s|key=%s",
 				teapot.URLParam(req, "bucket"),
 				teapot.URLParam(req, "key"),
@@ -27,7 +27,7 @@ func TestHeaderDispatchRouting(t *testing.T) {
 		}).Name("hdr.put.object").Action("s3:PutObject")
 
 		// Copy: header must exist (specificity 1)
-		d.When(m.HeaderExists("X-Amz-Copy-Source")).Do(func(w http.ResponseWriter, req *http.Request) {
+		d.When(m.HeaderExists("X-Amz-Copy-Source")).FuncDo(func(w http.ResponseWriter, req *http.Request) {
 			fmt.Fprintf(w, "COPY_OBJECT|src=%s", req.Header.Get("X-Amz-Copy-Source"))
 		}).Name("hdr.put.copy").Action("s3:CopyObject")
 
@@ -35,7 +35,7 @@ func TestHeaderDispatchRouting(t *testing.T) {
 		d.When(
 			m.HeaderEquals("X-Amz-Copy-Source", "/src-bucket/src-key"),
 			m.HeaderEquals("X-Amz-Metadata-Directive", "REPLACE"),
-		).Do(func(w http.ResponseWriter, req *http.Request) {
+		).FuncDo(func(w http.ResponseWriter, req *http.Request) {
 			fmt.Fprintf(w, "COPY_REPLACE|bucket=%s",
 				teapot.URLParam(req, "bucket"),
 			)
@@ -101,17 +101,17 @@ func TestHeaderQueryCombinedDispatch(t *testing.T) {
 	r := teapot.New()
 
 	r.Dispatch("PUT", "/{bucket}/{key:.*}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
-		d.Default(func(w http.ResponseWriter, _ *http.Request) {
+		d.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("default"))
 		})
 
 		// Query-only: tagging (specificity 1)
-		d.When(m.QueryExists("tagging")).Do(func(w http.ResponseWriter, _ *http.Request) {
+		d.When(m.QueryExists("tagging")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("tagging"))
 		})
 
 		// Header-only: copy (specificity 1)
-		d.When(m.HeaderExists("X-Amz-Copy-Source")).Do(func(w http.ResponseWriter, _ *http.Request) {
+		d.When(m.HeaderExists("X-Amz-Copy-Source")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("copy"))
 		})
 
@@ -119,7 +119,7 @@ func TestHeaderQueryCombinedDispatch(t *testing.T) {
 		d.When(
 			m.HeaderExists("X-Amz-Copy-Source"),
 			m.QueryExists("acl"),
-		).Do(func(w http.ResponseWriter, _ *http.Request) {
+		).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("copy-with-acl"))
 		})
 	})
@@ -157,15 +157,15 @@ func TestHeaderSpecificityOrdering(t *testing.T) {
 	r := teapot.New()
 
 	r.Dispatch("GET", "/items", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
-		d.Default(func(w http.ResponseWriter, _ *http.Request) {
+		d.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("default"))
 		})
 
-		d.When(m.HeaderExists("X-Version")).Do(func(w http.ResponseWriter, _ *http.Request) {
+		d.When(m.HeaderExists("X-Version")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("versioned"))
 		})
 
-		d.When(m.HeaderEquals("X-Version", "v2")).Do(func(w http.ResponseWriter, _ *http.Request) {
+		d.When(m.HeaderEquals("X-Version", "v2")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("v2"))
 		})
 	})

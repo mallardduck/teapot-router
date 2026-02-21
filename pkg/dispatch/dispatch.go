@@ -93,7 +93,7 @@ func (b *Builder) Default(h http.HandlerFunc) {
 
 // When starts a conditional route with the given matchers.
 // All matchers must match for the route to be selected (AND semantics).
-// Call Do on the returned Route to set the handler.
+// Call [Route.Do] on the returned Route to set the handler.
 func (b *Builder) When(matchers ...Matcher) *Route {
 	rt := &route{matchers: matchers}
 	b.routes = append(b.routes, rt)
@@ -105,7 +105,7 @@ type Route struct {
 	route *route
 }
 
-// Do sets the handler for this conditional route.
+// Do will set the handler for this conditional route.
 func (rt *Route) Do(h http.HandlerFunc) {
 	rt.route.handler = h
 }

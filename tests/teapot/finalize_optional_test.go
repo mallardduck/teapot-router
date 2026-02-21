@@ -16,25 +16,25 @@ func TestWithoutFinalize(t *testing.T) {
 	r := teapot.New()
 
 	// Register various route types
-	r.GET("/simple", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/simple", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("SIMPLE"))
-	})
+	}))
 
-	r.GET("/with-name", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/with-name", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		name := teapot.GetRouteName(r)
 		_, _ = w.Write([]byte("NAME:" + name))
-	}).Name("test.name")
+	})).Name("test.name")
 
-	r.GET("/with-action", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/with-action", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		action := teapot.GetAction(r)
 		_, _ = w.Write([]byte("ACTION:" + action))
-	}).Action("s3:TestAction")
+	})).Action("s3:TestAction")
 
-	r.GET("/with-both", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/with-both", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		name := teapot.GetRouteName(r)
 		action := teapot.GetAction(r)
 		_, _ = w.Write([]byte(name + ":" + action))
-	}).Name("test.both").Action("s3:Both")
+	})).Name("test.both").Action("s3:Both")
 
 	mw := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -43,17 +43,17 @@ func TestWithoutFinalize(t *testing.T) {
 		})
 	}
 
-	r.GET("/with-middleware", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/with-middleware", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("MIDDLEWARE"))
-	}).With(mw)
+	})).With(mw)
 
-	r.QueryGET("/query", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/query", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("BASE"))
-	})
+	}))
 
-	r.QueryGET("/query", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/query", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("PARAM"))
-	}).Query("test")
+	})).Query("test")
 
 	// NO Finalize() call!
 	// Verify router is not finalized
@@ -94,25 +94,25 @@ func TestWithFinalize(t *testing.T) {
 	r := teapot.New()
 
 	// Same routes as above
-	r.GET("/simple", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/simple", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("SIMPLE"))
-	})
+	}))
 
-	r.GET("/with-name", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/with-name", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		name := teapot.GetRouteName(r)
 		_, _ = w.Write([]byte("NAME:" + name))
-	}).Name("test.name")
+	})).Name("test.name")
 
-	r.GET("/with-action", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/with-action", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		action := teapot.GetAction(r)
 		_, _ = w.Write([]byte("ACTION:" + action))
-	}).Action("s3:TestAction")
+	})).Action("s3:TestAction")
 
-	r.GET("/with-both", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/with-both", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		name := teapot.GetRouteName(r)
 		action := teapot.GetAction(r)
 		_, _ = w.Write([]byte(name + ":" + action))
-	}).Name("test.both").Action("s3:Both")
+	})).Name("test.both").Action("s3:Both")
 
 	mw := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -121,17 +121,17 @@ func TestWithFinalize(t *testing.T) {
 		})
 	}
 
-	r.GET("/with-middleware", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/with-middleware", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("MIDDLEWARE"))
-	}).With(mw)
+	})).With(mw)
 
-	r.QueryGET("/query", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/query", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("BASE"))
-	})
+	}))
 
-	r.QueryGET("/query", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/query", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("PARAM"))
-	}).Query("test")
+	})).Query("test")
 
 	// Call Finalize()
 	r.Finalize()
@@ -177,11 +177,11 @@ func TestFinalizeIsPureOptimization(t *testing.T) {
 
 	// Register same routes on both
 	setupRouter := func(r *teapot.Router) {
-		r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+		r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			name := teapot.GetRouteName(r)
 			action := teapot.GetAction(r)
 			_, _ = w.Write([]byte(name + ":" + action))
-		}).Name("test").Action("s3:Test")
+		})).Name("test").Action("s3:Test")
 	}
 
 	setupRouter(r1)

@@ -19,7 +19,7 @@ func Example() {
 	r := teapot.New()
 
 	// S3 ListBuckets endpoint
-	r.QueryGET("/", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buckets := []string{"photos", "documents", "backups"}
 
 		// Generate URLs for each bucket
@@ -32,10 +32,10 @@ func Example() {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"buckets": bucketURLs,
 		})
-	}).Query("list-type")
+	})).Query("list-type")
 
 	// S3 ListObjects endpoint
-	r.QueryGET("/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/{bucket}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bucket := teapot.URLParam(r, "bucket")
 		objects := []string{"file1.txt", "file2.jpg", "folder/file3.pdf"}
 
@@ -50,7 +50,7 @@ func Example() {
 			"bucket":  urls.BucketURL(r, bucket),
 			"objects": objectURLs,
 		})
-	}).Query("list-type")
+	})).Query("list-type")
 
 	// Test the ListBuckets endpoint
 	req := httptest.NewRequest("GET", "/?list-type", nil)
@@ -68,7 +68,7 @@ func ExampleBuilder_development() {
 
 	r := teapot.New()
 
-	r.GET("/{bucket}/{key:.*}", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/{bucket}/{key:.*}", func(w http.ResponseWriter, r *http.Request) {
 		bucket := teapot.URLParam(r, "bucket")
 		key := teapot.URLParam(r, "key")
 
@@ -97,7 +97,7 @@ func ExampleBuilder_reverseProxy() {
 
 	r := teapot.New()
 
-	r.GET("/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/{bucket}", func(w http.ResponseWriter, r *http.Request) {
 		bucket := teapot.URLParam(r, "bucket")
 
 		// URL builder detects HTTPS from X-Forwarded-Proto header

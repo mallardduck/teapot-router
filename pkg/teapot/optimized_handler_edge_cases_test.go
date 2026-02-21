@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -19,7 +20,7 @@ func TestOptimizedHandlerBoundaryConditions(t *testing.T) {
 		r := teapot.New()
 
 		var capturedKey string
-		r.GET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
+		r.Func().GET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
 			capturedKey = teapot.URLParam(req, "key")
 			_, _ = w.Write([]byte("OK"))
 		})
@@ -34,7 +35,7 @@ func TestOptimizedHandlerBoundaryConditions(t *testing.T) {
 		r := teapot.New()
 
 		var capturedKey1, capturedKey2 string
-		r.GET("/{path:.*}", func(w http.ResponseWriter, req *http.Request) {
+		r.Func().GET("/{path:.*}", func(w http.ResponseWriter, req *http.Request) {
 			// Access multiple wildcard params (though pattern only has one)
 			capturedKey1 = teapot.URLParam(req, "path")
 			capturedKey2 = teapot.URLParam(req, "other")
@@ -50,9 +51,7 @@ func TestOptimizedHandlerBoundaryConditions(t *testing.T) {
 	t.Run("route with exactly zero wildcard params after finalize", func(t *testing.T) {
 		r := teapot.New()
 
-		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
-			_, _ = w.Write([]byte("OK"))
-		})
+		r.Func().GET("/test", testutil.StringResponseWriterBuilder("OK"))
 
 		r.Finalize()
 
@@ -71,7 +70,7 @@ func TestOptimizedHandlerBoundaryConditions(t *testing.T) {
 			})
 		}
 
-		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
+		r.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
 			callOrder = append(callOrder, "handler")
 			_, _ = w.Write([]byte("OK"))
 		}).With(mw)
@@ -94,7 +93,7 @@ func TestOptimizedHandlerBoundaryConditions(t *testing.T) {
 			})
 		}
 
-		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
+		r.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
 			callOrder = append(callOrder, "handler")
 			_, _ = w.Write([]byte("OK"))
 		}).With(mw)
@@ -131,7 +130,7 @@ func TestOptimizedHandlerBoundaryConditions(t *testing.T) {
 			})
 		}
 
-		r.GET("/test", func(w http.ResponseWriter, req *http.Request) {
+		r.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
 			callOrder = append(callOrder, "handler")
 			_, _ = w.Write([]byte("OK"))
 		}).With(mw1).With(mw2).With(mw3)
@@ -149,7 +148,7 @@ func TestOptimizedHandlerBoundaryConditions(t *testing.T) {
 		r := teapot.New()
 
 		var capturedKey string
-		r.GET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
+		r.Func().GET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
 			capturedKey = teapot.URLParam(req, "key")
 			_, _ = w.Write([]byte("OK"))
 		})
@@ -165,9 +164,7 @@ func TestOptimizedHandlerBoundaryConditions(t *testing.T) {
 	t.Run("nil chi route context with wildcards", func(t *testing.T) {
 		r := teapot.New()
 
-		r.GET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
-			_, _ = w.Write([]byte("OK"))
-		})
+		r.Func().GET("/{key:.*}", testutil.StringResponseWriterBuilder("OK"))
 
 		r.Finalize()
 
@@ -285,7 +282,7 @@ func TestOptimizedHandlerAllCombinations(t *testing.T) {
 				pattern = "/{key:.*}"
 			}
 
-			rb := r.GET(pattern, func(w http.ResponseWriter, req *http.Request) {
+			rb := r.Func().GET(pattern, func(w http.ResponseWriter, req *http.Request) {
 				capturedAction = teapot.GetAction(req)
 				capturedName = teapot.GetRouteName(req)
 				if tt.hasWildcard {
@@ -353,7 +350,7 @@ func TestOptimizedHandlerNilRouteContext(t *testing.T) {
 	t.Run("slow path with nil chi context", func(t *testing.T) {
 		r := teapot.New()
 
-		r.GET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
+		r.Func().GET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
 			// Access URLParam which needs chi context
 			key := teapot.URLParam(req, "key")
 			_, _ = w.Write([]byte(key))
@@ -369,9 +366,7 @@ func TestOptimizedHandlerNilRouteContext(t *testing.T) {
 	t.Run("fast path with nil chi context", func(t *testing.T) {
 		r := teapot.New()
 
-		r.GET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
-			_, _ = w.Write([]byte("OK"))
-		})
+		r.Func().GET("/{key:.*}", testutil.StringResponseWriterBuilder("OK"))
 
 		r.Finalize()
 
@@ -391,7 +386,7 @@ func TestOptimizedHandlerNilRouteContext(t *testing.T) {
 func TestOptimizedHandlerWildcardWithNilContext(t *testing.T) {
 	r := teapot.New()
 
-	r.GET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
+	r.Func().GET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
 		// Attempt to get wildcard param
 		key := chi.URLParam(req, "key")
 		_, _ = w.Write([]byte(key))

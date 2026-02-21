@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/dispatch"
 )
 
@@ -195,11 +196,10 @@ func TestDispatcherBoundaryConditions(t *testing.T) {
 
 	t.Run("dispatcher with exactly one route", func(t *testing.T) {
 		// Tests specificity sorting with single route
-		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 		route := &Route{
 			Method:        "GET",
 			Pattern:       "/test",
-			Handler:       handler,
+			Handler:       http.HandlerFunc(testutil.NoopResponse),
 			QueryMatchers: []dispatch.Matcher{dispatch.QueryExistsMatcher{Key: "foo"}},
 		}
 
@@ -212,19 +212,17 @@ func TestDispatcherBoundaryConditions(t *testing.T) {
 
 	t.Run("routes with specificity values at boundaries", func(t *testing.T) {
 		// Test sorting with specificity 0, 1, 2, etc.
-		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
-
-		route0 := &Route{Method: "GET", Pattern: "/test", Handler: handler}
+		route0 := &Route{Method: "GET", Pattern: "/test", Handler: http.HandlerFunc(testutil.NoopResponse)}
 		route1 := &Route{
 			Method:        "GET",
 			Pattern:       "/test",
-			Handler:       handler,
+			Handler:       http.HandlerFunc(testutil.NoopResponse),
 			QueryMatchers: []dispatch.Matcher{dispatch.QueryExistsMatcher{Key: "a"}},
 		}
 		route2 := &Route{
 			Method:  "GET",
 			Pattern: "/test",
-			Handler: handler,
+			Handler: http.HandlerFunc(testutil.NoopResponse),
 			QueryMatchers: []dispatch.Matcher{
 				dispatch.QueryExistsMatcher{Key: "a"},
 				dispatch.QueryExistsMatcher{Key: "b"},
@@ -246,14 +244,10 @@ func TestDispatcherBoundaryConditions(t *testing.T) {
 // TestDispatcherNilAndEmptyContexts tests nil chi.RouteContext edge cases
 func TestDispatcherNilAndEmptyContexts(t *testing.T) {
 	t.Run("nil chi route context", func(t *testing.T) {
-		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			_, _ = w.Write([]byte("OK"))
-		})
-
 		route := &Route{
 			Method:         "GET",
 			Pattern:        "/*",
-			Handler:        handler,
+			Handler:        http.HandlerFunc(testutil.StringResponseWriterBuilder("OK")),
 			WildcardParams: map[string]bool{"key": true},
 		}
 

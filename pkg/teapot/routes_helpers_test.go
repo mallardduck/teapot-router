@@ -15,7 +15,7 @@ import (
 // identified by gremlins in routes_helpers.go (lines 24:29, 26:27, 50:29, 52:27, etc.)
 func TestFormatRoutesHelpersBoundaryConditions(t *testing.T) {
 	t.Run("format routes with exactly zero routes", func(t *testing.T) {
-		routes := []teapot.RouteInfo{}
+		var routes []teapot.RouteInfo
 
 		var buf bytes.Buffer
 		err := teapot.FormatRoutesTable(&buf, routes)

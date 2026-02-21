@@ -15,11 +15,11 @@ func TestFinalizeOptimization(t *testing.T) {
 	r := teapot.New()
 
 	// Register routes
-	r.GET("/simple", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/simple", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("SIMPLE"))
 	})
 
-	r.GET("/with-meta", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/with-meta", func(w http.ResponseWriter, r *http.Request) {
 		action := teapot.GetAction(r)
 		name := teapot.GetRouteName(r)
 		_, _ = w.Write([]byte(action + ":" + name))
@@ -46,7 +46,7 @@ func TestFinalizeOptimization(t *testing.T) {
 // TestFinalizeIdempotent ensures calling Finalize multiple times is safe
 func TestFinalizeIdempotent(t *testing.T) {
 	r := teapot.New()
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("OK"))
 	})
 
@@ -66,21 +66,21 @@ func TestS3WithFinalize(t *testing.T) {
 	r := teapot.New()
 
 	// Service endpoint
-	r.GET("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("LIST_BUCKETS"))
 	}).Name("service.list").Action("s3:ListAllMyBuckets")
 
 	// Bucket operations
 	r.NamedGroup("/{bucket}", "bucket", func(r *teapot.Router) {
-		r.PUT("", func(w http.ResponseWriter, r *http.Request) {
+		r.Func().PUT("", func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte("CREATE"))
 		}).Name("create").Action("s3:CreateBucket")
 
-		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
+		r.Func().QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte("LIST"))
 		}).Name("list").Action("s3:ListBucket")
 
-		r.QueryGET("", func(w http.ResponseWriter, r *http.Request) {
+		r.Func().QueryGET("", func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte("ACL"))
 		}).Name("acl").Action("s3:GetBucketAcl").Query("acl")
 	})

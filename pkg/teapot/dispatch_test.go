@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -13,13 +14,13 @@ func TestDispatchBasicRouting(t *testing.T) {
 	r := New()
 
 	r.Dispatch("GET", "/items", func(d *DispatchBuilder, m Matchers) {
-		d.Default(func(w http.ResponseWriter, _ *http.Request) {
+		d.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("list-all"))
 		})
-		d.When(m.QueryEquals("type", "active")).Do(func(w http.ResponseWriter, _ *http.Request) {
+		d.When(m.QueryEquals("type", "active")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("list-active"))
 		})
-		d.When(m.QueryExists("search")).Do(func(w http.ResponseWriter, _ *http.Request) {
+		d.When(m.QueryExists("search")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("search"))
 		})
 	})
@@ -51,12 +52,12 @@ func TestDispatchNameAndAction(t *testing.T) {
 	var capturedName, capturedAction string
 
 	r.Dispatch("GET", "/things", func(d *DispatchBuilder, m Matchers) {
-		d.Default(func(_ http.ResponseWriter, req *http.Request) {
+		d.FuncDefault(func(_ http.ResponseWriter, req *http.Request) {
 			capturedName = GetRouteName(req)
 			capturedAction = GetAction(req)
 		}).Name("things.list").Action("api:things:List")
 
-		d.When(m.QueryEquals("view", "detail")).Do(func(_ http.ResponseWriter, req *http.Request) {
+		d.When(m.QueryEquals("view", "detail")).FuncDo(func(_ http.ResponseWriter, req *http.Request) {
 			capturedName = GetRouteName(req)
 			capturedAction = GetAction(req)
 		}).Name("things.detail").Action("api:things:Detail")
@@ -85,8 +86,8 @@ func TestDispatchURLGeneration(t *testing.T) {
 	r := New()
 
 	r.Dispatch("GET", "/users/{id}", func(d *DispatchBuilder, m Matchers) {
-		d.Default(func(_ http.ResponseWriter, _ *http.Request) {}).Name("user.show")
-		d.When(m.QueryExists("edit")).Do(func(_ http.ResponseWriter, _ *http.Request) {}).Name("user.edit")
+		d.FuncDefault(testutil.NoopResponse).Name("user.show")
+		d.When(m.QueryExists("edit")).FuncDo(testutil.NoopResponse).Name("user.edit")
 	})
 
 	url, err := r.URL("user.show", "id", "42")
@@ -102,9 +103,9 @@ func TestDispatchRouteListing(t *testing.T) {
 	r := New()
 
 	r.Dispatch("GET", "/api/items", func(d *DispatchBuilder, m Matchers) {
-		d.Default(func(_ http.ResponseWriter, _ *http.Request) {}).Name("api.items.list").Action("api:Items:List")
-		d.When(m.QueryEquals("status", "active")).Do(func(_ http.ResponseWriter, _ *http.Request) {}).Name("api.items.active").Action("api:Items:ListActive")
-		d.When(m.QueryExists("search")).Do(func(_ http.ResponseWriter, _ *http.Request) {}).Name("api.items.search").Action("api:Items:Search")
+		d.FuncDefault(testutil.NoopResponse).Name("api.items.list").Action("api:Items:List")
+		d.When(m.QueryEquals("status", "active")).FuncDo(testutil.NoopResponse).Name("api.items.active").Action("api:Items:ListActive")
+		d.When(m.QueryExists("search")).FuncDo(testutil.NoopResponse).Name("api.items.search").Action("api:Items:Search")
 	})
 
 	routes := r.Routes()
@@ -141,12 +142,12 @@ func TestDispatchWildcardParams(t *testing.T) {
 	var capturedBucket, capturedKey string
 
 	r.Dispatch("GET", "/{bucket}/{key:.*}", func(d *DispatchBuilder, m Matchers) {
-		d.Default(func(w http.ResponseWriter, req *http.Request) {
+		d.FuncDefault(func(w http.ResponseWriter, req *http.Request) {
 			capturedBucket = URLParam(req, "bucket")
 			capturedKey = URLParam(req, "key")
 			_, _ = w.Write([]byte("object"))
 		})
-		d.When(m.QueryExists("acl")).Do(func(w http.ResponseWriter, req *http.Request) {
+		d.When(m.QueryExists("acl")).FuncDo(func(w http.ResponseWriter, req *http.Request) {
 			capturedBucket = URLParam(req, "bucket")
 			capturedKey = URLParam(req, "key")
 			_, _ = w.Write([]byte("acl"))
@@ -186,7 +187,7 @@ func TestDispatchMiddleware(t *testing.T) {
 	}
 
 	r.Dispatch("GET", "/mw-test", func(d *DispatchBuilder, m Matchers) {
-		d.Default(func(w http.ResponseWriter, _ *http.Request) {
+		d.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("ok"))
 		}).With(mw)
 	})
@@ -201,22 +202,22 @@ func TestDispatchMiddleware(t *testing.T) {
 
 func TestDispatchConflictWithDirect(t *testing.T) {
 	r := New()
-	r.GET("/conflict", func(_ http.ResponseWriter, _ *http.Request) {})
+	r.Func().GET("/conflict", testutil.NoopResponse)
 
 	assert.Panics(t, func() {
 		r.Dispatch("GET", "/conflict", func(d *DispatchBuilder, m Matchers) {
-			d.Default(func(_ http.ResponseWriter, _ *http.Request) {})
+			d.FuncDefault(testutil.NoopResponse)
 		})
 	})
 }
 
 func TestDispatchConflictWithExistingDispatcher(t *testing.T) {
 	r := New()
-	r.QueryGET("/conflict", func(_ http.ResponseWriter, _ *http.Request) {}).Query("foo")
+	r.Func().QueryGET("/conflict", testutil.NoopResponse).Query("foo")
 
 	assert.Panics(t, func() {
 		r.Dispatch("GET", "/conflict", func(d *DispatchBuilder, m Matchers) {
-			d.Default(func(_ http.ResponseWriter, _ *http.Request) {})
+			d.FuncDefault(testutil.NoopResponse)
 		})
 	})
 }
@@ -236,19 +237,19 @@ func TestDispatchDuplicateName(t *testing.T) {
 
 	assert.Panics(t, func() {
 		r.Dispatch("GET", "/dup-name", func(d *DispatchBuilder, m Matchers) {
-			d.Default(func(_ http.ResponseWriter, _ *http.Request) {}).Name("same-name")
-			d.When(m.QueryExists("x")).Do(func(_ http.ResponseWriter, _ *http.Request) {}).Name("same-name")
+			d.FuncDefault(testutil.NoopResponse).Name("same-name")
+			d.When(m.QueryExists("x")).FuncDo(testutil.NoopResponse).Name("same-name")
 		})
 	})
 }
 
 func TestDispatchNameConflictWithFluentAPI(t *testing.T) {
 	r := New()
-	r.GET("/other", func(_ http.ResponseWriter, _ *http.Request) {}).Name("taken")
+	r.Func().GET("/other", testutil.NoopResponse).Name("taken")
 
 	assert.Panics(t, func() {
 		r.Dispatch("GET", "/different-path", func(d *DispatchBuilder, m Matchers) {
-			d.Default(func(_ http.ResponseWriter, _ *http.Request) {}).Name("taken")
+			d.FuncDefault(testutil.NoopResponse).Name("taken")
 		})
 	})
 }
@@ -257,16 +258,16 @@ func TestDispatchCoexistsWithFluentAPI(t *testing.T) {
 	r := New()
 
 	// Fluent-style route on one path
-	r.GET("/fluent", func(w http.ResponseWriter, _ *http.Request) {
+	r.Func().GET("/fluent", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("fluent"))
 	}).Name("fluent.route")
 
 	// Dispatch-style route on a different path
 	r.Dispatch("GET", "/grouped", func(d *DispatchBuilder, m Matchers) {
-		d.Default(func(w http.ResponseWriter, _ *http.Request) {
+		d.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("grouped-default"))
 		}).Name("grouped.default")
-		d.When(m.QueryExists("special")).Do(func(w http.ResponseWriter, _ *http.Request) {
+		d.When(m.QueryExists("special")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("grouped-special"))
 		}).Name("grouped.special")
 	})
@@ -302,7 +303,7 @@ func TestDispatchWithNamedGroup(t *testing.T) {
 
 	r.NamedGroup("/api", "api", func(sub *Router) {
 		sub.Dispatch("GET", "/things", func(d *DispatchBuilder, m Matchers) {
-			d.Default(func(w http.ResponseWriter, _ *http.Request) {
+			d.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
 				_, _ = w.Write([]byte("things"))
 			}).Name("list").Action("api:Things:List")
 		})

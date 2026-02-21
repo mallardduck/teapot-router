@@ -20,7 +20,7 @@ func TestGroupNamePrefix(t *testing.T) {
 		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
 			// Inner group with empty prefix - line 405: if namePrefix == ""
 			sub.NamedGroup("/v1", "", func(sub2 *teapot.Router) {
-				sub2.GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test")
+				sub2.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test")
 			})
 		})
 
@@ -42,7 +42,7 @@ func TestGroupNamePrefix(t *testing.T) {
 
 		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
 			sub.NamedGroup("/v1", "v1", func(sub2 *teapot.Router) {
-				sub2.GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test")
+				sub2.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test")
 			})
 		})
 
@@ -56,7 +56,7 @@ func TestGroupNamePrefix(t *testing.T) {
 
 		// Root level group with empty prefix
 		r.NamedGroup("/api", "", func(sub *teapot.Router) {
-			sub.GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test")
+			sub.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test")
 		})
 
 		routes := r.Routes()
@@ -71,7 +71,7 @@ func TestGroupNamePrefix(t *testing.T) {
 		r.NamedGroup("/a", "a", func(sub *teapot.Router) {
 			sub.NamedGroup("/b", "", func(sub2 *teapot.Router) { // Empty inherits "a"
 				sub2.NamedGroup("/c", "c", func(sub3 *teapot.Router) { // Adds "c" to "a"
-					sub3.GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test")
+					sub3.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test")
 				})
 			})
 		})
@@ -88,7 +88,7 @@ func TestGroupPathPrefix(t *testing.T) {
 		r := teapot.New()
 
 		r.Group("/api", func(sub *teapot.Router) {
-			sub.GET("/users", func(w http.ResponseWriter, req *http.Request) {
+			sub.Func().GET("/users", func(w http.ResponseWriter, req *http.Request) {
 				_, _ = w.Write([]byte("users"))
 			})
 		})
@@ -109,7 +109,7 @@ func TestGroupPathPrefix(t *testing.T) {
 
 		r.Group("/api", func(sub *teapot.Router) {
 			sub.Group("/v1", func(sub2 *teapot.Router) {
-				sub2.GET("/test", func(w http.ResponseWriter, req *http.Request) {
+				sub2.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
 					_, _ = w.Write([]byte("nested"))
 				})
 			})
@@ -129,7 +129,7 @@ func TestGroupPathPrefix(t *testing.T) {
 		r := teapot.New()
 
 		r.Group("", func(sub *teapot.Router) {
-			sub.GET("/test", func(w http.ResponseWriter, req *http.Request) {
+			sub.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
 				_, _ = w.Write([]byte("ok"))
 			})
 		})
@@ -148,7 +148,7 @@ func TestGroupPathPrefix(t *testing.T) {
 		r := teapot.New()
 
 		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
-			sub.GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users")
+			sub.Func().GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users")
 		})
 
 		routes := r.Routes()
@@ -182,7 +182,7 @@ func TestGroupMiddleware(t *testing.T) {
 
 		r.Group("/api", func(sub *teapot.Router) {
 			sub.Use(mw)
-			sub.GET("/test", func(w http.ResponseWriter, req *http.Request) {
+			sub.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
 				_, _ = w.Write([]byte("ok"))
 			})
 		})
@@ -219,7 +219,7 @@ func TestGroupMiddleware(t *testing.T) {
 			sub.Use(mw1)
 			sub.Group("/v1", func(sub2 *teapot.Router) {
 				sub2.Use(mw2)
-				sub2.GET("/test", func(w http.ResponseWriter, req *http.Request) {
+				sub2.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
 					calls = append(calls, "handler")
 					_, _ = w.Write([]byte("ok"))
 				})
@@ -244,7 +244,7 @@ func TestRouteMethod(t *testing.T) {
 		r := teapot.New()
 
 		r.Route("/api", func(sub *teapot.Router) {
-			sub.GET("/test", func(w http.ResponseWriter, req *http.Request) {
+			sub.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
 				_, _ = w.Write([]byte("ok"))
 			})
 		})
@@ -264,7 +264,7 @@ func TestRouteMethod(t *testing.T) {
 
 		r.Route("/api", func(sub *teapot.Router) {
 			sub.Use(teapot.RouteContextMiddleware(r))
-			sub.GET("/test", func(w http.ResponseWriter, req *http.Request) {
+			sub.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
 				// Should have access to route context here
 				action := teapot.GetAction(req)
 				_, _ = w.Write([]byte(action))

@@ -12,12 +12,14 @@ import (
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
+type handler struct{}
+
 // contextHandler is the single handler wired to every route in the test router.
 // It reads the route name, action, and path parameters that the router / dispatcher
 // injected into the request context and writes them to the response body.
 // Asserting on that output is equivalent to asserting "this request was dispatched
 // to the correct route AND the dispatcher populated the context correctly."
-func contextHandler(w http.ResponseWriter, r *http.Request) {
+func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "ROUTE:%s|ACTION:%s|BUCKET:%s|KEY:%s",
 		teapot.GetRouteName(r),
 		teapot.GetAction(r),
@@ -25,6 +27,8 @@ func contextHandler(w http.ResponseWriter, r *http.Request) {
 		teapot.URLParam(r, "key"),
 	)
 }
+
+var contextHandler = handler{}
 
 // setupS3Router registers every S3-style route from examples/routes-cli/main.go
 // (the conditional debug route and the favicon handler are intentionally omitted).
@@ -567,7 +571,7 @@ func TestS3DispatcherIntegration(t *testing.T) {
 // test can verify the correct route was reached.  A 200 response for a URL that
 // should hit this handler means the fallback was served instead — that is the
 // exact failure mode being tested.
-func routeNotImplemented(w http.ResponseWriter, r *http.Request) {
+var routeNotImplemented = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 	fmt.Fprintf(w, "ROUTE:%s|ACTION:%s|BUCKET:%s|KEY:%s",
 		teapot.GetRouteName(r),
@@ -575,7 +579,7 @@ func routeNotImplemented(w http.ResponseWriter, r *http.Request) {
 		teapot.URLParam(r, "bucket"),
 		teapot.URLParam(r, "key"),
 	)
-}
+})
 
 // TestS3DispatcherWithStubHandlers runs the full S3 route set with a
 // deliberate split between "implemented" routes (contextHandler, 200) and
@@ -1064,10 +1068,10 @@ func TestDispatcherPromotionWithSharedHandler(t *testing.T) {
 		//   r.QueryGET("/{bucket}", deps.getBucketVersioning).Query("versioning")…
 		//   r.QueryPUT("/{bucket}", deps.putBucketVersioning).Query("versioning")…
 		r := teapot.New()
-		r.PUT("/{bucket}", fallback).Name("put-create").Action("put-create")
-		r.GET("/{bucket}", fallback).Name("get-list").Action("get-list")
-		r.QueryGET("/{bucket}", stub).Query("versioning").Name("get-versioning").Action("get-versioning")
-		r.QueryPUT("/{bucket}", stub).Query("versioning").Name("put-versioning").Action("put-versioning")
+		r.Func().PUT("/{bucket}", fallback).Name("put-create").Action("put-create")
+		r.Func().GET("/{bucket}", fallback).Name("get-list").Action("get-list")
+		r.Func().QueryGET("/{bucket}", stub).Query("versioning").Name("get-versioning").Action("get-versioning")
+		r.Func().QueryPUT("/{bucket}", stub).Query("versioning").Name("put-versioning").Action("put-versioning")
 
 		tests := []struct {
 			method   string
@@ -1096,10 +1100,10 @@ func TestDispatcherPromotionWithSharedHandler(t *testing.T) {
 		// goes through handleDirect's "dispatcher already exists" branch —
 		// no second mux.Method() call.
 		r := teapot.New()
-		r.QueryGET("/{bucket}", stub).Query("versioning").Name("get-versioning").Action("get-versioning")
-		r.QueryGET("/{bucket}", stub).Query("acl").Name("get-acl").Action("get-acl")
-		r.QueryGET("/{bucket}", stub).Query("cors").Name("get-cors").Action("get-cors")
-		r.GET("/{bucket}", fallback).Name("get-list").Action("get-list")
+		r.Func().QueryGET("/{bucket}", stub).Query("versioning").Name("get-versioning").Action("get-versioning")
+		r.Func().QueryGET("/{bucket}", stub).Query("acl").Name("get-acl").Action("get-acl")
+		r.Func().QueryGET("/{bucket}", stub).Query("cors").Name("get-cors").Action("get-cors")
+		r.Func().GET("/{bucket}", fallback).Name("get-list").Action("get-list")
 
 		tests := []struct {
 			path     string
@@ -1129,14 +1133,14 @@ func TestDispatcherPromotionWithSharedHandler(t *testing.T) {
 		// each route is reachable regardless of its position among peers with
 		// equal specificity.
 		r := teapot.New()
-		r.GET("/{bucket}", fallback).Name("list").Action("list")
+		r.Func().GET("/{bucket}", fallback).Name("list").Action("list")
 
 		queryKeys := []string{
 			"versioning", "acl", "cors", "policy", "lifecycle",
 			"location", "requestPayment", "analytics", "versions", "uploads",
 		}
 		for _, key := range queryKeys {
-			r.QueryGET("/{bucket}", stub).Query(key).Name(key).Action(key)
+			r.Func().QueryGET("/{bucket}", stub).Query(key).Name(key).Action(key)
 		}
 
 		// Every query key must reach its own stub
@@ -1165,10 +1169,10 @@ func TestDispatcherPromotionWithSharedHandler(t *testing.T) {
 		// second time on the /* pattern.  Verifies the overwrite takes effect
 		// on the translated pattern, not just plain {param} patterns.
 		r := teapot.New()
-		r.GET("/{bucket}/{key:.*}", fallback).Name("get-object").Action("get-object")
-		r.QueryGET("/{bucket}/{key:.*}", stub).Query("tagging").Name("get-tagging").Action("get-tagging")
-		r.QueryGET("/{bucket}/{key:.*}", stub).Query("retention").Name("get-retention").Action("get-retention")
-		r.QueryGET("/{bucket}/{key:.*}", stub).Query("acl").Name("get-acl").Action("get-acl")
+		r.Func().GET("/{bucket}/{key:.*}", fallback).Name("get-object").Action("get-object")
+		r.Func().QueryGET("/{bucket}/{key:.*}", stub).Query("tagging").Name("get-tagging").Action("get-tagging")
+		r.Func().QueryGET("/{bucket}/{key:.*}", stub).Query("retention").Name("get-retention").Action("get-retention")
+		r.Func().QueryGET("/{bucket}/{key:.*}", stub).Query("acl").Name("get-acl").Action("get-acl")
 
 		tests := []struct {
 			path     string

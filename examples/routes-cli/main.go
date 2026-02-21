@@ -187,6 +187,7 @@ func setupRoutes() *teapot.Router {
 		router.GET("/.internal/routes", teapot.NewListRoutesHandler(router, nil)).Name("debug.routes")
 	}
 
+	// TODO add a handler to output the ico file
 	router.Func().GET("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {}).Name("favicon")
 
 	return router

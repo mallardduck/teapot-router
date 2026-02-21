@@ -169,13 +169,13 @@ func TestFormatRoutesJSON(t *testing.T) {
 		t.Errorf("expected count=3, got %v", output["count"])
 	}
 
-	routes_list, ok := output["routes"].([]any)
-	if !ok || len(routes_list) != 3 {
+	routesList, ok := output["routes"].([]any)
+	if !ok || len(routesList) != 3 {
 		t.Errorf("expected 3 routes, got %v", output["routes"])
 	}
 
 	// Verify first route has expected fields
-	firstRoute, ok := routes_list[0].(map[string]any)
+	firstRoute, ok := routesList[0].(map[string]any)
 	if !ok {
 		t.Fatal("expected route to be a map")
 	}

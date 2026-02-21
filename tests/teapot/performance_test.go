@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -14,7 +15,7 @@ import (
 func TestDirectVsQueryPerformance(t *testing.T) {
 	t.Run("Direct route (GET)", func(t *testing.T) {
 		r := teapot.New()
-		r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+		r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
 		})
 
@@ -27,7 +28,7 @@ func TestDirectVsQueryPerformance(t *testing.T) {
 
 	t.Run("Query route (QueryGET)", func(t *testing.T) {
 		r := teapot.New()
-		r.QueryGET("/test", func(w http.ResponseWriter, r *http.Request) {
+		r.Func().QueryGET("/test", func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
 		})
 
@@ -41,32 +42,32 @@ func TestDirectVsQueryPerformance(t *testing.T) {
 
 // TestQueryMethodPanic verifies that .Query() panics on direct routes
 func TestQueryMethodPanic(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("expected panic when using .Query() with GET")
-		}
-	}()
+	msg := testutil.CapturePanic(func() {
+		r := teapot.New()
+		r.Func().GET("/test", testutil.NoopResponse).Query("param")
+	})
 
-	r := teapot.New()
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {}).Query("param")
+	if msg == "" {
+		t.Error("expected panic when using .Query() with GET")
+	}
 }
 
 // TestQueryValueMethodPanic verifies that .QueryValue() panics on direct routes
 func TestQueryValueMethodPanic(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("expected panic when using .QueryValue() with GET")
-		}
-	}()
+	msg := testutil.CapturePanic(func() {
+		r := teapot.New()
+		r.Func().GET("/test", testutil.NoopResponse).QueryValue("key", "value")
+	})
 
-	r := teapot.New()
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {}).QueryValue("key", "value")
+	if msg == "" {
+		t.Error("expected panic when using .QueryValue() with GET")
+	}
 }
 
 // Benchmark direct route (new fast path)
 func BenchmarkDirectRoute(b *testing.B) {
 	r := teapot.New()
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
 
@@ -83,7 +84,7 @@ func BenchmarkDirectRoute(b *testing.B) {
 // Benchmark query route (uses dispatcher)
 func BenchmarkQueryRoute(b *testing.B) {
 	r := teapot.New()
-	r.QueryGET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().QueryGET("/test", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
 
@@ -100,7 +101,7 @@ func BenchmarkQueryRoute(b *testing.B) {
 // Benchmark direct route with context injection
 func BenchmarkDirectRouteWithContext(b *testing.B) {
 	r := teapot.New()
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
 		_ = teapot.GetAction(r)
 		_ = teapot.GetRouteName(r)
 		w.WriteHeader(200)
@@ -119,7 +120,7 @@ func BenchmarkDirectRouteWithContext(b *testing.B) {
 // Benchmark query route with context injection
 func BenchmarkQueryRouteWithContext(b *testing.B) {
 	r := teapot.New()
-	r.QueryGET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().QueryGET("/test", func(w http.ResponseWriter, r *http.Request) {
 		_ = teapot.GetAction(r)
 		_ = teapot.GetRouteName(r)
 		w.WriteHeader(200)

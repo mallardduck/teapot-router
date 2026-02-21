@@ -13,7 +13,7 @@ import (
 // Benchmark teapot router vs raw Chi for simple routes (no query multiplexing)
 func BenchmarkSimpleRoute_Teapot(b *testing.B) {
 	r := teapot.New()
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
 
@@ -46,7 +46,7 @@ func BenchmarkSimpleRoute_Chi(b *testing.B) {
 // Benchmark with URL parameters
 func BenchmarkURLParams_Teapot(b *testing.B) {
 	r := teapot.New()
-	r.GET("/users/{id}", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/users/{id}", func(w http.ResponseWriter, r *http.Request) {
 		_ = teapot.URLParam(r, "id")
 		w.WriteHeader(200)
 	})
@@ -81,7 +81,7 @@ func BenchmarkURLParams_Chi(b *testing.B) {
 // Benchmark query multiplexing (unique to teapot)
 func BenchmarkQueryMultiplexing_SingleRoute(b *testing.B) {
 	r := teapot.New()
-	r.GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
 
@@ -97,13 +97,13 @@ func BenchmarkQueryMultiplexing_SingleRoute(b *testing.B) {
 
 func BenchmarkQueryMultiplexing_ThreeRoutes(b *testing.B) {
 	r := teapot.New()
-	r.GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
-	r.GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Query("acl")
-	r.GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Query("versioning")
 
@@ -119,13 +119,13 @@ func BenchmarkQueryMultiplexing_ThreeRoutes(b *testing.B) {
 
 func BenchmarkQueryMultiplexing_ThreeRoutes_MatchLast(b *testing.B) {
 	r := teapot.New()
-	r.GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
-	r.GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Query("acl")
-	r.GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Query("versioning")
 
@@ -142,7 +142,7 @@ func BenchmarkQueryMultiplexing_ThreeRoutes_MatchLast(b *testing.B) {
 // Benchmark context injection overhead
 func BenchmarkContextInjection_Teapot(b *testing.B) {
 	r := teapot.New()
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
 		_ = teapot.GetAction(r)
 		_ = teapot.GetRouteName(r)
 		w.WriteHeader(200)

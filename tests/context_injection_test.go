@@ -201,7 +201,7 @@ func TestContextInjection_WithMiddleware(t *testing.T) {
 		_, _ = w.Write([]byte("OK"))
 	}
 
-	r.GET("/protected", handler).
+	r.Func().GET("/protected", handler).
 		Name("protected.resource").
 		Action("read:protected").
 		With(checkContextMiddleware)
@@ -283,7 +283,7 @@ func TestContextInjection_WildcardParams(t *testing.T) {
 		_, _ = w.Write([]byte("OK"))
 	}
 
-	r.GET("/{bucket}/{key:.*}", handler).
+	r.Func().GET("/{bucket}/{key:.*}", handler).
 		Name("object.get").
 		Action("s3:GetObject")
 
@@ -444,7 +444,7 @@ func TestContextInjection_EmptyValues(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	r.GET("/no-metadata", handler)
+	r.Func().GET("/no-metadata", handler)
 
 	req := httptest.NewRequest("GET", "/no-metadata", nil)
 	w := httptest.NewRecorder()
@@ -504,7 +504,7 @@ func TestContextInjection_GlobalVsRouteMiddleware(t *testing.T) {
 		r.Use(teapot.RouteContextMiddleware(r))
 		r.Use(routeLevelMiddleware)
 
-		r.GET("/test", handler).
+		r.Func().GET("/test", handler).
 			Name("test.route").
 			Action("test:Action").
 			With(routeSpecificMiddleware)
@@ -572,20 +572,20 @@ func TestContextInjection_RouteContextMiddleware(t *testing.T) {
 		r.Use(auditMiddleware)
 
 		// Direct routes
-		r.GET("/users", handler).
+		r.Func().GET("/users", handler).
 			Name("users.index").
 			Action("list:users")
 
-		r.GET("/users/{id}", handler).
+		r.Func().GET("/users/{id}", handler).
 			Name("users.show").
 			Action("read:user")
 
 		// Query-multiplexed routes
-		r.QueryGET("/{bucket}", handler).
+		r.Func().QueryGET("/{bucket}", handler).
 			Name("bucket.list").
 			Action("s3:ListBucket")
 
-		r.QueryGET("/{bucket}", handler).
+		r.Func().QueryGET("/{bucket}", handler).
 			Query("acl").
 			Name("bucket.acl").
 			Action("s3:GetBucketAcl")
@@ -659,17 +659,17 @@ func TestContextInjection_RouteContextMiddleware_QueryFallback(t *testing.T) {
 		r.Use(auditMiddleware)
 
 		// Fallback route (no query params)
-		r.GET("/{bucket}", handler).
+		r.Func().GET("/{bucket}", handler).
 			Name("bucket.head").
 			Action("s3:HeadBucket")
 
 		// Query-specific routes (will trigger auto-promotion)
-		r.QueryGET("/{bucket}", handler).
+		r.Func().QueryGET("/{bucket}", handler).
 			Query("acl").
 			Name("bucket.acl").
 			Action("s3:GetBucketAcl")
 
-		r.QueryGET("/{bucket}", handler).
+		r.Func().QueryGET("/{bucket}", handler).
 			Query("versioning").
 			Name("bucket.versioning").
 			Action("s3:GetBucketVersioning")

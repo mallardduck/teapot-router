@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/mallardduck/teapot-router/pkg/dispatch"
@@ -198,7 +199,7 @@ func TestDispatcherMiddleware(t *testing.T) {
 
 func TestDispatcherAddRouteSpecificity(t *testing.T) {
 	asserts := assert.New(t)
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	handler := http.HandlerFunc(testutil.NoopResponse)
 
 	route1 := &Route{
 		Method:  "GET",
@@ -231,7 +232,7 @@ func TestDispatcherAddRouteSpecificity(t *testing.T) {
 }
 
 func TestDispatcherUpdateSpecificity(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	handler := http.HandlerFunc(testutil.NoopResponse)
 
 	route1 := &Route{
 		Method:  "GET",
@@ -260,7 +261,7 @@ func TestDispatcherUpdateSpecificity(t *testing.T) {
 }
 
 func TestFindBestDispatcherRoute(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+	handler := http.HandlerFunc(testutil.NoopResponse)
 
 	t.Run("returns fallback route when available", func(t *testing.T) {
 		dispatcher := &Dispatcher{

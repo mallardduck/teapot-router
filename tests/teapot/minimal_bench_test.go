@@ -29,7 +29,7 @@ func BenchmarkMinimal_Chi(b *testing.B) {
 
 func BenchmarkMinimal_TeapotDirect(b *testing.B) {
 	r := teapot.New()
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
 
@@ -45,7 +45,7 @@ func BenchmarkMinimal_TeapotDirect(b *testing.B) {
 
 func BenchmarkMinimal_TeapotQuery(b *testing.B) {
 	r := teapot.New()
-	r.QueryGET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().QueryGET("/test", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
 
@@ -78,7 +78,7 @@ func BenchmarkWithMeta_Chi(b *testing.B) {
 
 func BenchmarkWithMeta_TeapotDirect(b *testing.B) {
 	r := teapot.New()
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Name("test").Action("s3:Test")
 
@@ -94,7 +94,7 @@ func BenchmarkWithMeta_TeapotDirect(b *testing.B) {
 
 func BenchmarkWithMeta_TeapotQuery(b *testing.B) {
 	r := teapot.New()
-	r.QueryGET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().QueryGET("/test", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	}).Name("test").Action("s3:Test")
 

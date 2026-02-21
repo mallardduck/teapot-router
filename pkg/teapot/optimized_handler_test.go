@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -13,7 +14,7 @@ import (
 func TestFinalizeMinimalRoute(t *testing.T) {
 	r := teapot.New()
 
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("OK"))
 	})
 
@@ -29,7 +30,7 @@ func TestFinalizeWithActionAndName(t *testing.T) {
 	r := teapot.New()
 
 	var capturedAction, capturedName string
-	r.GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
 		capturedAction = teapot.GetAction(r)
 		capturedName = teapot.GetRouteName(r)
 		_, _ = w.Write([]byte("OK"))
@@ -56,7 +57,7 @@ func TestFinalizeWithMiddleware(t *testing.T) {
 		})
 	}
 
-	r.GET("/protected", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/protected", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("OK"))
 	}).With(mw)
 
@@ -74,7 +75,7 @@ func TestFinalizeWithWildcardParams(t *testing.T) {
 	r := teapot.New()
 
 	var capturedKey string
-	r.GET("/{bucket}/{key:.*}", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/{bucket}/{key:.*}", func(w http.ResponseWriter, r *http.Request) {
 		capturedKey = teapot.URLParam(r, "key")
 		_, _ = w.Write([]byte("OK"))
 	})
@@ -101,7 +102,7 @@ func TestFinalizeWithEverything(t *testing.T) {
 		})
 	}
 
-	r.GET("/{bucket}/{key:.*}", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/{bucket}/{key:.*}", func(w http.ResponseWriter, r *http.Request) {
 		capturedAction = teapot.GetAction(r)
 		capturedName = teapot.GetRouteName(r)
 		capturedKey = teapot.URLParam(r, "key")
@@ -126,7 +127,7 @@ func TestRouteBeforeAndAfterFinalize(t *testing.T) {
 	r := teapot.New()
 
 	var capturedAction string
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
 		capturedAction = teapot.GetAction(r)
 		_, _ = w.Write([]byte("OK"))
 	}).Action("test:Action")
@@ -151,12 +152,12 @@ func TestFinalizeQueryRoutes(t *testing.T) {
 
 	var capturedAction string
 
-	r.QueryGET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().QueryGET("/bucket", func(w http.ResponseWriter, r *http.Request) {
 		capturedAction = teapot.GetAction(r)
 		_, _ = w.Write([]byte("LIST"))
 	}).Name("bucket.list").Action("s3:ListBucket")
 
-	r.QueryGET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().QueryGET("/bucket", func(w http.ResponseWriter, r *http.Request) {
 		capturedAction = teapot.GetAction(r)
 		_, _ = w.Write([]byte("ACL"))
 	}).Name("bucket.acl").Action("s3:GetBucketAcl").Query("acl")
@@ -178,7 +179,7 @@ func TestFinalizeQueryRoutes(t *testing.T) {
 func TestMultipleFinalize(t *testing.T) {
 	r := teapot.New()
 
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("OK"))
 	})
 
@@ -196,9 +197,7 @@ func TestFinalizeWithGroups(t *testing.T) {
 	r := teapot.New()
 
 	r.Group("/api", func(r *teapot.Router) {
-		r.GET("/users", func(w http.ResponseWriter, r *http.Request) {
-			_, _ = w.Write([]byte("USERS"))
-		}).Name("api.users")
+		r.Func().GET("/users", testutil.StringResponseWriterBuilder("USERS")).Name("api.users")
 	})
 
 	// Finalize
@@ -224,9 +223,7 @@ func TestFinalizeMiddlewareOnly(t *testing.T) {
 		})
 	}
 
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("OK"))
-	}).With(mw)
+	r.Func().GET("/test", testutil.StringResponseWriterBuilder("OK")).With(mw)
 
 	// Finalize
 	r.Finalize()
@@ -242,7 +239,7 @@ func TestFinalizeActionOnly(t *testing.T) {
 	r := teapot.New()
 
 	var capturedAction string
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
 		capturedAction = teapot.GetAction(r)
 		_, _ = w.Write([]byte("OK"))
 	}).Action("test:Action")
@@ -261,7 +258,7 @@ func TestFinalizeNameOnly(t *testing.T) {
 	r := teapot.New()
 
 	var capturedName string
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
 		capturedName = teapot.GetRouteName(r)
 		_, _ = w.Write([]byte("OK"))
 	}).Name("test.route")

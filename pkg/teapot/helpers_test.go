@@ -14,7 +14,7 @@ import (
 func TestURLParams(t *testing.T) {
 	r := teapot.New()
 
-	r.GET("/users/{id}/posts/{postId}", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/users/{id}/posts/{postId}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		params := teapot.URLParams(r)
 
 		assert.Len(t, params, 2)
@@ -22,7 +22,7 @@ func TestURLParams(t *testing.T) {
 		assert.Equal(t, "456", params["postId"])
 
 		w.WriteHeader(200)
-	})
+	}))
 
 	req := httptest.NewRequest("GET", "/users/123/posts/456", nil)
 	w := httptest.NewRecorder()
@@ -35,14 +35,14 @@ func TestURLParams(t *testing.T) {
 func TestURLParamsEmpty(t *testing.T) {
 	r := teapot.New()
 
-	r.GET("/simple", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/simple", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		params := teapot.URLParams(r)
 
 		assert.NotNil(t, params, "expected empty map, not nil")
 		assert.Len(t, params, 0)
 
 		w.WriteHeader(200)
-	})
+	}))
 
 	req := httptest.NewRequest("GET", "/simple", nil)
 	w := httptest.NewRecorder()
@@ -61,9 +61,9 @@ func TestChiAccessor(t *testing.T) {
 		_, _ = w.Write([]byte("Custom 404"))
 	})
 
-	r.GET("/exists", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/exists", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-	})
+	}))
 
 	// Test normal route works
 	req := httptest.NewRequest("GET", "/exists", nil)
@@ -103,19 +103,19 @@ func TestRouterWith(t *testing.T) {
 	}
 
 	// Route without middleware
-	r.GET("/public", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/public", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("PUBLIC"))
-	})
+	}))
 
 	// Route with mw1
-	r.With(mw1).GET("/protected", func(w http.ResponseWriter, r *http.Request) {
+	r.With(mw1).GET("/protected", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("PROTECTED"))
-	})
+	}))
 
 	// Route with mw1 and mw2
-	r.With(mw1, mw2).GET("/admin", func(w http.ResponseWriter, r *http.Request) {
+	r.With(mw1, mw2).GET("/admin", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("ADMIN"))
-	})
+	}))
 
 	// Test public route
 	calls = nil
@@ -160,10 +160,10 @@ func TestRouterWithChaining(t *testing.T) {
 	}
 
 	// Chain With() calls
-	r.With(mw1).With(mw2).GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.With(mw1).With(mw2).GET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		order = append(order, "handler")
 		w.WriteHeader(200)
-	})
+	}))
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
@@ -195,19 +195,19 @@ func TestMiddlewareGroup(t *testing.T) {
 	}
 
 	// Public routes (no middleware)
-	r.GET("/public", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/public", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("PUBLIC"))
-	}).Name("public")
+	})).Name("public")
 
 	// Protected routes (with auth + logging middleware)
 	r.MiddlewareGroup(func(r *teapot.Router) {
-		r.GET("/admin", func(w http.ResponseWriter, r *http.Request) {
+		r.GET("/admin", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte("ADMIN"))
-		}).Name("admin")
+		})).Name("admin")
 
-		r.GET("/dashboard", func(w http.ResponseWriter, r *http.Request) {
+		r.GET("/dashboard", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte("DASHBOARD"))
-		}).Name("dashboard")
+		})).Name("dashboard")
 	}, auth, logging)
 
 	// Test public route (no middleware)
@@ -266,10 +266,10 @@ func TestMiddlewareGroupNested(t *testing.T) {
 
 	r.MiddlewareGroup(func(r *teapot.Router) {
 		r.MiddlewareGroup(func(r *teapot.Router) {
-			r.GET("/nested", func(w http.ResponseWriter, r *http.Request) {
+			r.GET("/nested", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				order = append(order, "handler")
 				w.WriteHeader(200)
-			})
+			}))
 		}, mw2, mw3)
 	}, mw1)
 
@@ -297,9 +297,9 @@ func TestMiddlewareGroupWithNamedGroup(t *testing.T) {
 
 	r.MiddlewareGroup(func(r *teapot.Router) {
 		r.NamedGroup("/api", "api", func(r *teapot.Router) {
-			r.GET("/users", func(w http.ResponseWriter, r *http.Request) {
+			r.GET("/users", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				_, _ = w.Write([]byte("USERS"))
-			}).Name("users")
+			})).Name("users")
 		})
 	}, auth)
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -13,12 +14,12 @@ import (
 func TestPatchAndOptions(t *testing.T) {
 	r := teapot.New()
 
-	r.PATCH("/resource", func(w http.ResponseWriter, r *http.Request) {
+	r.PATCH("/resource", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("PATCH"))
-	})
-	r.OPTIONS("/resource", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	r.OPTIONS("/resource", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("OPTIONS"))
-	})
+	}))
 
 	assert.Equal(t, "PATCH", request(t, r, "PATCH", "/resource").Body.String())
 	assert.Equal(t, "OPTIONS", request(t, r, "OPTIONS", "/resource").Body.String())
@@ -28,13 +29,13 @@ func TestPatchAndOptions(t *testing.T) {
 func TestQueryPOST(t *testing.T) {
 	r := teapot.New()
 
-	r.QueryPOST("/upload", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryPOST("/upload", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("UPLOAD"))
-	}).Query("uploads")
+	})).Query("uploads")
 
-	r.QueryPOST("/upload", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryPOST("/upload", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("CREATE"))
-	})
+	}))
 
 	assert.Equal(t, "UPLOAD", request(t, r, "POST", "/upload?uploads").Body.String())
 	assert.Equal(t, "CREATE", request(t, r, "POST", "/upload").Body.String())
@@ -44,13 +45,13 @@ func TestQueryPOST(t *testing.T) {
 func TestQueryPUT(t *testing.T) {
 	r := teapot.New()
 
-	r.QueryPUT("/object", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryPUT("/object", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("ACL"))
-	}).Query("acl")
+	})).Query("acl")
 
-	r.QueryPUT("/object", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryPUT("/object", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("PUT"))
-	})
+	}))
 
 	assert.Equal(t, "ACL", request(t, r, "PUT", "/object?acl").Body.String())
 	assert.Equal(t, "PUT", request(t, r, "PUT", "/object").Body.String())
@@ -60,13 +61,13 @@ func TestQueryPUT(t *testing.T) {
 func TestQueryDELETE(t *testing.T) {
 	r := teapot.New()
 
-	r.QueryDELETE("/object", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryDELETE("/object", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("DELETE_ALL"))
-	}).Query("deleteAll")
+	})).Query("deleteAll")
 
-	r.QueryDELETE("/object", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryDELETE("/object", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("DELETE"))
-	})
+	}))
 
 	assert.Equal(t, "DELETE_ALL", request(t, r, "DELETE", "/object?deleteAll").Body.String())
 	assert.Equal(t, "DELETE", request(t, r, "DELETE", "/object").Body.String())
@@ -76,14 +77,14 @@ func TestQueryDELETE(t *testing.T) {
 func TestQueryHEAD(t *testing.T) {
 	r := teapot.New()
 
-	r.QueryHEAD("/object", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryHEAD("/object", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Custom", "metadata")
 		w.WriteHeader(200)
-	}).Query("metadata")
+	})).Query("metadata")
 
-	r.QueryHEAD("/object", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryHEAD("/object", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-	})
+	}))
 
 	w := request(t, r, "HEAD", "/object?metadata")
 	assert.Equal(t, 200, w.Code)
@@ -97,13 +98,13 @@ func TestQueryHEAD(t *testing.T) {
 func TestQueryPATCH(t *testing.T) {
 	r := teapot.New()
 
-	r.QueryPATCH("/resource", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryPATCH("/resource", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("PARTIAL"))
-	}).Query("partial")
+	})).Query("partial")
 
-	r.QueryPATCH("/resource", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryPATCH("/resource", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("PATCH"))
-	})
+	}))
 
 	assert.Equal(t, "PARTIAL", request(t, r, "PATCH", "/resource?partial").Body.String())
 	assert.Equal(t, "PATCH", request(t, r, "PATCH", "/resource").Body.String())
@@ -113,15 +114,15 @@ func TestQueryPATCH(t *testing.T) {
 func TestQueryOPTIONS(t *testing.T) {
 	r := teapot.New()
 
-	r.QueryOPTIONS("/resource", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryOPTIONS("/resource", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Allow", "GET, POST, CORS")
 		w.WriteHeader(200)
-	}).Query("cors")
+	})).Query("cors")
 
-	r.QueryOPTIONS("/resource", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryOPTIONS("/resource", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Allow", "GET, POST")
 		w.WriteHeader(200)
-	})
+	}))
 
 	w := request(t, r, "OPTIONS", "/resource?cors")
 	assert.Equal(t, "GET, POST, CORS", w.Header().Get("Allow"))
@@ -134,9 +135,9 @@ func TestQueryOPTIONS(t *testing.T) {
 func TestFinalizeAndIsFinalized(t *testing.T) {
 	r := teapot.New()
 
-	r.GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("OK"))
-	})
+	}))
 
 	// Initially not finalized
 	assert.False(t, r.IsFinalized(), "router should not be finalized initially")
@@ -155,7 +156,7 @@ func TestFinalizeAndIsFinalized(t *testing.T) {
 func TestURLEdgeCases(t *testing.T) {
 	r := teapot.New()
 
-	r.GET("/users/{id}/posts/{postId}", func(w http.ResponseWriter, r *http.Request) {}).
+	r.GET("/users/{id}/posts/{postId}", http.HandlerFunc(testutil.NoopResponse)).
 		Name("user.posts.show")
 
 	// Test with no parameters
@@ -176,34 +177,34 @@ func TestURLEdgeCases(t *testing.T) {
 func TestMustURLPanic(t *testing.T) {
 	r := teapot.New()
 
-	defer func() {
-		if rec := recover(); rec == nil {
-			t.Error("expected MustURL to panic for nonexistent route")
-		}
-	}()
+	msg := testutil.CapturePanic(func() {
+		r.MustURL("nonexistent.route")
+	})
 
-	r.MustURL("nonexistent.route")
+	if msg == "" {
+		t.Error("expected MustURL to panic for nonexistent route")
+	}
 }
 
 // Test: Query and QueryValue chaining
 func TestQueryChaining(t *testing.T) {
 	r := teapot.New()
 
-	r.QueryGET("/search", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/search", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("FULL_ADMIN"))
-	}).Query("admin").QueryValue("type", "full")
+	})).Query("admin").QueryValue("type", "full")
 
-	r.QueryGET("/search", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/search", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("ADMIN"))
-	}).Query("admin")
+	})).Query("admin")
 
-	r.QueryGET("/search", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/search", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("FULL"))
-	}).QueryValue("type", "full")
+	})).QueryValue("type", "full")
 
-	r.QueryGET("/search", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/search", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("DEFAULT"))
-	})
+	}))
 
 	assert.Equal(t, "FULL_ADMIN", request(t, r, "GET", "/search?admin&type=full").Body.String())
 	assert.Equal(t, "ADMIN", request(t, r, "GET", "/search?admin").Body.String())

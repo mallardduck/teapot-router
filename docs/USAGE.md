@@ -2,17 +2,58 @@
 
 ## Named Routes
 
-Define routes with names and generate URLs later:
+Assign a name to any route with `.Name()`, then generate its URL path later
+using `URL()` or `MustURL()`.
+
+### Standard parameters
 
 ```go
-r.GET("/objects/{key}", showObject).Name("objects.show")
+r.GET("/users/{id}", showUser).Name("users.show")
 
-url := r.MustURL("objects.show", "key", "photos/avatar.png")
-// Returns: "/objects/photos/avatar.png"
+// MustURL panics on error — suited to handler code
+path := r.MustURL("users.show", "id", "42")
+// Returns: "/users/42"
 
-// Or with error handling:
-url, err := r.URL("objects.show", "key", "photos/avatar.png")
+// URL returns an error — suited to startup / config code
+path, err := r.URL("users.show", "id", "42")
 ```
+
+Parameters are passed as alternating key-value pairs. Each key must match a
+placeholder name in the route pattern.
+
+### Wildcard parameters
+
+Wildcard segments (`{key:.*}`, which match slashes) are substituted the same way:
+
+```go
+r.GET("/{bucket}/{key:.*}", getObject).Name("object.get")
+
+path := r.MustURL("object.get", "bucket", "photos", "key", "2024/vacation.jpg")
+// Returns: "/photos/2024/vacation.jpg"
+```
+
+### Error conditions
+
+`URL()` returns an error when:
+- the route name was never registered (check that `.Name()` was called)
+- an odd number of `params` arguments is provided (must be key-value pairs)
+- any placeholder remains unreplaced after substitution (a required param was omitted)
+
+### Generating absolute URLs
+
+Combine with the `urlbuilder` package to turn a path into a full URL:
+
+```go
+import "github.com/mallardduck/teapot-router/pkg/urlbuilder"
+
+urls := urlbuilder.New("s3.example.com")
+
+path := r.MustURL("object.get", "bucket", "photos", "key", "2024/vacation.jpg")
+fullURL := urls.BuildURL(r, path)
+// Returns: "https://s3.example.com/photos/2024/vacation.jpg"
+```
+
+See [URLBUILDER.md](URLBUILDER.md) for the full guide.
 
 ---
 

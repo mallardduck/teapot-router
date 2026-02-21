@@ -524,7 +524,34 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	r.mux.ServeHTTP(w, req)
 }
 
-// URL generates a URL for a named route with the given parameters
+// URL generates a URL path for a named route with optional parameter substitution.
+//
+// Parameters are supplied as alternating key-value pairs. Each key must match a
+// placeholder in the route pattern:
+//
+//   - {key}    — standard named segment
+//   - {key:.*} — wildcard segment (matches slashes too)
+//
+// Both placeholder formats are replaced by their corresponding value.
+//
+// Example (standard param):
+//
+//	r.GET("/users/{id}", handler).Name("users.show")
+//	path, err := r.URL("users.show", "id", "42")
+//	// path == "/users/42"
+//
+// Example (wildcard param):
+//
+//	r.GET("/{bucket}/{key:.*}", handler).Name("object.get")
+//	path, err := r.URL("object.get", "bucket", "photos", "key", "2024/vacation.jpg")
+//	// path == "/photos/2024/vacation.jpg"
+//
+// Errors are returned when:
+//   - the route name is not found (check that .Name() was called)
+//   - params contains an odd number of arguments (must be key-value pairs)
+//   - any placeholder in the pattern remains unreplaced after substitution
+//
+// Use [MustURL] for a panic-on-error variant suited to handler code.
 func (r *Router) URL(name string, params ...string) (string, error) {
 	rt, exists := r.nameIndex[name]
 	if !exists {
@@ -557,7 +584,13 @@ func (r *Router) URL(name string, params ...string) (string, error) {
 	return url, nil
 }
 
-// MustURL is like URL but panics on error
+// MustURL is like [URL] but panics instead of returning an error.
+//
+// Prefer this inside HTTP handlers where a missing or malformed route name is
+// a programming error rather than a recoverable condition:
+//
+//	path := r.MustURL("users.show", "id", "42")
+//	// panics if "users.show" is not registered or "id" is missing
 func (r *Router) MustURL(name string, params ...string) string {
 	url, err := r.URL(name, params...)
 	if err != nil {

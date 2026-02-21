@@ -34,19 +34,32 @@ go get github.com/mallardduck/teapot-router
 ```go
 import (
     "net/http"
-    
+
     teapot "github.com/mallardduck/teapot-router"
 )
 
 func main() {
     r := teapot.New()
-    
+
     r.GET("/users", listUsers).Name("users.index")
     r.GET("/users/{id}", showUser).Name("users.show")
-    
+
     http.ListenAndServe(":3000", r)
 }
 ```
+
+Named routes can be reversed into URL paths at any point after registration:
+
+```go
+path := r.MustURL("users.show", "id", "42")
+// "/users/42"
+
+// Or with error handling:
+path, err := r.URL("users.show", "id", "42")
+```
+
+Parameters are key-value pairs matching the placeholder names in the pattern.
+Wildcard segments (`{key:.*}`) are substituted the same way.
 
 For more usage details see: [docs/USAGE.md](docs/USAGE.md)
 

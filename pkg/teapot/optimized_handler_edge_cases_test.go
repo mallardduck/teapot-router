@@ -356,7 +356,7 @@ func TestOptimizedHandlerNilRouteContext(t *testing.T) {
 		r.GET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
 			// Access URLParam which needs chi context
 			key := teapot.URLParam(req, "key")
-			_, _ = w.Write([]byte(key))
+			_, _ = w.Write([]byte(key)) //nolint:gosec // G705: key is a URL path parameter from the router, not user-supplied HTML input
 		})
 
 		// Don't finalize - use slow path
@@ -394,7 +394,7 @@ func TestOptimizedHandlerWildcardWithNilContext(t *testing.T) {
 	r.GET("/{key:.*}", func(w http.ResponseWriter, req *http.Request) {
 		// Attempt to get wildcard param
 		key := chi.URLParam(req, "key")
-		_, _ = w.Write([]byte(key))
+		_, _ = w.Write([]byte(key)) //nolint:gosec // G705: key is a URL path parameter from the router, not user-supplied HTML input
 	})
 
 	r.Finalize()

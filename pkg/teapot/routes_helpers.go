@@ -45,17 +45,32 @@ func FilterRoutes(routes []RouteInfo, filter RouteFilter) []RouteInfo {
 //	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, func(route teapot.RouteInfo) bool {
 //	    return !strings.HasPrefix(route.Pattern, "/.internal/")
 //	}))
+//
+// NewListRoutesHandler returns an HTTP handler that displays registered routes.
+// The handler responds with JSON or HTML based on the Accept header.
+// If filter is non-nil, only routes for which filter returns true are included.
+// Pass nil to show all routes.
+//
+// If you want to merge routes from multiple routers, use [AggregateRoutes] and
+// then [NewListRoutesHandlerWithRoutes].
 func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		routes := FilterRoutes(router.Routes(), filter)
+		NewListRoutesHandlerWithRoutes(router.Routes(), filter)(w, req)
+	}
+}
+
+// NewListRoutesHandlerWithRoutes returns an HTTP handler that displays the provided routes.
+func NewListRoutesHandlerWithRoutes(routes []RouteInfo, filter RouteFilter) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		filteredRoutes := FilterRoutes(routes, filter)
 
 		// Check Accept header for JSON vs HTML
 		accept := req.Header.Get("Accept")
 		if strings.Contains(accept, "application/json") {
 			w.Header().Set("Content-Type", "application/json")
 			err := json.NewEncoder(w).Encode(map[string]any{
-				"count":  len(routes),
-				"routes": routes,
+				"count":  len(filteredRoutes),
+				"routes": filteredRoutes,
 			})
 			if err != nil {
 				log.Printf("[teapot-router] failed to encode routes as JSON: %v", err)
@@ -71,7 +86,7 @@ func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
 		// Only show Query/Headers columns when at least one route uses them
 		hasQuery := false
 		hasHeaders := false
-		for _, rt := range routes {
+		for _, rt := range filteredRoutes {
 			if len(rt.QueryParams) > 0 {
 				hasQuery = true
 			}
@@ -118,7 +133,7 @@ func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
             <tr>
                 <th>Method</th>
                 <th>Pattern</th>
-`, len(routes))
+`, len(filteredRoutes))
 		if hasQuery {
 			_, _ = fmt.Fprint(w, `                <th>Query</th>
 `)
@@ -134,7 +149,7 @@ func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
         <tbody>
 `)
 
-		for _, route := range routes {
+		for _, route := range filteredRoutes {
 			methodClass := strings.ToLower(route.Method)
 			name := route.Name
 			if name == "" {

@@ -160,25 +160,89 @@ key := teapot.URLParam(r, "key")
 
 ---
 
-## Route Groups
+## Route Groups and Sub-Routers
+
+### Path and Name Groups
 
 Group routes with path and name prefixes:
 
 ```go
 // Path prefix only
 r.Group("/api/v1", func (r *teapot.Router) {
-r.GET("/users", listUsers).Name("users.list")
+    r.GET("/users", listUsers).Name("users.list")
 })
 
 // Path + name prefix
 r.NamedGroup("/{bucket}", "bucket", func (r *teapot.Router) {
-r.GET("", listObjects).Name("list") // name: "bucket.list"
-r.GET("", getBucketAcl).Name("acl").Query("acl") // name: "bucket.acl"
+    r.GET("", listObjects).Name("list") // name: "bucket.list"
+    r.GET("", getBucketAcl).Name("acl").Query("acl") // name: "bucket.acl"
 
-r.NamedGroup("/{key:.*}", "object", func (r *teapot.Router) {
-r.GET("", getObject).Name("get") // name: "bucket.object.get"
+    r.NamedGroup("/{key:.*}", "object", func (r *teapot.Router) {
+        r.GET("", getObject).Name("get") // name: "bucket.object.get"
+    })
 })
-})
+```
+
+### Sub-Routers (Live Propagation)
+
+`SubRouter(prefix)` creates a new child router whose routes are automatically visible in the parent router with the prefix prepended. 
+
+Unlike `Group()`, `SubRouter()` returns a separate `Router` instance that can be used independently (e.g., as its own HTTP server) while still reporting its routes to the parent for unified listing and URL generation.
+
+```go
+adminRouter := r.SubRouter("/admin")
+adminRouter.GET("/dashboard", dashHandler).Name("dashboard")
+// "dashboard" route is now visible in both adminRouter and r (as "/admin/dashboard")
+```
+
+---
+
+## Mounting Handlers
+
+### Mounting standard http.Handlers
+
+Use `Mount(prefix, handler)` to attach any `http.Handler` to a path prefix:
+
+```go
+r.Mount("/static", http.FileServer(http.Dir("./static")))
+```
+
+### Mounting teapot Routers (Route Propagation)
+
+If the handler being mounted is also a `*teapot.Router`, all its existing routes are automatically propagated to the parent router with the prefix prepended. This enables unified route listing and URL generation even when routers are developed independently.
+
+```go
+apiRouter := teapot.New()
+apiRouter.GET("/users", listUsers).Name("users.list")
+
+// Mount propagates all apiRouter's current routes to r
+r.Mount("/api/v1", apiRouter)
+// r now knows about "/api/v1/users" with name "users.list"
+```
+
+---
+
+## Direct Handler Registration
+
+Assign standard `http.Handler` (including `http.HandlerFunc` via `http.HandlerFunc(fn)`) to a method and pattern:
+
+```go
+r.Handle("GET", "/health", healthHandler).Name("health")
+```
+
+This is a more flexible alternative to `GET()`, `POST()`, etc. when you already have an `http.Handler` instance.
+
+---
+
+## Phantom Routes (External Services)
+
+Use `RegisterExternal(method, pattern, name, action)` to add "phantom" routes to the router. These routes appear in documentation (route lists) and work with the URL builder, but do not dispatch requests locally. This is useful for documenting external services or third-party handlers that you cannot convert to teapot.
+
+```go
+r.RegisterExternal("GET", "https://auth.example.com/login", "auth.login", "auth:Login")
+
+// Use for URL generation:
+loginURL := r.MustURL("auth.login") // "https://auth.example.com/login"
 ```
 
 ---

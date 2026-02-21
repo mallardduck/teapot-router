@@ -212,6 +212,33 @@ func (r *Router) QueryOPTIONS(pattern string, handler http.Handler) *RouteBuilde
 	return r.handleQuery("OPTIONS", pattern, handler)
 }
 
+// Handle registers an arbitrary http.Handler with a pattern and method
+// Supports both direct registration and query-based multiplexing via RouteBuilder
+func (r *Router) Handle(method, pattern string, handler http.Handler) *RouteBuilder {
+	return r.handleDirect(method, pattern, handler)
+}
+
+// RegisterExternal adds a "phantom" route to the router.
+// Phantom routes are only for documentation and do not dispatch requests.
+// They appear in the Routes() listing and can be used for URL generation.
+func (r *Router) RegisterExternal(method, pattern, name, action string) {
+	// Create a dummy route metadata
+	rt := &core.Route{
+		Method:  method,
+		Pattern: r.pathPrefix + pattern,
+		Name:    r.namePrefix + name,
+		Action:  action,
+	}
+
+	// Add to routes list for listing
+	*r.routes = append(*r.routes, rt)
+
+	// Add to name index for URL generation
+	if rt.Name != "" {
+		r.nameIndex[rt.Name] = rt
+	}
+}
+
 // handleDirect registers a route directly with Chi (no dispatcher, best performance)
 // This is used by GET, POST, PUT, DELETE, etc.
 // Automatically promotes to dispatcher-based routing if multiple routes exist on same method+pattern
@@ -250,7 +277,7 @@ func (r *Router) handleDirect(method, pattern string, handler http.Handler) *Rou
 
 	// Check if another direct route already exists
 	if existingRoute, exists := r.directRoutes[dispatcherKey]; exists {
-		r.debugLogf("Auto-promoting to dispatcher: %s %s (multiple routes on same path)", method, fullPattern)
+		r.debugLogf("Auto-promoting to dispatcher: %s %s (chi: %s) (multiple routes on same path)", method, fullPattern, chiPattern)
 		// Promote to dispatcher!
 		disp := &core.Dispatcher{Routes: make([]*core.Route, 0)}
 		disp.AddRoute(existingRoute) // Old route becomes fallback
@@ -271,6 +298,7 @@ func (r *Router) handleDirect(method, pattern string, handler http.Handler) *Rou
 	}
 	*r.optimizedHandlers = append(*r.optimizedHandlers, optHandler)
 
+	r.debugLogf("Registering direct route with Chi: %s %s (chi: %s)", method, fullPattern, chiPattern)
 	r.mux.Method(method, chiPattern, optHandler)
 	r.directRoutes[dispatcherKey] = rt
 
@@ -432,6 +460,68 @@ func (r *Router) Use(middlewares ...func(http.Handler) http.Handler) {
 	r.mux.Use(middlewares...)
 }
 
+// Mount attaches another http.Handler (typically a router) to a prefix.
+// If the handler is a *teapot.Router, all its routes are propagated to the
+// parent router with the prefix prepended for unified listing and URL generation.
+func (r *Router) Mount(pattern string, handler http.Handler) {
+	fullPattern := r.pathPrefix + pattern
+	r.mux.Mount(pattern, handler)
+
+	r.propagateRoutes(fullPattern, handler)
+}
+
+func (r *Router) propagateRoutes(prefix string, handler http.Handler) {
+	// Propagate routes if it's a teapot Router
+	if subRouter, ok := handler.(*Router); ok {
+		for _, rt := range *subRouter.routes {
+			// Create a copy of the route with updated pattern and name
+			newRoute := &core.Route{
+				Method:         rt.Method,
+				Pattern:        prefix + rt.Pattern,
+				ChiPattern:     prefix + rt.ChiPattern,
+				Handler:        rt.Handler,
+				Name:           r.namePrefix + rt.Name,
+				Action:         rt.Action,
+				QueryMatchers:  rt.QueryMatchers,
+				Middlewares:    rt.Middlewares,
+				WildcardParams: rt.WildcardParams,
+			}
+			*r.routes = append(*r.routes, newRoute)
+
+			// Update name index for URL generation
+			if newRoute.Name != "" {
+				r.nameIndex[newRoute.Name] = newRoute
+			}
+		}
+	}
+}
+
+// SubRouter creates a new child router whose routes are automatically
+// visible in the parent router with the prefix prepended.
+//
+// Unlike Group(), SubRouter() returns a separate Router instance that
+// can be used independently (e.g., as its own HTTP server) but still
+// reports its routes to the parent.
+func (r *Router) SubRouter(prefix string) *Router {
+	subRouter := New()
+	// Create a proxy that notifies the parent when routes are added
+	// Actually, easier to just wrap the subRouter's routes slice
+	// but that might be messy with patterns.
+
+	// Instead, we can make SubRouter aware of its parent
+	// or just rely on the fact that SubRouter is empty now,
+	// and we want it to propagate FUTURE routes too.
+
+	// Let's change the approach for SubRouter to support live propagation.
+	subRouter.routes = r.routes
+	subRouter.nameIndex = r.nameIndex
+	subRouter.pathPrefix = r.pathPrefix + prefix
+	subRouter.namePrefix = r.namePrefix // SubRouter usually doesn't prefix names unless told
+
+	r.mux.Mount(prefix, subRouter)
+	return subRouter
+}
+
 // findMatchingRoute manually matches a request against registered routes
 // This is used as a fallback when Chi's RouteContext isn't available (e.g., in global middleware)
 func (r *Router) findMatchingRoute(method, path string) *core.Route {
@@ -576,6 +666,9 @@ func (r *Router) URL(name string, params ...string) (string, error) {
 		url = strings.ReplaceAll(url, "{"+key+":.*}", value)
 	}
 
+	// Remove Go 1.22+ exact match operator {$} for URL generation
+	url = strings.ReplaceAll(url, "{$}", "")
+
 	// Check if any parameters remain unreplaced
 	if strings.Contains(url, "{") {
 		return "", fmt.Errorf("missing parameters for route %q", name)
@@ -625,31 +718,45 @@ type HeaderParam struct {
 func (r *Router) Routes() []RouteInfo {
 	var infos []RouteInfo
 	for _, rt := range *r.routes {
-		var queryParams []QueryParam
-		var headerParams []HeaderParam
-		for _, matcher := range rt.QueryMatchers {
-			switch m := matcher.(type) {
-			case dispatch.QueryExistsMatcher:
-				queryParams = append(queryParams, QueryParam{Key: m.Key})
-			case dispatch.QueryValueMatcher:
-				queryParams = append(queryParams, QueryParam{Key: m.Key, Value: m.Value})
-			case dispatch.HeaderExistsMatcher:
-				headerParams = append(headerParams, HeaderParam{Key: m.Key})
-			case dispatch.HeaderValueMatcher:
-				headerParams = append(headerParams, HeaderParam{Key: m.Key, Value: m.Value})
-			}
-		}
-
-		infos = append(infos, RouteInfo{
-			Method:       rt.Method,
-			Pattern:      rt.Pattern,
-			Name:         rt.Name,
-			Action:       rt.Action,
-			QueryParams:  queryParams,
-			HeaderParams: headerParams,
-		})
+		infos = append(infos, transformRoute(rt))
 	}
 	return infos
+}
+
+// AggregateRoutes merges routes from multiple routers into a single slice.
+// This is useful for unified route listings across routers on different ports.
+func AggregateRoutes(routers ...*Router) []RouteInfo {
+	var allRoutes []RouteInfo
+	for _, r := range routers {
+		allRoutes = append(allRoutes, r.Routes()...)
+	}
+	return allRoutes
+}
+
+func transformRoute(rt *core.Route) RouteInfo {
+	var queryParams []QueryParam
+	var headerParams []HeaderParam
+	for _, matcher := range rt.QueryMatchers {
+		switch m := matcher.(type) {
+		case dispatch.QueryExistsMatcher:
+			queryParams = append(queryParams, QueryParam{Key: m.Key})
+		case dispatch.QueryValueMatcher:
+			queryParams = append(queryParams, QueryParam{Key: m.Key, Value: m.Value})
+		case dispatch.HeaderExistsMatcher:
+			headerParams = append(headerParams, HeaderParam{Key: m.Key})
+		case dispatch.HeaderValueMatcher:
+			headerParams = append(headerParams, HeaderParam{Key: m.Key, Value: m.Value})
+		}
+	}
+
+	return RouteInfo{
+		Method:       rt.Method,
+		Pattern:      rt.Pattern,
+		Name:         rt.Name,
+		Action:       rt.Action,
+		QueryParams:  queryParams,
+		HeaderParams: headerParams,
+	}
 }
 
 // GetAction retrieves the S3 action from the request context

@@ -58,6 +58,23 @@ func TranslatePattern(pattern string) (string, map[string]bool) {
 			break // Only one wildcard per pattern is supported by Chi
 		}
 
+		// Check for Go 1.22+ exact match operator {$}
+		if paramDef == "$" {
+			// Chi handles exact matches with the standard trailing slash / pattern.
+			// We translate /{ $ } to / so that Chi routes correctly.
+			// Example: /users/{$} becomes /users/
+			prefix := result[:idx]
+			suffix := result[endIdx+1:]
+
+			// If we have something like /admin/{$}, we want it to be /admin/
+			// If it's just /{$}, it becomes /
+			result = prefix + suffix
+
+			// Don't advance start, re-scan from where suffix begins
+			start = idx
+			continue
+		}
+
 		start = endIdx + 1
 	}
 

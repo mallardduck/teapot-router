@@ -24,6 +24,22 @@ http.ListenAndServe(":8080", router)
 
 Visit `http://localhost:8080/.internal/routes` to see all routes.
 
+### Aggregated Route List
+
+If you have multiple routers (e.g., an app router on port 80 and an admin router on port 8080), you can merge their routes for a unified listing:
+
+```go
+appRouter := setupApp()
+adminRouter := setupAdmin()
+
+// Aggregate routes from both
+combined := teapot.AggregateRoutes(appRouter, adminRouter)
+
+// Create a handler for the aggregated routes
+handler := teapot.NewListRoutesHandlerWithRoutes(combined, nil)
+appRouter.GET("/.internal/routes", handler).Name("all.routes")
+```
+
 ### Response Formats
 
 The debug endpoint supports both JSON and HTML:
@@ -76,6 +92,13 @@ router.RegisterDebugRoute("/.internal/routes", "debug.routes")
 router.GET("/.internal/routes", router.RoutesHandler()).
 Name("debug.routes").
 With(authMiddleware)
+
+// Option 5: Custom filtering
+// Only show routes that don't start with /.internal/
+filter := func(route teapot.RouteInfo) bool {
+    return !strings.HasPrefix(route.Pattern, "/.internal/")
+}
+router.GET("/routes", teapot.NewListRoutesHandler(router, filter))
 ```
 
 ## CLI Route Listing
@@ -193,6 +216,15 @@ Pretty table output for CLI commands:
 ```go
 routes := router.Routes()
 err := teapot.FormatRoutesTable(os.Stdout, routes)
+```
+
+### AggregateRoutes
+
+Merge routes from multiple routers for unified output:
+
+```go
+allRoutes := teapot.AggregateRoutes(mainRouter, adminRouter, internalRouter)
+err := teapot.FormatRoutesTable(os.Stdout, allRoutes)
 ```
 
 ### FormatRoutesJSON

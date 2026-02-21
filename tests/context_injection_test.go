@@ -8,6 +8,7 @@ import (
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -494,17 +495,13 @@ func TestContextInjection_GlobalVsRouteMiddleware(t *testing.T) {
 	// Add global middleware (before Route() group - no route context available)
 	r.Use(globalMiddleware)
 
-	handler := func(w http.ResponseWriter, req *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}
-
 	// Create Route() group with RouteContextMiddleware for route metadata
 	r.Route("/", func(r *teapot.Router) {
 		// Add RouteContextMiddleware to inject route metadata early
 		r.Use(teapot.RouteContextMiddleware(r))
 		r.Use(routeLevelMiddleware)
 
-		r.Func().GET("/test", handler).
+		r.Func().GET("/test", testutil.OKResponse).
 			Name("test.route").
 			Action("test:Action").
 			With(routeSpecificMiddleware)
@@ -559,11 +556,6 @@ func TestContextInjection_RouteContextMiddleware(t *testing.T) {
 		})
 	}
 
-	// Register various routes
-	handler := func(w http.ResponseWriter, req *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}
-
 	// IMPORTANT: Use Route() to ensure RouteContext is available (recommended pattern)
 	r.Use(chiMiddleware.StripSlashes) // Truly global middleware
 	r.Route("/", func(r *teapot.Router) {
@@ -572,20 +564,20 @@ func TestContextInjection_RouteContextMiddleware(t *testing.T) {
 		r.Use(auditMiddleware)
 
 		// Direct routes
-		r.Func().GET("/users", handler).
+		r.Func().GET("/users", testutil.OKResponse).
 			Name("users.index").
 			Action("list:users")
 
-		r.Func().GET("/users/{id}", handler).
+		r.Func().GET("/users/{id}", testutil.OKResponse).
 			Name("users.show").
 			Action("read:user")
 
 		// Query-multiplexed routes
-		r.Func().QueryGET("/{bucket}", handler).
+		r.Func().QueryGET("/{bucket}", testutil.OKResponse).
 			Name("bucket.list").
 			Action("s3:ListBucket")
 
-		r.Func().QueryGET("/{bucket}", handler).
+		r.Func().QueryGET("/{bucket}", testutil.OKResponse).
 			Query("acl").
 			Name("bucket.acl").
 			Action("s3:GetBucketAcl")

@@ -7,15 +7,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
 // Benchmark teapot router vs raw Chi for simple routes (no query multiplexing)
 func BenchmarkSimpleRoute_Teapot(b *testing.B) {
 	r := teapot.New()
-	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})
+	r.Func().GET("/test", testutil.OKResponse)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
@@ -29,9 +28,7 @@ func BenchmarkSimpleRoute_Teapot(b *testing.B) {
 
 func BenchmarkSimpleRoute_Chi(b *testing.B) {
 	r := chi.NewRouter()
-	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})
+	r.Get("/test", testutil.OKResponse)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
@@ -97,15 +94,9 @@ func BenchmarkQueryMultiplexing_SingleRoute(b *testing.B) {
 
 func BenchmarkQueryMultiplexing_ThreeRoutes(b *testing.B) {
 	r := teapot.New()
-	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})
-	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	}).Query("acl")
-	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	}).Query("versioning")
+	r.Func().GET("/bucket", testutil.OKResponse)
+	r.Func().GET("/bucket", testutil.OKResponse).Query("acl")
+	r.Func().GET("/bucket", testutil.OKResponse).Query("versioning")
 
 	req := httptest.NewRequest("GET", "/bucket", nil)
 	w := httptest.NewRecorder()
@@ -119,15 +110,9 @@ func BenchmarkQueryMultiplexing_ThreeRoutes(b *testing.B) {
 
 func BenchmarkQueryMultiplexing_ThreeRoutes_MatchLast(b *testing.B) {
 	r := teapot.New()
-	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})
-	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	}).Query("acl")
-	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	}).Query("versioning")
+	r.Func().GET("/bucket", testutil.OKResponse)
+	r.Func().GET("/bucket", testutil.OKResponse).Query("acl")
+	r.Func().GET("/bucket", testutil.OKResponse).Query("versioning")
 
 	req := httptest.NewRequest("GET", "/bucket?versioning", nil)
 	w := httptest.NewRecorder()
@@ -160,9 +145,7 @@ func BenchmarkContextInjection_Teapot(b *testing.B) {
 
 func BenchmarkContextInjection_Chi(b *testing.B) {
 	r := chi.NewRouter()
-	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})
+	r.Get("/test", testutil.OKResponse)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()

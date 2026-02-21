@@ -7,15 +7,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
 // Benchmark: Minimal route WITHOUT Finalize (slow path)
 func BenchmarkMinimalDirect_NoFinalize(b *testing.B) {
 	r := teapot.New()
-	r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	}))
+	r.GET("/test", testutil.OKResponseHandler)
 	// NO Finalize() call - uses slow path
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -31,9 +30,7 @@ func BenchmarkMinimalDirect_NoFinalize(b *testing.B) {
 // Benchmark: Minimal route WITH Finalize (fast path)
 func BenchmarkMinimalDirect_WithFinalize(b *testing.B) {
 	r := teapot.New()
-	r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	}))
+	r.GET("/test", testutil.OKResponseHandler)
 	r.Finalize() // Optimize!
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -49,9 +46,7 @@ func BenchmarkMinimalDirect_WithFinalize(b *testing.B) {
 // Benchmark: Chi baseline for comparison
 func BenchmarkMinimalDirect_Chi(b *testing.B) {
 	r := chi.NewRouter()
-	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})
+	r.Get("/test", testutil.OKResponse)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
@@ -66,9 +61,7 @@ func BenchmarkMinimalDirect_Chi(b *testing.B) {
 // Benchmark: With Name/Action WITHOUT Finalize
 func BenchmarkWithMeta_NoFinalize(b *testing.B) {
 	r := teapot.New()
-	r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})).Name("test").Action("s3:Test")
+	r.GET("/test", testutil.OKResponseHandler).Name("test").Action("s3:Test")
 	// NO Finalize() - runtime checks
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -84,9 +77,7 @@ func BenchmarkWithMeta_NoFinalize(b *testing.B) {
 // Benchmark: With Name/Action WITH Finalize
 func BenchmarkWithMeta_WithFinalize(b *testing.B) {
 	r := teapot.New()
-	r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})).Name("test").Action("s3:Test")
+	r.GET("/test", testutil.OKResponseHandler).Name("test").Action("s3:Test")
 	r.Finalize() // Pre-compute!
 
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -109,9 +100,7 @@ func BenchmarkWithMiddleware_NoFinalize(b *testing.B) {
 		})
 	}
 
-	r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})).With(mw)
+	r.GET("/test", testutil.OKResponseHandler).With(mw)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
@@ -133,9 +122,7 @@ func BenchmarkWithMiddleware_WithFinalize(b *testing.B) {
 		})
 	}
 
-	r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})).With(mw)
+	r.GET("/test", testutil.OKResponseHandler).With(mw)
 
 	r.Finalize() // Pre-apply middleware!
 

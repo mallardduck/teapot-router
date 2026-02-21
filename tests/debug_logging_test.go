@@ -3,7 +3,6 @@ package tests
 import (
 	"bytes"
 	"log"
-	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -55,14 +54,14 @@ func TestDebugLogging(t *testing.T) {
 	t.Run("debug logging with complex routing", func(t *testing.T) {
 		r := teapot.New().SetDebugLog(true)
 
-		r.Func().GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users.list")
-		r.Func().POST("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users.create")
+		r.Func().GET("/users", testutil.NoopResponse).Name("users.list")
+		r.Func().POST("/users", testutil.NoopResponse).Name("users.create")
 
 		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
-			sub.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {})
+			sub.Func().GET("/test", testutil.NoopResponse)
 		})
 
-		r.Func().QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {}).Query("acl")
+		r.Func().QueryGET("/bucket", testutil.NoopResponse).Query("acl")
 
 		r.Finalize()
 

@@ -33,9 +33,7 @@ func TestBasicHTTPMethods(t *testing.T) {
 	r.Func().POST("/post", testutil.StringResponseWriterBuilder("POST"))
 	r.Func().PUT("/put", testutil.StringResponseWriterBuilder("PUT"))
 	r.Func().DELETE("/delete", testutil.StringResponseWriterBuilder("DELETE"))
-	r.Func().HEAD("/head", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})
+	r.Func().HEAD("/head", testutil.OKResponse)
 
 	assert.Equal(t, "GET", request(t, r, "GET", "/get").Body.String())
 	assert.Equal(t, "POST", request(t, r, "POST", "/post").Body.String())

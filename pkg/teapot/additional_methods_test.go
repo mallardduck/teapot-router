@@ -82,9 +82,7 @@ func TestQueryHEAD(t *testing.T) {
 		w.WriteHeader(200)
 	})).Query("metadata")
 
-	r.QueryHEAD("/object", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	}))
+	r.QueryHEAD("/object", testutil.OKResponseHandler)
 
 	w := request(t, r, "HEAD", "/object?metadata")
 	assert.Equal(t, 200, w.Code)

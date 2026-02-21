@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -58,12 +59,10 @@ func TestChiAccessor(t *testing.T) {
 	r.Chi().NotFound(func(w http.ResponseWriter, r *http.Request) {
 		notFoundCalled = true
 		w.WriteHeader(404)
-		_, _ = w.Write([]byte("Custom 404"))
+		testutil.StringResponseWriterBuilder("Custom 404")(w, r)
 	})
 
-	r.GET("/exists", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	}))
+	r.GET("/exists", testutil.OKResponseHandler)
 
 	// Test normal route works
 	req := httptest.NewRequest("GET", "/exists", nil)
@@ -103,19 +102,13 @@ func TestRouterWith(t *testing.T) {
 	}
 
 	// Route without middleware
-	r.GET("/public", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("PUBLIC"))
-	}))
+	r.Func().GET("/public", testutil.StringResponseWriterBuilder("PUBLIC"))
 
 	// Route with mw1
-	r.With(mw1).GET("/protected", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("PROTECTED"))
-	}))
+	r.With(mw1).Func().GET("/protected", testutil.StringResponseWriterBuilder("PROTECTED"))
 
 	// Route with mw1 and mw2
-	r.With(mw1, mw2).GET("/admin", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("ADMIN"))
-	}))
+	r.With(mw1, mw2).Func().GET("/admin", testutil.StringResponseWriterBuilder("ADMIN"))
 
 	// Test public route
 	calls = nil
@@ -195,19 +188,13 @@ func TestMiddlewareGroup(t *testing.T) {
 	}
 
 	// Public routes (no middleware)
-	r.GET("/public", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("PUBLIC"))
-	})).Name("public")
+	r.Func().GET("/public", testutil.StringResponseWriterBuilder("PUBLIC")).Name("public")
 
 	// Protected routes (with auth + logging middleware)
 	r.MiddlewareGroup(func(r *teapot.Router) {
-		r.GET("/admin", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			_, _ = w.Write([]byte("ADMIN"))
-		})).Name("admin")
+		r.Func().GET("/admin", testutil.StringResponseWriterBuilder("ADMIN")).Name("admin")
 
-		r.GET("/dashboard", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			_, _ = w.Write([]byte("DASHBOARD"))
-		})).Name("dashboard")
+		r.Func().GET("/dashboard", testutil.StringResponseWriterBuilder("DASHBOARD")).Name("dashboard")
 	}, auth, logging)
 
 	// Test public route (no middleware)
@@ -297,9 +284,7 @@ func TestMiddlewareGroupWithNamedGroup(t *testing.T) {
 
 	r.MiddlewareGroup(func(r *teapot.Router) {
 		r.NamedGroup("/api", "api", func(r *teapot.Router) {
-			r.GET("/users", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				_, _ = w.Write([]byte("USERS"))
-			})).Name("users")
+			r.Func().GET("/users", testutil.StringResponseWriterBuilder("USERS")).Name("users")
 		})
 	}, auth)
 

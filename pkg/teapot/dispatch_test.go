@@ -5,9 +5,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/mallardduck/teapot-router/internal/testutil"
 )
 
 func TestDispatchBasicRouting(t *testing.T) {

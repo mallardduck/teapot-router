@@ -15,9 +15,7 @@ import (
 func TestDirectVsQueryPerformance(t *testing.T) {
 	t.Run("Direct route (GET)", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(200)
-		})
+		r.GET("/test", testutil.OKResponseHandler)
 
 		req := httptest.NewRequest("GET", "/test", nil)
 		w := httptest.NewRecorder()
@@ -28,9 +26,7 @@ func TestDirectVsQueryPerformance(t *testing.T) {
 
 	t.Run("Query route (QueryGET)", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().QueryGET("/test", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(200)
-		})
+		r.QueryGET("/test", testutil.OKResponseHandler)
 
 		req := httptest.NewRequest("GET", "/test", nil)
 		w := httptest.NewRecorder()
@@ -67,9 +63,7 @@ func TestQueryValueMethodPanic(t *testing.T) {
 // Benchmark direct route (new fast path)
 func BenchmarkDirectRoute(b *testing.B) {
 	r := teapot.New()
-	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})
+	r.GET("/test", testutil.OKResponseHandler)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
@@ -84,9 +78,7 @@ func BenchmarkDirectRoute(b *testing.B) {
 // Benchmark query route (uses dispatcher)
 func BenchmarkQueryRoute(b *testing.B) {
 	r := teapot.New()
-	r.Func().QueryGET("/test", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-	})
+	r.QueryGET("/test", testutil.OKResponseHandler)
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()

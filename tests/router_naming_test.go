@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,7 +15,7 @@ func TestRouteNaming(t *testing.T) {
 	t.Run("simple route name", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test.route")
+		r.Func().GET("/test", testutil.NoopResponse).Name("test.route")
 
 		routes := r.Routes()
 		require.Len(t, routes, 1)
@@ -27,7 +26,7 @@ func TestRouteNaming(t *testing.T) {
 		r := teapot.New()
 
 		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
-			sub.Func().GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users.list")
+			sub.Func().GET("/users", testutil.NoopResponse).Name("users.list")
 		})
 
 		routes := r.Routes()
@@ -49,7 +48,7 @@ func TestRouteNaming(t *testing.T) {
 
 		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
 			sub.NamedGroup("/v1", "v1", func(sub2 *teapot.Router) {
-				sub2.Func().GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users")
+				sub2.Func().GET("/users", testutil.NoopResponse).Name("users")
 			})
 		})
 
@@ -62,7 +61,7 @@ func TestRouteNaming(t *testing.T) {
 	t.Run("route without name has empty string", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {})
+		r.Func().GET("/test", testutil.NoopResponse)
 
 		routes := r.Routes()
 		require.Len(t, routes, 1)
@@ -75,14 +74,14 @@ func TestDuplicateRouteNames(t *testing.T) {
 	t.Run("duplicate name same method panics", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/test1", func(w http.ResponseWriter, req *http.Request) {}).Name("duplicate")
+		r.Func().GET("/test1", testutil.NoopResponse).Name("duplicate")
 
 		// Line 84: if existingRoute.Method == rb.route.Method
 		// Verify panic occurs and capture error message
 		var panicMsg string
 		assert.Panics(t, func() {
 			panicMsg = testutil.CapturePanic(func() {
-				r.Func().GET("/test2", func(w http.ResponseWriter, req *http.Request) {}).Name("duplicate")
+				r.Func().GET("/test2", testutil.NoopResponse).Name("duplicate")
 			})
 			if panicMsg != "" {
 				panic(panicMsg) // re-panic for assert.Panics
@@ -100,8 +99,8 @@ func TestDuplicateRouteNames(t *testing.T) {
 		r := teapot.New()
 
 		// Same name, different methods, same pattern - this is OK (Laravel-style resources)
-		r.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("resource")
-		r.Func().POST("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("resource")
+		r.Func().GET("/test", testutil.NoopResponse).Name("resource")
+		r.Func().POST("/test", testutil.NoopResponse).Name("resource")
 
 		routes := r.Routes()
 		assert.Len(t, routes, 2)
@@ -122,11 +121,11 @@ func TestDuplicateRouteNames(t *testing.T) {
 	t.Run("duplicate name different methods different patterns panics", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/test1", func(w http.ResponseWriter, req *http.Request) {}).Name("conflict")
+		r.Func().GET("/test1", testutil.NoopResponse).Name("conflict")
 
 		// Line 90: if existingRoute.Pattern != rb.route.Pattern
 		assert.Panics(t, func() {
-			r.Func().POST("/test2", func(w http.ResponseWriter, req *http.Request) {}).Name("conflict")
+			r.Func().POST("/test2", testutil.NoopResponse).Name("conflict")
 		}, "should panic on duplicate name with different methods and different patterns")
 	})
 
@@ -134,11 +133,11 @@ func TestDuplicateRouteNames(t *testing.T) {
 		r := teapot.New()
 
 		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
-			sub.Func().GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users")
+			sub.Func().GET("/users", testutil.NoopResponse).Name("users")
 		})
 
 		r.NamedGroup("/admin", "admin", func(sub *teapot.Router) {
-			sub.Func().GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users")
+			sub.Func().GET("/users", testutil.NoopResponse).Name("users")
 		})
 
 		routes := r.Routes()
@@ -150,8 +149,8 @@ func TestDuplicateRouteNames(t *testing.T) {
 	t.Run("URL generation requires unique route names", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users.list")
-		r.Func().GET("/users/{id}", func(w http.ResponseWriter, req *http.Request) {}).Name("users.show")
+		r.Func().GET("/users", testutil.NoopResponse).Name("users.list")
+		r.Func().GET("/users/{id}", testutil.NoopResponse).Name("users.show")
 
 		// Should be able to generate URLs for both
 		url1, err := r.URL("users.list")
@@ -170,7 +169,7 @@ func TestRouteNameValidation(t *testing.T) {
 		r := teapot.New()
 
 		// Empty name should be OK
-		r.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("")
+		r.Func().GET("/test", testutil.NoopResponse).Name("")
 
 		routes := r.Routes()
 		require.Len(t, routes, 1)
@@ -180,9 +179,9 @@ func TestRouteNameValidation(t *testing.T) {
 	t.Run("multiple routes without names ok", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/test1", func(w http.ResponseWriter, req *http.Request) {})
-		r.Func().GET("/test2", func(w http.ResponseWriter, req *http.Request) {})
-		r.Func().GET("/test3", func(w http.ResponseWriter, req *http.Request) {})
+		r.Func().GET("/test1", testutil.NoopResponse)
+		r.Func().GET("/test2", testutil.NoopResponse)
+		r.Func().GET("/test3", testutil.NoopResponse)
 
 		routes := r.Routes()
 		assert.Len(t, routes, 3)
@@ -191,7 +190,7 @@ func TestRouteNameValidation(t *testing.T) {
 	t.Run("name can be set after route creation", func(t *testing.T) {
 		r := teapot.New()
 
-		rb := r.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {})
+		rb := r.Func().GET("/test", testutil.NoopResponse)
 		rb.Name("my.route")
 
 		routes := r.Routes()
@@ -202,7 +201,7 @@ func TestRouteNameValidation(t *testing.T) {
 	t.Run("name and action can both be set", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {}).
+		r.Func().GET("/test", testutil.NoopResponse).
 			Name("test.route").
 			Action("s3:GetObject")
 

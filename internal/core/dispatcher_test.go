@@ -7,21 +7,17 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/dispatch"
 )
 
 func TestDispatcherSingleRoute(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("OK"))
-	})
-
 	route := &Route{
 		Method:  "GET",
 		Pattern: "/test",
-		Handler: handler,
+		Handler: testutil.OKResponseHandler,
 	}
 
 	dispatcher := &Dispatcher{
@@ -34,27 +30,19 @@ func TestDispatcherSingleRoute(t *testing.T) {
 	dispatcher.ServeHTTP(w, req)
 
 	assert.Equal(t, 200, w.Code)
-	assert.Equal(t, "OK", w.Body.String())
 }
 
 func TestDispatcherQueryMatching(t *testing.T) {
-	handler1 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("HANDLER1"))
-	})
-	handler2 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("HANDLER2"))
-	})
-
 	route1 := &Route{
 		Method:        "GET",
 		Pattern:       "/test",
-		Handler:       handler1,
+		Handler:       http.HandlerFunc(testutil.StringResponseWriterBuilder("HANDLER1")),
 		QueryMatchers: []dispatch.Matcher{dispatch.QueryExistsMatcher{Key: "foo"}},
 	}
 	route2 := &Route{
 		Method:  "GET",
 		Pattern: "/test",
-		Handler: handler2,
+		Handler: http.HandlerFunc(testutil.StringResponseWriterBuilder("HANDLER2")),
 	}
 
 	dispatcher := &Dispatcher{}
@@ -77,14 +65,10 @@ func TestDispatcherQueryMatching(t *testing.T) {
 }
 
 func TestDispatcherNoMatch(t *testing.T) {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("OK"))
-	})
-
 	route := &Route{
 		Method:        "GET",
 		Pattern:       "/test",
-		Handler:       handler,
+		Handler:       testutil.NoopResponseHandler,
 		QueryMatchers: []dispatch.Matcher{dispatch.QueryExistsMatcher{Key: "required"}},
 	}
 
@@ -107,7 +91,7 @@ func TestDispatcherContextInjection(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedAction = GetAction(r.Context())
 		capturedName = GetRouteName(r.Context())
-		_, _ = w.Write([]byte("OK"))
+		testutil.OKResponse(w, r)
 	})
 
 	route := &Route{

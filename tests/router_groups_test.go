@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -20,7 +21,7 @@ func TestGroupNamePrefix(t *testing.T) {
 		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
 			// Inner group with empty prefix - line 405: if namePrefix == ""
 			sub.NamedGroup("/v1", "", func(sub2 *teapot.Router) {
-				sub2.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test")
+				sub2.Func().GET("/test", testutil.NoopResponse).Name("test")
 			})
 		})
 
@@ -42,7 +43,7 @@ func TestGroupNamePrefix(t *testing.T) {
 
 		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
 			sub.NamedGroup("/v1", "v1", func(sub2 *teapot.Router) {
-				sub2.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test")
+				sub2.Func().GET("/test", testutil.NoopResponse).Name("test")
 			})
 		})
 
@@ -56,7 +57,7 @@ func TestGroupNamePrefix(t *testing.T) {
 
 		// Root level group with empty prefix
 		r.NamedGroup("/api", "", func(sub *teapot.Router) {
-			sub.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test")
+			sub.Func().GET("/test", testutil.NoopResponse).Name("test")
 		})
 
 		routes := r.Routes()
@@ -71,7 +72,7 @@ func TestGroupNamePrefix(t *testing.T) {
 		r.NamedGroup("/a", "a", func(sub *teapot.Router) {
 			sub.NamedGroup("/b", "", func(sub2 *teapot.Router) { // Empty inherits "a"
 				sub2.NamedGroup("/c", "c", func(sub3 *teapot.Router) { // Adds "c" to "a"
-					sub3.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {}).Name("test")
+					sub3.Func().GET("/test", testutil.NoopResponse).Name("test")
 				})
 			})
 		})
@@ -88,9 +89,7 @@ func TestGroupPathPrefix(t *testing.T) {
 		r := teapot.New()
 
 		r.Group("/api", func(sub *teapot.Router) {
-			sub.Func().GET("/users", func(w http.ResponseWriter, req *http.Request) {
-				_, _ = w.Write([]byte("users"))
-			})
+			sub.Func().GET("/users", testutil.StringResponseWriterBuilder("users"))
 		})
 
 		r.Finalize()
@@ -109,9 +108,7 @@ func TestGroupPathPrefix(t *testing.T) {
 
 		r.Group("/api", func(sub *teapot.Router) {
 			sub.Group("/v1", func(sub2 *teapot.Router) {
-				sub2.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
-					_, _ = w.Write([]byte("nested"))
-				})
+				sub2.Func().GET("/test", testutil.StringResponseWriterBuilder("nested"))
 			})
 		})
 
@@ -129,9 +126,7 @@ func TestGroupPathPrefix(t *testing.T) {
 		r := teapot.New()
 
 		r.Group("", func(sub *teapot.Router) {
-			sub.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
-				_, _ = w.Write([]byte("ok"))
-			})
+			sub.Func().GET("/test", testutil.StringResponseWriterBuilder("ok"))
 		})
 
 		r.Finalize()
@@ -148,7 +143,7 @@ func TestGroupPathPrefix(t *testing.T) {
 		r := teapot.New()
 
 		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
-			sub.Func().GET("/users", func(w http.ResponseWriter, req *http.Request) {}).Name("users")
+			sub.Func().GET("/users", testutil.NoopResponse).Name("users")
 		})
 
 		routes := r.Routes()
@@ -182,9 +177,7 @@ func TestGroupMiddleware(t *testing.T) {
 
 		r.Group("/api", func(sub *teapot.Router) {
 			sub.Use(mw)
-			sub.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
-				_, _ = w.Write([]byte("ok"))
-			})
+			sub.Func().GET("/test", testutil.StringResponseWriterBuilder("ok"))
 		})
 
 		r.Finalize()
@@ -221,7 +214,7 @@ func TestGroupMiddleware(t *testing.T) {
 				sub2.Use(mw2)
 				sub2.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
 					calls = append(calls, "handler")
-					_, _ = w.Write([]byte("ok"))
+					testutil.StringResponseWriterBuilder("ok")(w, req)
 				})
 			})
 		})
@@ -244,9 +237,7 @@ func TestRouteMethod(t *testing.T) {
 		r := teapot.New()
 
 		r.Route("/api", func(sub *teapot.Router) {
-			sub.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
-				_, _ = w.Write([]byte("ok"))
-			})
+			sub.Func().GET("/test", testutil.StringResponseWriterBuilder("ok"))
 		})
 
 		r.Finalize()

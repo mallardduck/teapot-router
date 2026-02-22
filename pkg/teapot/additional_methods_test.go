@@ -179,9 +179,7 @@ func TestMustURLPanic(t *testing.T) {
 		r.MustURL("nonexistent.route")
 	})
 
-	if msg == "" {
-		t.Error("expected MustURL to panic for nonexistent route")
-	}
+	assert.NotEmpty(t, msg, "expected MustURL to panic for nonexistent route")
 }
 
 // Test: Query and QueryValue chaining

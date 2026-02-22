@@ -5,6 +5,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
@@ -30,31 +33,21 @@ func TestLatePropagation(t *testing.T) {
 			break
 		}
 	}
-	if !foundSub {
-		t.Errorf("Expected to find propagated route /api/hello in main router")
-	}
+	assert.True(t, foundSub, "Expected to find propagated route /api/hello in main router")
 
 	// 5. Verify URL generation
 	url, err := r.URL("sub.hello")
-	if err != nil {
-		t.Fatalf("Failed to generate URL for propagated route: %v", err)
-	}
-	if url != "/api/hello" {
-		t.Errorf("Expected URL /api/hello, got %s", url)
-	}
+	require.NoError(t, err, "Failed to generate URL for propagated route")
+	assert.Equal(t, "/api/hello", url)
 
 	// 6. Verify functional routing
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
 	res, err := http.Get(ts.URL + "/api/hello")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		t.Errorf("Expected status OK, got %d", res.StatusCode)
-	}
+	assert.Equal(t, http.StatusOK, res.StatusCode, "Expected status OK, got %d", res.StatusCode)
 }
 
 func TestLatePropagation_Homing(t *testing.T) {
@@ -71,12 +64,8 @@ func TestLatePropagation_Homing(t *testing.T) {
 
 	// Verify propagation
 	url, err := r.URL("sub.world")
-	if err != nil {
-		t.Fatalf("Failed to generate URL for late-added route: %v", err)
-	}
-	if url != "/v1/world" {
-		t.Errorf("Expected URL /v1/world, got %s", url)
-	}
+	require.NoError(t, err, "Failed to generate URL for late-added route")
+	assert.Equal(t, "/v1/world", url)
 }
 
 func TestLatePropagation_DeepHoming(t *testing.T) {
@@ -90,10 +79,6 @@ func TestLatePropagation_DeepHoming(t *testing.T) {
 	r3.GET("/users", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})).Name("users.index")
 
 	url, err := r1.URL("users.index")
-	if err != nil {
-		t.Fatalf("Failed to generate URL for deep homing: %v", err)
-	}
-	if url != "/api/v1/users" {
-		t.Errorf("Expected URL /api/v1/users, got %s", url)
-	}
+	require.NoError(t, err, "Failed to generate URL for deep homing")
+	assert.Equal(t, "/api/v1/users", url)
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
@@ -22,22 +23,14 @@ func TestRouterImprovements(t *testing.T) {
 		defer ts.Close()
 
 		res, err := http.Get(ts.URL + "/test")
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		defer res.Body.Close()
-		if res.StatusCode != http.StatusOK {
-			t.Errorf("expected OK, got %v", res.Status)
-		}
+		assert.Equal(t, http.StatusOK, res.StatusCode, "expected OK, got %v", res.Status)
 
 		// Verify name registration
 		url, err := r.URL("test")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if url != "/test" {
-			t.Errorf("expected /test, got %q", url)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, "/test", url)
 	})
 
 	t.Run("RegisterExternal (phantom routes)", func(t *testing.T) {
@@ -52,18 +45,12 @@ func TestRouterImprovements(t *testing.T) {
 				break
 			}
 		}
-		if !found {
-			t.Error("RegisterExternal route not found in Routes()")
-		}
+		assert.True(t, found, "RegisterExternal route not found in Routes()")
 
 		// Verify URL generation works for phantom routes
 		url, err := r.URL("ext")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if url != "/external" {
-			t.Errorf("expected /external, got %q", url)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, "/external", url)
 
 		// Verify it doesn't actually dispatch
 		ts := httptest.NewServer(r)
@@ -71,9 +58,7 @@ func TestRouterImprovements(t *testing.T) {
 		res, err := http.Get(ts.URL + "/external")
 		assert.NoError(t, err)
 		defer res.Body.Close()
-		if res.StatusCode != http.StatusNotFound {
-			t.Errorf("expected 404 for phantom route, got %v", res.Status)
-		}
+		assert.Equal(t, http.StatusNotFound, res.StatusCode, "expected 404 for phantom route, got %v", res.Status)
 	})
 
 	t.Run("Mount propagation", func(t *testing.T) {
@@ -91,18 +76,12 @@ func TestRouterImprovements(t *testing.T) {
 				break
 			}
 		}
-		if !found {
-			t.Error("Mounted route not propagated correctly")
-		}
+		assert.True(t, found, "Mounted route not propagated correctly")
 
 		// Verify URL generation in parent
 		url, err := parent.URL("hello")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if url != "/api/hello" {
-			t.Errorf("expected /api/hello, got %q", url)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, "/api/hello", url)
 	})
 
 	t.Run("SubRouter", func(t *testing.T) {
@@ -118,18 +97,12 @@ func TestRouterImprovements(t *testing.T) {
 				break
 			}
 		}
-		if !found {
-			t.Error("SubRouter route not propagated correctly")
-		}
+		assert.True(t, found, "SubRouter route not propagated correctly")
 
 		// Verify URL generation in parent
 		url, err := r.URL("dash")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if url != "/admin/dashboard" {
-			t.Errorf("expected /admin/dashboard, got %q", url)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, "/admin/dashboard", url)
 	})
 
 	t.Run("SubRouter with wildcards", func(t *testing.T) {
@@ -138,12 +111,8 @@ func TestRouterImprovements(t *testing.T) {
 		sub.GET("/{bucket}/{key:.*}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})).Name("get_file")
 
 		url, err := r.URL("get_file", "bucket", "mybucket", "key", "path/to/file.txt")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if url != "/files/mybucket/path/to/file.txt" {
-			t.Errorf("expected /files/mybucket/path/to/file.txt, got %q", url)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, "/files/mybucket/path/to/file.txt", url)
 	})
 
 	t.Run("AggregateRoutes", func(t *testing.T) {
@@ -154,8 +123,6 @@ func TestRouterImprovements(t *testing.T) {
 		r2.GET("/r2", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
 		combined := teapot.AggregateRoutes(r1, r2)
-		if len(combined) != 2 {
-			t.Errorf("expected 2 routes, got %d", len(combined))
-		}
+		assert.Len(t, combined, 2)
 	})
 }

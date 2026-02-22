@@ -3,6 +3,9 @@ package tests
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
@@ -45,23 +48,15 @@ func TestMountWithNamePrefix(t *testing.T) {
 	r.MountNamed("/v1", "api.v1", sub)
 
 	_, err = r.URL("api.v1.list")
-	if err != nil {
-		t.Logf("Expected api.v1.list but got error: %v", err)
-		t.Fail()
-	} else {
-		t.Log("Successfully found api.v1.list")
-	}
+	require.NoError(t, err, "Expected api.v1.list to be found")
+	t.Log("Successfully found api.v1.list")
 
 	// Test Homing with MountNamed
 	sub.GET("/profile", handler).Name("profile")
 
 	_, err = r.URL("api.v1.profile")
-	if err != nil {
-		t.Logf("Expected api.v1.profile but got error: %v", err)
-		t.Fail()
-	} else {
-		t.Log("Successfully found api.v1.profile")
-	}
+	require.NoError(t, err, "Expected api.v1.profile to be found")
+	t.Log("Successfully found api.v1.profile")
 
 	// Test Mount with .Name() builder
 	sub2 := teapot.New()
@@ -70,22 +65,14 @@ func TestMountWithNamePrefix(t *testing.T) {
 	r.Mount("/v2", sub2).Name("api.v2")
 
 	_, err = r.URL("api.v2.list")
-	if err != nil {
-		t.Logf("Expected api.v2.list but got error: %v", err)
-		t.Fail()
-	} else {
-		t.Log("Successfully found api.v2.list")
-	}
+	require.NoError(t, err, "Expected api.v2.list to be found")
+	t.Log("Successfully found api.v2.list")
 
 	// Test Homing with Mount builder
 	sub2.GET("/detail", handler).Name("detail")
 	_, err = r.URL("api.v2.detail")
-	if err != nil {
-		t.Logf("Expected api.v2.detail but got error: %v", err)
-		t.Fail()
-	} else {
-		t.Log("Successfully found api.v2.detail")
-	}
+	require.NoError(t, err, "Expected api.v2.detail to be found")
+	t.Log("Successfully found api.v2.detail")
 
 	// Test Hierarchical Mount builder
 	r0 := teapot.New()
@@ -98,12 +85,8 @@ func TestMountWithNamePrefix(t *testing.T) {
 
 	// Current name should be p0.p1.list
 	_, err = r0.URL("p0.p1.list")
-	if err != nil {
-		t.Logf("Expected p0.p1.list but got error: %v", err)
-		t.Fail()
-	} else {
-		t.Log("Successfully found p0.p1.list")
-	}
+	require.NoError(t, err, "Expected p0.p1.list to be found")
+	t.Log("Successfully found p0.p1.list")
 
 	// Now RENAME the mount in r1
 	// Find the mount builder? Wait, Mount returns a new one each time.
@@ -112,27 +95,16 @@ func TestMountWithNamePrefix(t *testing.T) {
 
 	// Check r0 again. Should have p0.p1_new.list
 	_, err = r0.URL("p0.p1_new.list")
-	if err != nil {
-		t.Logf("Expected p0.p1_new.list but got error: %v", err)
-		t.Fail()
-	} else {
-		t.Log("Successfully found p0.p1_new.list")
-	}
+	require.NoError(t, err, "Expected p0.p1_new.list to be found")
+	t.Log("Successfully found p0.p1_new.list")
 
 	// What happens to the old name? It should be gone.
 	_, err = r0.URL("p0.p1.list")
-	if err == nil {
-		t.Log("Expected p0.p1.list to be gone, but it's still there")
-		t.Fail()
-	}
+	assert.Error(t, err, "Expected p0.p1.list to be gone, but it's still there")
 
 	// Test deep homing with prefix change
 	r2.GET("/r4", handler).Name("new_route")
 	_, err = r0.URL("p0.p1_new.new_route")
-	if err != nil {
-		t.Logf("Expected p0.p1_new.new_route but got error: %v", err)
-		t.Fail()
-	} else {
-		t.Log("Successfully found p0.p1_new.new_route")
-	}
+	require.NoError(t, err, "Expected p0.p1_new.new_route to be found")
+	t.Log("Successfully found p0.p1_new.new_route")
 }

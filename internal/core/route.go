@@ -18,6 +18,7 @@ type Route struct {
 	QueryMatchers  []dispatch.Matcher
 	Middlewares    []func(http.Handler) http.Handler
 	WildcardParams map[string]bool // Track which params are wildcards (e.g., "key" -> true)
+	OriginalRoute  *Route          // Pointer to original route if this is a propagated copy
 }
 
 // TranslatePattern converts our {key:.*} syntax to Chi's wildcard syntax

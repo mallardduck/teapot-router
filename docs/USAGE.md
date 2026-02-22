@@ -207,9 +207,11 @@ Use `Mount(prefix, handler)` to attach any `http.Handler` to a path prefix:
 r.Mount("/static", http.FileServer(http.Dir("./static")))
 ```
 
-### Mounting teapot Routers (Route Propagation)
+### Mounting teapot Routers (Late Propagation & Homing)
 
-If the handler being mounted is also a `*teapot.Router`, all its existing routes are automatically propagated to the parent router with the prefix prepended. This enables unified route listing and URL generation even when routers are developed independently.
+If the handler being mounted is also a `*teapot.Router`, all its existing routes are automatically propagated to the parent router with the prefix prepended. 
+
+Furthermore, **"Homing"** is established: any future routes added to the sub-router after it has been mounted will also be automatically propagated to the parent. This enables flexible router composition where routers can be developed independently or even after mounting.
 
 ```go
 apiRouter := teapot.New()
@@ -217,8 +219,30 @@ apiRouter.GET("/users", listUsers).Name("users.list")
 
 // Mount propagates all apiRouter's current routes to r
 r.Mount("/api/v1", apiRouter)
-// r now knows about "/api/v1/users" with name "users.list"
+
+// Homing: even routes added LATER are visible in the parent
+apiRouter.GET("/profile", profileHandler).Name("users.profile")
+
+// r now knows about both:
+// "/api/v1/users" (name: "users.list")
+// "/api/v1/profile" (name: "users.profile")
 ```
+
+#### Custom Name Prefixes for Mounted Routers
+
+When mounting a router, you can control the name prefix applied to its routes using `MountNamed` or the fluent `.Name()` method on the mount builder:
+
+```go
+// Using MountNamed
+r.MountNamed("/api/v1", "v1", apiRouter)
+// apiRouter route "users.list" becomes "v1.users.list" in r
+
+// Using fluent API
+r.Mount("/api/v2", apiRouter).Name("v2")
+// apiRouter route "users.list" becomes "v2.users.list" in r
+```
+
+If a name is assigned via the fluent `.Name()` after mounting, any already-propagated routes will be renamed throughout the hierarchy automatically.
 
 ---
 

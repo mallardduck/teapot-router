@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/mallardduck/teapot-router/pkg/teapot"
 )
 
@@ -23,6 +25,7 @@ func TestRouterImprovements(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer res.Body.Close()
 		if res.StatusCode != http.StatusOK {
 			t.Errorf("expected OK, got %v", res.Status)
 		}
@@ -65,7 +68,9 @@ func TestRouterImprovements(t *testing.T) {
 		// Verify it doesn't actually dispatch
 		ts := httptest.NewServer(r)
 		defer ts.Close()
-		res, _ := http.Get(ts.URL + "/external")
+		res, err := http.Get(ts.URL + "/external")
+		assert.NoError(t, err)
+		defer res.Body.Close()
 		if res.StatusCode != http.StatusNotFound {
 			t.Errorf("expected 404 for phantom route, got %v", res.Status)
 		}

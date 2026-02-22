@@ -25,6 +25,54 @@ type Router struct {
 	optimizedHandlers *[]*optimizedHandler // for finalization optimization
 	finalized         bool
 	debugLog          bool // enable debug logging for auto-promotion
+
+	// Homing support for late propagation
+	parents []parentRouter // parent routers to notify of new routes
+}
+
+type parentRouter struct {
+	router     *Router
+	pathPrefix string
+	namePrefix string
+}
+
+// MountBuilder provides a fluent API for building mounted routers
+type MountBuilder struct {
+	router     *Router
+	subRouter  *Router
+	pathPrefix string
+	namePrefix string
+}
+
+// Name assigns a name prefix to all routes in the mounted sub-router
+func (mb *MountBuilder) Name(name string) *MountBuilder {
+	if mb.subRouter == nil {
+		return mb
+	}
+
+	if name != "" && !strings.HasSuffix(name, ".") {
+		name += "."
+	}
+
+	// Update the prefix for all future routes
+	newNamePrefix := mb.router.namePrefix + name
+
+	// Find the parent entry in the subRouter and update it
+	for i := range mb.subRouter.parents {
+		p := &mb.subRouter.parents[i]
+		if p.router == mb.router && p.pathPrefix == mb.pathPrefix {
+			// Found it! Update the prefix
+			oldNamePrefix := p.namePrefix
+			p.namePrefix = newNamePrefix
+
+			// Now we MUST also update any ALREADY propagated routes' names.
+			// This is because propagateRoutes was called with the old prefix during Mount.
+			mb.router.propagateRouteNames(oldNamePrefix, newNamePrefix, mb.subRouter)
+		}
+	}
+
+	mb.namePrefix = newNamePrefix
+	return mb
 }
 
 // RouteBuilder provides a fluent API for building routes
@@ -71,6 +119,11 @@ func (rb *RouteBuilder) Name(name string) *RouteBuilder {
 
 	// Register in name index
 	rb.router.nameIndex[fullName] = rb.route
+
+	// Update parents if name was added late (homing)
+	for _, p := range rb.router.parents {
+		p.router.propagateRouteName(p.namePrefix, rb.route)
+	}
 
 	return rb
 }
@@ -265,6 +318,11 @@ func (r *Router) handleDirect(method, pattern string, handler http.Handler) *Rou
 
 	*r.routes = append(*r.routes, rt)
 
+	// Propagate to parents (Homing)
+	for _, p := range r.parents {
+		p.router.propagateRoute(p.pathPrefix, p.namePrefix, rt)
+	}
+
 	dispatcherKey := method + ":" + chiPattern
 
 	// Check if dispatcher already exists (from QueryGET/etc)
@@ -329,6 +387,11 @@ func (r *Router) handleQuery(method, pattern string, handler http.Handler) *Rout
 	rt.Middlewares = append(rt.Middlewares, r.middlewares...)
 
 	*r.routes = append(*r.routes, rt)
+
+	// Propagate to parents (Homing)
+	for _, p := range r.parents {
+		p.router.propagateRoute(p.pathPrefix, p.namePrefix, rt)
+	}
 
 	// Get or create dispatcher for this method+pattern
 	dispatcherKey := method + ":" + chiPattern
@@ -460,40 +523,152 @@ func (r *Router) Use(middlewares ...func(http.Handler) http.Handler) {
 	r.mux.Use(middlewares...)
 }
 
+// MountNamed is like Mount, but allows specifying a name prefix for the sub-router's routes.
+// The provided namePrefix will be prepended to all routes in the sub-router.
+func (r *Router) MountNamed(pattern, namePrefix string, handler http.Handler) *MountBuilder {
+	fullPattern := r.pathPrefix + pattern
+
+	if namePrefix != "" && !strings.HasSuffix(namePrefix, ".") {
+		namePrefix += "."
+	}
+	fullNamePrefix := r.namePrefix + namePrefix
+
+	var subRouter *Router
+	if sr, ok := handler.(*Router); ok {
+		subRouter = sr
+
+		// Check if we are already mounted at this pattern
+		alreadyMounted := false
+		for _, p := range subRouter.parents {
+			if p.router == r && p.pathPrefix == fullPattern {
+				alreadyMounted = true
+				break
+			}
+		}
+
+		if !alreadyMounted {
+			r.mux.Mount(pattern, handler)
+
+			// Late propagation of existing routes
+			r.propagateRoutes(fullPattern, fullNamePrefix, subRouter)
+
+			// Set up "Homing" for future routes
+			subRouter.parents = append(subRouter.parents, parentRouter{
+				router:     r,
+				pathPrefix: fullPattern,
+				namePrefix: fullNamePrefix,
+			})
+		}
+	} else {
+		r.mux.Mount(pattern, handler)
+	}
+
+	return &MountBuilder{
+		router:     r,
+		subRouter:  subRouter,
+		pathPrefix: fullPattern,
+		namePrefix: fullNamePrefix,
+	}
+}
+
 // Mount attaches another http.Handler (typically a router) to a prefix.
 // If the handler is a *teapot.Router, all its routes are propagated to the
 // parent router with the prefix prepended for unified listing and URL generation.
-func (r *Router) Mount(pattern string, handler http.Handler) {
-	fullPattern := r.pathPrefix + pattern
-	r.mux.Mount(pattern, handler)
-
-	r.propagateRoutes(fullPattern, handler)
+// Furthermore, future routes added to the sub-router will also be propagated.
+func (r *Router) Mount(pattern string, handler http.Handler) *MountBuilder {
+	return r.MountNamed(pattern, "", handler)
 }
 
-func (r *Router) propagateRoutes(prefix string, handler http.Handler) {
-	// Propagate routes if it's a teapot Router
-	if subRouter, ok := handler.(*Router); ok {
-		for _, rt := range *subRouter.routes {
-			// Create a copy of the route with updated pattern and name
-			newRoute := &core.Route{
-				Method:         rt.Method,
-				Pattern:        prefix + rt.Pattern,
-				ChiPattern:     prefix + rt.ChiPattern,
-				Handler:        rt.Handler,
-				Name:           r.namePrefix + rt.Name,
-				Action:         rt.Action,
-				QueryMatchers:  rt.QueryMatchers,
-				Middlewares:    rt.Middlewares,
-				WildcardParams: rt.WildcardParams,
-			}
-			*r.routes = append(*r.routes, newRoute)
+func (r *Router) propagateRoutes(pathPrefix, namePrefix string, subRouter *Router) {
+	for _, rt := range *subRouter.routes {
+		r.propagateRoute(pathPrefix, namePrefix, rt)
+	}
+}
 
-			// Update name index for URL generation
-			if newRoute.Name != "" {
-				r.nameIndex[newRoute.Name] = newRoute
+func (r *Router) propagateRoute(pathPrefix, namePrefix string, rt *core.Route) {
+	// Create a copy of the route with updated pattern and name
+	newRoute := &core.Route{
+		Method:         rt.Method,
+		Pattern:        pathPrefix + rt.Pattern,
+		ChiPattern:     pathPrefix + rt.ChiPattern,
+		Handler:        rt.Handler,
+		Name:           namePrefix + rt.Name,
+		Action:         rt.Action,
+		QueryMatchers:  rt.QueryMatchers,
+		Middlewares:    rt.Middlewares,
+		WildcardParams: rt.WildcardParams,
+		OriginalRoute:  rt, // Link to original for name updates
+	}
+	*r.routes = append(*r.routes, newRoute)
+
+	// Update name index for URL generation
+	if newRoute.Name != "" {
+		r.nameIndex[newRoute.Name] = newRoute
+	}
+
+	// Propagate further up if this router also has parents
+	for _, p := range r.parents {
+		p.router.propagateRoute(p.pathPrefix, p.namePrefix, newRoute)
+	}
+}
+
+func (r *Router) propagateRouteName(namePrefix string, originalRt *core.Route) {
+	for _, rt := range *r.routes {
+		if rt.OriginalRoute == originalRt {
+			rt.Name = namePrefix + originalRt.Name
+			if rt.Name != "" {
+				r.nameIndex[rt.Name] = rt
+			}
+
+			// Propagate further up
+			for _, p := range r.parents {
+				p.router.propagateRouteName(p.namePrefix, rt)
+			}
+			return
+		}
+	}
+}
+
+func (r *Router) propagateRouteNames(oldPrefix, newPrefix string, subRouter *Router) {
+	for _, rt := range *r.routes {
+		if rt.OriginalRoute != nil && strings.HasPrefix(rt.Name, oldPrefix) {
+			// Check if this route actually belongs to the subRouter tree
+			if r.belongsTo(rt, subRouter) {
+				// Remove old name from index
+				if rt.Name != "" {
+					delete(r.nameIndex, rt.Name)
+				}
+
+				// Update name
+				suffix := strings.TrimPrefix(rt.Name, oldPrefix)
+				rt.Name = newPrefix + suffix
+
+				// Re-add to index
+				if rt.Name != "" {
+					r.nameIndex[rt.Name] = rt
+				}
+
+				// Propagate further up
+				for _, p := range r.parents {
+					p.router.propagateRouteNames(p.namePrefix+oldPrefix, p.namePrefix+newPrefix, subRouter)
+				}
 			}
 		}
 	}
+}
+
+func (r *Router) belongsTo(rt *core.Route, subRouter *Router) bool {
+	// Follow OriginalRoute chain to see if it leads to one of subRouter's routes
+	curr := rt.OriginalRoute
+	for curr != nil {
+		for _, subRt := range *subRouter.routes {
+			if curr == subRt {
+				return true
+			}
+		}
+		curr = curr.OriginalRoute
+	}
+	return false
 }
 
 // SubRouter creates a new child router whose routes are automatically

@@ -16,12 +16,12 @@ func TestExactMatch(t *testing.T) {
 
 	r.GET("/{$}", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("root"))
+		_, _ = w.Write([]byte("root"))
 	}))
 
 	r.GET("/{path}", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("child"))
+		_, _ = w.Write([]byte("child"))
 	}))
 
 	t.Run("root match", func(t *testing.T) {
@@ -57,11 +57,11 @@ func TestExactMatchInGroups(t *testing.T) {
 	r.Group("/admin", func(r *teapot.Router) {
 		r.GET("/{$}", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("admin-root"))
+			_, _ = w.Write([]byte("admin-root"))
 		}))
 		r.GET("/{path}", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("admin-child"))
+			_, _ = w.Write([]byte("admin-child"))
 		}))
 	})
 

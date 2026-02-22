@@ -606,6 +606,12 @@ func (r *Router) propagateRoute(pathPrefix, namePrefix string, rt *core.Route) {
 		r.nameIndex[newRoute.Name] = newRoute
 	}
 
+	// Also track in directRoutes and dispatchers for findMatchingRoute
+	dispatcherKey := newRoute.Method + ":" + newRoute.ChiPattern
+	if len(newRoute.QueryMatchers) == 0 {
+		r.directRoutes[dispatcherKey] = newRoute
+	}
+
 	// Propagate further up if this router also has parents
 	for _, p := range r.parents {
 		p.router.propagateRoute(p.pathPrefix, p.namePrefix, newRoute)
@@ -700,36 +706,78 @@ func (r *Router) SubRouter(prefix string) *Router {
 // findMatchingRoute manually matches a request against registered routes
 // This is used as a fallback when Chi's RouteContext isn't available (e.g., in global middleware)
 func (r *Router) findMatchingRoute(method, path string) *core.Route {
+	type candidate struct {
+		route   *core.Route
+		pattern string
+	}
+	var matches []candidate
+
 	// Check all direct routes
 	for key, route := range r.directRoutes {
 		if strings.HasPrefix(key, method+":") {
 			pattern := strings.TrimPrefix(key, method+":")
 			if r.matchPattern(pattern, path) {
-				return route
+				matches = append(matches, candidate{route: route, pattern: pattern})
 			}
 		}
 	}
 
-	// Check dispatcher routes (return fallback route for query-multiplexed)
+	// Check dispatcher routes
 	for key, disp := range r.dispatchers {
 		if strings.HasPrefix(key, method+":") {
 			pattern := strings.TrimPrefix(key, method+":")
 			if r.matchPattern(pattern, path) {
-				// Return fallback route (no query matchers)
+				// For dispatchers, we want the fallback route for name/action resolution in middleware
+				// when we don't know the query params yet.
+				var fallback *core.Route
 				for _, rt := range disp.Routes {
 					if len(rt.QueryMatchers) == 0 {
-						return rt
+						fallback = rt
+						break
 					}
 				}
-				// If no fallback, return first route
-				if len(disp.Routes) > 0 {
-					return disp.Routes[0]
+				if fallback == nil && len(disp.Routes) > 0 {
+					fallback = disp.Routes[0]
+				}
+				if fallback != nil {
+					matches = append(matches, candidate{route: fallback, pattern: pattern})
 				}
 			}
 		}
 	}
 
-	return nil
+	if len(matches) == 0 {
+		return nil
+	}
+
+	// If multiple matches, prioritize literal matches (no {param} or *)
+	if len(matches) > 1 {
+		bestIdx := 0
+		bestScore := -1
+
+		for i, match := range matches {
+			score := 0
+			if !strings.ContainsAny(match.pattern, "{}*") {
+				score = 100 // Exact literal match
+			} else {
+				// Count literal parts (non-parameters)
+				parts := strings.Split(match.pattern, "/")
+				for _, p := range parts {
+					if p != "" && !strings.ContainsAny(p, "{}*") {
+						score++
+					}
+				}
+			}
+
+			if score > bestScore {
+				bestScore = score
+				bestIdx = i
+			}
+		}
+		return matches[bestIdx].route
+	}
+
+	return matches[0].route
 }
 
 // matchPattern checks if a Chi pattern matches a path

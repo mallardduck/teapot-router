@@ -160,6 +160,11 @@ func (rb *RouteBuilder) With(middlewares ...func(http.Handler) http.Handler) *Ro
 	return rb
 }
 
+// NoopHandler is a handler that does nothing. It is intended for use in stub
+// implementations of handler interfaces, allowing route registration to proceed
+// without real handler dependencies (e.g. for CLI route listing tools).
+var NoopHandler http.Handler = http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+
 // New creates a new Router instance
 func New() *Router {
 	routes := make([]*core.Route, 0)

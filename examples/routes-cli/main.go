@@ -184,7 +184,7 @@ func setupRoutes() *teapot.Router {
 	// ==================== DEBUG ROUTES ====================
 	// Debug route (conditionally registered)
 	if isDebug() {
-		router.GET("/.internal/routes", teapot.NewListRoutesHandler(router, nil)).Name("debug.routes")
+		router.GET("/.internal/routes", teapot.NewListRoutesHandler(router, teapot.ListRoutesOptions{})).Name("debug.routes")
 	}
 
 	// TODO add a handler to output the ico file

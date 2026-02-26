@@ -3,6 +3,7 @@ package teapot
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -31,74 +32,98 @@ func FilterRoutes(routes []RouteInfo, filter RouteFilter) []RouteInfo {
 	return filtered
 }
 
+// ListRoutesOptions controls the behaviour of [NewListRoutesHandler] and
+// [NewListRoutesHandlerWithRoutes].
+type ListRoutesOptions struct {
+	// Filter, when non-nil, is applied to each route; only routes for which it
+	// returns true are included in the output.
+	Filter RouteFilter
+
+	// BaseURL, when non-empty, is prepended to each route pattern in the HTML
+	// output to generate a clickable link.  Only patterns without path
+	// parameters (i.e. no "{…}" segments) are linked, since those are directly
+	// navigable in a browser.
+	//
+	// Example: "https://myapp.example.com" or "http://localhost:8080"
+	BaseURL string
+}
+
 // NewListRoutesHandler returns an HTTP handler that displays registered routes.
 // The handler responds with JSON or HTML based on the Accept header.
-// If filter is non-nil, only routes for which filter returns true are included.
-// Pass nil to show all routes.
 //
 // Example:
 //
 //	// Show all routes
-//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, nil))
+//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, teapot.ListRoutesOptions{}))
 //
 //	// Exclude internal routes
-//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, func(route teapot.RouteInfo) bool {
-//	    return !strings.HasPrefix(route.Pattern, "/.internal/")
+//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, teapot.ListRoutesOptions{
+//	    Filter: func(route teapot.RouteInfo) bool {
+//	        return !strings.HasPrefix(route.Pattern, "/.internal/")
+//	    },
 //	}))
 //
-// NewListRoutesHandler returns an HTTP handler that displays registered routes.
-// The handler responds with JSON or HTML based on the Accept header.
-// If filter is non-nil, only routes for which filter returns true are included.
-// Pass nil to show all routes.
+//	// With clickable links in the HTML output
+//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, teapot.ListRoutesOptions{
+//	    BaseURL: "http://localhost:8080",
+//	}))
 //
 // If you want to merge routes from multiple routers, use [AggregateRoutes] and
 // then [NewListRoutesHandlerWithRoutes].
-func NewListRoutesHandler(router *Router, filter RouteFilter) http.HandlerFunc {
+func NewListRoutesHandler(router *Router, opts ListRoutesOptions) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		NewListRoutesHandlerWithRoutes(router.Routes(), filter)(w, req)
+		NewListRoutesHandlerWithRoutes(router.Routes(), opts)(w, req)
 	}
 }
 
-// NewListRoutesHandlerWithRoutes returns an HTTP handler that displays the provided routes.
-func NewListRoutesHandlerWithRoutes(routes []RouteInfo, filter RouteFilter) http.HandlerFunc {
+// NewListRoutesHandlerWithRoutes returns an HTTP handler that displays the
+// provided routes slice.  This is useful when combining routes from multiple
+// routers via [AggregateRoutes].
+func NewListRoutesHandlerWithRoutes(routes []RouteInfo, opts ListRoutesOptions) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		filteredRoutes := FilterRoutes(routes, filter)
+		filteredRoutes := FilterRoutes(routes, opts.Filter)
+		renderListRoutes(w, req, filteredRoutes, opts.BaseURL)
+	}
+}
 
-		// Check Accept header for JSON vs HTML
-		accept := req.Header.Get("Accept")
-		if strings.Contains(accept, "application/json") {
-			w.Header().Set("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(map[string]any{
-				"count":  len(filteredRoutes),
-				"routes": filteredRoutes,
-			})
-			if err != nil {
-				log.Printf("[teapot-router] failed to encode routes as JSON: %v", err)
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return
-			}
+func renderListRoutes(w http.ResponseWriter, req *http.Request, filteredRoutes []RouteInfo, baseURL string) {
+	// Check Accept header for JSON vs HTML
+	accept := req.Header.Get("Accept")
+	if strings.Contains(accept, "application/json") {
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(map[string]any{
+			"count":  len(filteredRoutes),
+			"routes": filteredRoutes,
+		})
+		if err != nil {
+			log.Printf("[teapot-router] failed to encode routes as JSON: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
+		return
+	}
 
-		// Default to HTML
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	// Default to HTML
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-		// Only show Query/Headers columns when at least one route uses them
-		hasQuery := false
-		hasHeaders := false
-		for _, rt := range filteredRoutes {
-			if len(rt.QueryParams) > 0 {
-				hasQuery = true
-			}
-			if len(rt.HeaderParams) > 0 {
-				hasHeaders = true
-			}
-			if hasQuery && hasHeaders {
-				break
-			}
+	// Only show Query/Headers columns when at least one route uses them
+	hasQuery := false
+	hasHeaders := false
+	for _, rt := range filteredRoutes {
+		if len(rt.QueryParams) > 0 {
+			hasQuery = true
 		}
+		if len(rt.HeaderParams) > 0 {
+			hasHeaders = true
+		}
+		if hasQuery && hasHeaders {
+			break
+		}
+	}
 
-		_, _ = fmt.Fprintf(w, `<!DOCTYPE html>
+	base := strings.TrimRight(baseURL, "/")
+
+	_, _ = fmt.Fprintf(w, `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -112,6 +137,8 @@ func NewListRoutesHandlerWithRoutes(routes []RouteInfo, filter RouteFilter) http
         tr:hover { background-color: #f9f9f9; }
         .method { font-family: monospace; font-weight: 600; }
         .pattern { font-family: monospace; color: #0066cc; }
+        .pattern a { color: inherit; text-decoration: none; }
+        .pattern a:hover { text-decoration: underline; }
         .query { font-family: monospace; color: #6c757d; }
         .name { color: #666; }
         .action { color: #888; font-size: 0.9em; }
@@ -134,54 +161,66 @@ func NewListRoutesHandlerWithRoutes(routes []RouteInfo, filter RouteFilter) http
                 <th>Method</th>
                 <th>Pattern</th>
 `, len(filteredRoutes))
-		if hasQuery {
-			_, _ = fmt.Fprint(w, `                <th>Query</th>
+	if hasQuery {
+		_, _ = fmt.Fprint(w, `                <th>Query</th>
 `)
-		}
-		if hasHeaders {
-			_, _ = fmt.Fprint(w, `                <th>Headers</th>
+	}
+	if hasHeaders {
+		_, _ = fmt.Fprint(w, `                <th>Headers</th>
 `)
-		}
-		_, _ = fmt.Fprint(w, `                <th>Name</th>
+	}
+	_, _ = fmt.Fprint(w, `                <th>Name</th>
                 <th>Action</th>
             </tr>
         </thead>
         <tbody>
 `)
 
-		for _, route := range filteredRoutes {
-			methodClass := strings.ToLower(route.Method)
-			name := route.Name
-			if name == "" {
-				name = "-"
-			}
-			action := route.Action
-			if action == "" {
-				action = "-"
-			}
-			_, _ = fmt.Fprintf(w, `            <tr>
+	for _, route := range filteredRoutes {
+		methodClass := strings.ToLower(route.Method)
+		name := route.Name
+		if name == "" {
+			name = "-"
+		}
+		action := route.Action
+		if action == "" {
+			action = "-"
+		}
+		patternCell := patternHTML(route.Pattern, base)
+		_, _ = fmt.Fprintf(w, `            <tr>
                 <td class="method %s">%s</td>
                 <td class="pattern">%s</td>
-`, methodClass, route.Method, route.Pattern)
-			if hasQuery {
-				_, _ = fmt.Fprintf(w, `                <td class="query">%s</td>
-`, formatQueryParams(route.QueryParams))
-			}
-			if hasHeaders {
-				_, _ = fmt.Fprintf(w, `                <td class="query">%s</td>
-`, formatHeaderParams(route.HeaderParams))
-			}
-			_, _ = fmt.Fprintf(w, `                <td class="name">%s</td>
+`, methodClass, html.EscapeString(route.Method), patternCell)
+		if hasQuery {
+			_, _ = fmt.Fprintf(w, `                <td class="query">%s</td>
+`, html.EscapeString(formatQueryParams(route.QueryParams)))
+		}
+		if hasHeaders {
+			_, _ = fmt.Fprintf(w, `                <td class="query">%s</td>
+`, html.EscapeString(formatHeaderParams(route.HeaderParams)))
+		}
+		_, _ = fmt.Fprintf(w, `                <td class="name">%s</td>
                 <td class="action">%s</td>
             </tr>
-`, name, action)
-		}
+`, html.EscapeString(name), html.EscapeString(action))
+	}
 
-		_, _ = fmt.Fprintf(w, `        </tbody>
+	_, _ = fmt.Fprintf(w, `        </tbody>
     </table>
 </body>
 </html>`)
+}
+
+// patternHTML returns the HTML for a pattern table cell.  When base is
+// non-empty and the pattern contains no path-parameter segments (i.e. no
+// "{…}"), the pattern is wrapped in an anchor tag pointing to base+pattern.
+func patternHTML(pattern, base string) string {
+	escaped := html.EscapeString(pattern)
+	if base == "" || strings.Contains(pattern, "{") {
+		return escaped
 	}
+	href := html.EscapeString(base + pattern)
+	return fmt.Sprintf(`<a href="%s">%s</a>`, href, escaped)
 }
 
 // FormatRoutesJSON writes routes as JSON to the writer.

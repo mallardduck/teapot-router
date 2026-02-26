@@ -339,7 +339,7 @@ func TestNewListRoutesHandlerHTMLWithHeaders(t *testing.T) {
 		d.When(m.HeaderEquals("X-Copy", "source")).FuncDo(testutil.NoopResponse).Name("hht.copy")
 	})
 
-	handler := NewListRoutesHandler(r, ListRoutesOptions{})
+	handler := NewListRoutesHandler(r, nil)
 
 	req := httptest.NewRequest("GET", "/.internal/routes", nil)
 	w := httptest.NewRecorder()

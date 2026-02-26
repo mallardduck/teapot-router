@@ -456,7 +456,7 @@ func TestListRoutesOptionsBaseURL(t *testing.T) {
 	}
 
 	t.Run("static BaseURL produces clickable link", func(t *testing.T) {
-		handler := teapot.NewListRoutesHandlerWithRoutes(routes, teapot.ListRoutesOptions{
+		handler := teapot.NewListRoutesHandlerWithRoutes(routes, &teapot.ListRoutesOptions{
 			BaseURL: "http://localhost:9000",
 		})
 		w := httptest.NewRecorder()
@@ -467,7 +467,7 @@ func TestListRoutesOptionsBaseURL(t *testing.T) {
 	})
 
 	t.Run("BaseURLFunc overrides static BaseURL", func(t *testing.T) {
-		handler := teapot.NewListRoutesHandlerWithRoutes(routes, teapot.ListRoutesOptions{
+		handler := teapot.NewListRoutesHandlerWithRoutes(routes, &teapot.ListRoutesOptions{
 			BaseURL: "http://should-not-appear.example.com",
 			BaseURLFunc: func(r *http.Request) string {
 				return "https://dynamic.example.com"
@@ -486,7 +486,7 @@ func TestListRoutesOptionsBaseURL(t *testing.T) {
 		req.Host = "myapp.example.com"
 
 		var capturedHost string
-		handler := teapot.NewListRoutesHandlerWithRoutes(routes, teapot.ListRoutesOptions{
+		handler := teapot.NewListRoutesHandlerWithRoutes(routes, &teapot.ListRoutesOptions{
 			BaseURLFunc: func(r *http.Request) string {
 				capturedHost = r.Host
 				return "http://" + r.Host
@@ -500,7 +500,7 @@ func TestListRoutesOptionsBaseURL(t *testing.T) {
 	})
 
 	t.Run("neither BaseURL nor BaseURLFunc yields no links", func(t *testing.T) {
-		handler := teapot.NewListRoutesHandlerWithRoutes(routes, teapot.ListRoutesOptions{})
+		handler := teapot.NewListRoutesHandlerWithRoutes(routes, nil)
 		w := httptest.NewRecorder()
 		handler(w, htmlReq())
 

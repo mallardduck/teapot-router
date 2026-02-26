@@ -23,7 +23,7 @@ func TestNewListRoutesHandler(t *testing.T) {
 	r.DELETE("/users/{id}", dummyHandler).Name("users.destroy")
 
 	// Get the handler (no filter - show all)
-	handler := teapot.NewListRoutesHandler(r, teapot.ListRoutesOptions{})
+	handler := teapot.NewListRoutesHandler(r, nil)
 
 	// Test JSON response (with Accept header)
 	req := httptest.NewRequest("GET", "/.internal/routes", nil)
@@ -65,7 +65,7 @@ func TestNewListRoutesHandlerHTML(t *testing.T) {
 	r.GET("/users", dummyHandler).Name("users.index")
 	r.GET("/posts", dummyHandler).Name("posts.index")
 
-	handler := teapot.NewListRoutesHandler(r, teapot.ListRoutesOptions{})
+	handler := teapot.NewListRoutesHandler(r, nil)
 
 	// Test HTML response (no Accept header defaults to HTML)
 	req := httptest.NewRequest("GET", "/.internal/routes", nil)
@@ -97,7 +97,7 @@ func TestNewListRoutesHandlerHTMLQueryParams(t *testing.T) {
 	r.QueryGET("/bucket", dummyHandler).Query("acl").Name("bucket.get-acl")
 	r.QueryGET("/bucket", dummyHandler).QueryValue("list-type", "v2").Name("bucket.list-v2")
 
-	handler := teapot.NewListRoutesHandler(r, teapot.ListRoutesOptions{})
+	handler := teapot.NewListRoutesHandler(r, nil)
 
 	req := httptest.NewRequest("GET", "/.internal/routes", nil)
 	w := httptest.NewRecorder()
@@ -118,7 +118,7 @@ func TestNewListRoutesHandlerAsRoute(t *testing.T) {
 
 	r.GET("/api/users", dummyHandler).Name("api.users")
 	r.GET("/api/posts", dummyHandler).Name("api.posts")
-	r.GET("/.internal/routes", teapot.NewListRoutesHandler(r, teapot.ListRoutesOptions{})).Name("debug.routes")
+	r.GET("/.internal/routes", teapot.NewListRoutesHandler(r, nil)).Name("debug.routes")
 
 	// Test it works via ServeHTTP
 	req := httptest.NewRequest("GET", "/.internal/routes", nil)
@@ -151,7 +151,7 @@ func TestNewListRoutesHandlerBaseURL(t *testing.T) {
 	r.GET("/users/{id}", dummyHandler).Name("users.show")
 	r.POST("/users", dummyHandler).Name("users.store")
 
-	handler := teapot.NewListRoutesHandler(r, teapot.ListRoutesOptions{
+	handler := teapot.NewListRoutesHandler(r, &teapot.ListRoutesOptions{
 		BaseURL: "http://localhost:8080",
 	})
 
@@ -170,7 +170,7 @@ func TestNewListRoutesHandlerBaseURL(t *testing.T) {
 	assert.Contains(t, body, `/users/{id}`)
 
 	// BaseURL with trailing slash should still produce correct URLs
-	handler2 := teapot.NewListRoutesHandler(r, teapot.ListRoutesOptions{
+	handler2 := teapot.NewListRoutesHandler(r, &teapot.ListRoutesOptions{
 		BaseURL: "http://localhost:8080/",
 	})
 	w2 := httptest.NewRecorder()
@@ -183,7 +183,7 @@ func TestNewListRoutesHandlerNoBaseURL(t *testing.T) {
 	r := teapot.New()
 	r.GET("/users", dummyHandler).Name("users.index")
 
-	handler := teapot.NewListRoutesHandler(r, teapot.ListRoutesOptions{})
+	handler := teapot.NewListRoutesHandler(r, nil)
 
 	req := httptest.NewRequest("GET", "/.internal/routes", nil)
 	w := httptest.NewRecorder()
@@ -352,7 +352,7 @@ func TestNewListRoutesHandlerWithFilter(t *testing.T) {
 
 	r.GET("/api/users", dummyHandler).Name("api.users")
 	r.GET("/api/posts", dummyHandler).Name("api.posts")
-	r.GET("/.internal/routes", teapot.NewListRoutesHandler(r, teapot.ListRoutesOptions{
+	r.GET("/.internal/routes", teapot.NewListRoutesHandler(r, &teapot.ListRoutesOptions{
 		Filter: func(route teapot.RouteInfo) bool {
 			return !strings.HasPrefix(route.Pattern, "/.internal/")
 		},

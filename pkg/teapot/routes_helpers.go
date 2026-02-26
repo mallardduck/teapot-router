@@ -78,26 +78,27 @@ func (o ListRoutesOptions) resolveBaseURL(req *http.Request) string {
 
 // NewListRoutesHandler returns an HTTP handler that displays registered routes.
 // The handler responds with JSON or HTML based on the Accept header.
+// opts may be nil to use default behaviour (no filter, no base URL).
 //
 // Example:
 //
-//	// Show all routes
-//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, teapot.ListRoutesOptions{}))
+//	// Show all routes (nil opts)
+//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, nil))
 //
 //	// Exclude internal routes
-//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, teapot.ListRoutesOptions{
+//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, &teapot.ListRoutesOptions{
 //	    Filter: func(route teapot.RouteInfo) bool {
 //	        return !strings.HasPrefix(route.Pattern, "/.internal/")
 //	    },
 //	}))
 //
 //	// With a static base URL for clickable links in the HTML output
-//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, teapot.ListRoutesOptions{
+//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, &teapot.ListRoutesOptions{
 //	    BaseURL: "http://localhost:8080",
 //	}))
 //
 //	// With a dynamic base URL derived from each incoming request
-//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, teapot.ListRoutesOptions{
+//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, &teapot.ListRoutesOptions{
 //	    BaseURLFunc: func(r *http.Request) string {
 //	        scheme := "https"
 //	        if r.TLS == nil {
@@ -109,7 +110,7 @@ func (o ListRoutesOptions) resolveBaseURL(req *http.Request) string {
 //
 // If you want to merge routes from multiple routers, use [AggregateRoutes] and
 // then [NewListRoutesHandlerWithRoutes].
-func NewListRoutesHandler(router *Router, opts ListRoutesOptions) http.HandlerFunc {
+func NewListRoutesHandler(router *Router, opts *ListRoutesOptions) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		NewListRoutesHandlerWithRoutes(router.Routes(), opts)(w, req)
 	}
@@ -118,10 +119,16 @@ func NewListRoutesHandler(router *Router, opts ListRoutesOptions) http.HandlerFu
 // NewListRoutesHandlerWithRoutes returns an HTTP handler that displays the
 // provided routes slice.  This is useful when combining routes from multiple
 // routers via [AggregateRoutes].
-func NewListRoutesHandlerWithRoutes(routes []RouteInfo, opts ListRoutesOptions) http.HandlerFunc {
+func NewListRoutesHandlerWithRoutes(routes []RouteInfo, opts *ListRoutesOptions) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		filteredRoutes := FilterRoutes(routes, opts.Filter)
-		renderListRoutes(w, req, filteredRoutes, opts.resolveBaseURL(req))
+		var filter RouteFilter
+		var baseURL string
+		if opts != nil {
+			filter = opts.Filter
+			baseURL = opts.resolveBaseURL(req)
+		}
+		filteredRoutes := FilterRoutes(routes, filter)
+		renderListRoutes(w, req, filteredRoutes, baseURL)
 	}
 }
 

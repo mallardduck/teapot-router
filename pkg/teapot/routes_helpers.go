@@ -45,7 +45,35 @@ type ListRoutesOptions struct {
 	// navigable in a browser.
 	//
 	// Example: "https://myapp.example.com" or "http://localhost:8080"
+	//
+	// If BaseURLFunc is also set, BaseURLFunc takes precedence.
 	BaseURL string
+
+	// BaseURLFunc, when non-nil, is called on each request to determine the
+	// base URL used for clickable links in the HTML output.  It takes
+	// precedence over the static BaseURL field, and is useful when the scheme
+	// or host must be derived from the incoming request (e.g. via the Host
+	// header or X-Forwarded-Host).
+	//
+	// Example – derive base URL from the request host:
+	//
+	//	BaseURLFunc: func(r *http.Request) string {
+	//	    scheme := "https"
+	//	    if r.TLS == nil {
+	//	        scheme = "http"
+	//	    }
+	//	    return scheme + "://" + r.Host
+	//	}
+	BaseURLFunc func(*http.Request) string
+}
+
+// resolveBaseURL returns the effective base URL for the given request.
+// BaseURLFunc takes precedence over the static BaseURL string.
+func (o ListRoutesOptions) resolveBaseURL(req *http.Request) string {
+	if o.BaseURLFunc != nil {
+		return o.BaseURLFunc(req)
+	}
+	return o.BaseURL
 }
 
 // NewListRoutesHandler returns an HTTP handler that displays registered routes.
@@ -63,9 +91,20 @@ type ListRoutesOptions struct {
 //	    },
 //	}))
 //
-//	// With clickable links in the HTML output
+//	// With a static base URL for clickable links in the HTML output
 //	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, teapot.ListRoutesOptions{
 //	    BaseURL: "http://localhost:8080",
+//	}))
+//
+//	// With a dynamic base URL derived from each incoming request
+//	r.GET("/.internal/routes", teapot.NewListRoutesHandler(router, teapot.ListRoutesOptions{
+//	    BaseURLFunc: func(r *http.Request) string {
+//	        scheme := "https"
+//	        if r.TLS == nil {
+//	            scheme = "http"
+//	        }
+//	        return scheme + "://" + r.Host
+//	    },
 //	}))
 //
 // If you want to merge routes from multiple routers, use [AggregateRoutes] and
@@ -82,7 +121,7 @@ func NewListRoutesHandler(router *Router, opts ListRoutesOptions) http.HandlerFu
 func NewListRoutesHandlerWithRoutes(routes []RouteInfo, opts ListRoutesOptions) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		filteredRoutes := FilterRoutes(routes, opts.Filter)
-		renderListRoutes(w, req, filteredRoutes, opts.BaseURL)
+		renderListRoutes(w, req, filteredRoutes, opts.resolveBaseURL(req))
 	}
 }
 

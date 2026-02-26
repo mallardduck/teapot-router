@@ -2,6 +2,8 @@ package teapot_test
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -437,6 +439,72 @@ func TestFormatQueryParamsEdgeCases(t *testing.T) {
 		// Should have correct number of "&" separators (n-1)
 		queryParamSection := extractQueryParamSection(output)
 		assert.Equal(t, 4, strings.Count(queryParamSection, "&"))
+	})
+}
+
+// TestListRoutesOptionsBaseURL tests the BaseURL / BaseURLFunc precedence in
+// ListRoutesOptions as surfaced by NewListRoutesHandlerWithRoutes.
+func TestListRoutesOptionsBaseURL(t *testing.T) {
+	routes := []teapot.RouteInfo{
+		{Method: "GET", Pattern: "/ping", Name: "ping"},
+	}
+
+	htmlReq := func() *http.Request {
+		r := httptest.NewRequest(http.MethodGet, "/routes", nil)
+		r.Header.Set("Accept", "text/html")
+		return r
+	}
+
+	t.Run("static BaseURL produces clickable link", func(t *testing.T) {
+		handler := teapot.NewListRoutesHandlerWithRoutes(routes, teapot.ListRoutesOptions{
+			BaseURL: "http://localhost:9000",
+		})
+		w := httptest.NewRecorder()
+		handler(w, htmlReq())
+
+		body := w.Body.String()
+		assert.Contains(t, body, `href="http://localhost:9000/ping"`)
+	})
+
+	t.Run("BaseURLFunc overrides static BaseURL", func(t *testing.T) {
+		handler := teapot.NewListRoutesHandlerWithRoutes(routes, teapot.ListRoutesOptions{
+			BaseURL: "http://should-not-appear.example.com",
+			BaseURLFunc: func(r *http.Request) string {
+				return "https://dynamic.example.com"
+			},
+		})
+		w := httptest.NewRecorder()
+		handler(w, htmlReq())
+
+		body := w.Body.String()
+		assert.Contains(t, body, `href="https://dynamic.example.com/ping"`)
+		assert.NotContains(t, body, "should-not-appear")
+	})
+
+	t.Run("BaseURLFunc receives the request", func(t *testing.T) {
+		req := htmlReq()
+		req.Host = "myapp.example.com"
+
+		var capturedHost string
+		handler := teapot.NewListRoutesHandlerWithRoutes(routes, teapot.ListRoutesOptions{
+			BaseURLFunc: func(r *http.Request) string {
+				capturedHost = r.Host
+				return "http://" + r.Host
+			},
+		})
+		w := httptest.NewRecorder()
+		handler(w, req)
+
+		assert.Equal(t, "myapp.example.com", capturedHost)
+		assert.Contains(t, w.Body.String(), `href="http://myapp.example.com/ping"`)
+	})
+
+	t.Run("neither BaseURL nor BaseURLFunc yields no links", func(t *testing.T) {
+		handler := teapot.NewListRoutesHandlerWithRoutes(routes, teapot.ListRoutesOptions{})
+		w := httptest.NewRecorder()
+		handler(w, htmlReq())
+
+		assert.NotContains(t, w.Body.String(), "<a href=")
 	})
 }
 

@@ -388,7 +388,55 @@ fi
 go run cmd/routes/main.go --json | jq '.routes[].Name' | grep -q "api.users.index"
 ```
 
-### 4. Documentation Generation
+### 4. Listing Routes Without Real Handler Dependencies
+
+In larger applications, handlers are often constructed with live dependencies (database
+connections, service clients, config, etc.) that are unavailable or expensive to build in a
+standalone CLI tool. The recommended pattern is to extract route registration into a shared
+function that accepts a handler interface, then provide a stub implementation backed by
+`teapot.NoopHandler` when listing:
+
+```go
+// Handlers defines the contract your route registration depends on.
+type Handlers interface {
+    ListUsers() http.Handler
+    ShowUser()  http.Handler
+    CreateUser() http.Handler
+}
+
+// RegisterRoutes is the single source of truth for all routes.
+// It is used by both the real server and the listing tool.
+func RegisterRoutes(r *teapot.Router, h Handlers) {
+    r.GET("/users",       h.ListUsers()).Name("users.index")
+    r.GET("/users/{id}", h.ShowUser()).Name("users.show")
+    r.POST("/users",      h.CreateUser()).Name("users.store")
+}
+
+// Real implementation — constructed with live dependencies in main.go.
+type appHandlers struct{ db *sql.DB }
+func (h *appHandlers) ListUsers()  http.Handler { return NewListUsersHandler(h.db) }
+func (h *appHandlers) ShowUser()   http.Handler { return NewShowUserHandler(h.db) }
+func (h *appHandlers) CreateUser() http.Handler { return NewCreateUserHandler(h.db) }
+
+// Stub implementation — no dependencies required.
+type stubHandlers struct{}
+func (stubHandlers) ListUsers()  http.Handler { return teapot.NoopHandler }
+func (stubHandlers) ShowUser()   http.Handler { return teapot.NoopHandler }
+func (stubHandlers) CreateUser() http.Handler { return teapot.NoopHandler }
+
+// cmd/routes/main.go — prints routes with zero real dependencies.
+func main() {
+    r := teapot.New()
+    RegisterRoutes(r, stubHandlers{})
+    teapot.FormatRoutesTable(os.Stdout, r.Routes())
+}
+```
+
+Because the stub satisfies the same interface as the real implementation, adding a new route
+to `RegisterRoutes` will cause a compile error until `stubHandlers` is updated — keeping
+the listing tool automatically in sync.
+
+### 5. Documentation Generation
 
 Generate route documentation from routes:
 

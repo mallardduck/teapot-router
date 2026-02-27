@@ -25,6 +25,7 @@ type Router struct {
 	optimizedHandlers *[]*optimizedHandler // for finalization optimization
 	finalized         bool
 	debugLog          bool // enable debug logging for auto-promotion
+	isGroupContext    bool // true when inside Group()/NamedGroup()/MiddlewareGroup() — Use() appends to r.middlewares instead of r.mux
 
 	// Homing support for late propagation
 	parents []parentRouter // parent routers to notify of new routes
@@ -451,6 +452,7 @@ func (r *Router) MiddlewareGroup(fn func(r *Router), middlewares ...func(http.Ha
 		middlewares:       append(append([]func(http.Handler) http.Handler{}, r.middlewares...), middlewares...), // Parent + new
 		optimizedHandlers: r.optimizedHandlers,
 		finalized:         r.finalized,
+		isGroupContext:    true, // Use() inside groups appends to r.middlewares, not r.mux
 	}
 
 	fn(subRouter)
@@ -470,6 +472,7 @@ func (r *Router) NamedGroup(pattern, namePrefix string, fn func(r *Router)) {
 		middlewares:       append([]func(http.Handler) http.Handler{}, r.middlewares...), // Copy parent middlewares
 		optimizedHandlers: r.optimizedHandlers,
 		debugLog:          r.debugLog,
+		isGroupContext:    true, // Use() inside groups appends to r.middlewares, not r.mux
 	}
 
 	// Trim trailing dot if namePrefix is empty
@@ -521,11 +524,24 @@ func (r *Router) Route(pattern string, fn func(r *Router)) {
 	})
 }
 
-// Use adds global middleware to the router
+// Use adds middleware to the router.
+//
+// At the root level, middleware is registered globally with chi and applies to all routes.
+//
+// Inside a Group(), NamedGroup(), or MiddlewareGroup() block, middleware is scoped to
+// routes registered within that group. It is appended to the group's middleware chain
+// and copied to each route at registration time.
+//
+// Use() must be called before registering routes or nested groups for the middleware
+// to take effect on those routes (same convention as chi).
 func (r *Router) Use(middlewares ...func(http.Handler) http.Handler) {
-	// Only add to chi.Mux for truly global middleware
-	// Don't add to r.middlewares as that would duplicate with route-specific
-	r.mux.Use(middlewares...)
+	if r.isGroupContext {
+		// Group context: store in r.middlewares so it's copied to routes at registration
+		r.middlewares = append(r.middlewares, middlewares...)
+	} else {
+		// Root/Route context: delegate to chi for global middleware
+		r.mux.Use(middlewares...)
+	}
 }
 
 // MountNamed is like Mount, but allows specifying a name prefix for the sub-router's routes.

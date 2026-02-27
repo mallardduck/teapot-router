@@ -1060,3 +1060,77 @@ func TestMiddlewareGroupAfterFinalization(t *testing.T) {
 	asserts.True(routeNames["after1"])
 	asserts.True(routeNames["after2"])
 }
+
+// Test: r.Use() inside Group() scopes middleware to the group, not globally
+func TestGroupUseIsScoped(t *testing.T) {
+	r := teapot.New()
+
+	var log []string
+	groupMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			log = append(log, "group:"+req.URL.Path)
+			next.ServeHTTP(w, req)
+		})
+	}
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	r.Group("/api", func(r *teapot.Router) {
+		r.Use(groupMiddleware)
+		r.GET("/users", handler)
+	})
+	r.GET("/public", handler)
+
+	srv := httptest.NewServer(r)
+	defer srv.Close()
+
+	// Hit the public route — middleware must NOT run
+	log = nil
+	resp, _ := http.Get(srv.URL + "/public")
+	_ = resp.Body.Close()
+	assert.Empty(t, log, "group middleware must not fire for /public")
+
+	// Hit the group route — middleware MUST run
+	log = nil
+	resp, _ = http.Get(srv.URL + "/api/users")
+	_ = resp.Body.Close()
+	assert.Equal(t, []string{"group:/api/users"}, log, "group middleware must fire for /api/users")
+}
+
+// Test: r.Use() inside MiddlewareGroup() scopes middleware to that group's routes
+func TestMiddlewareGroupUseIsScoped(t *testing.T) {
+	r := teapot.New()
+
+	var log []string
+	mw := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			log = append(log, "mw:"+req.URL.Path)
+			next.ServeHTTP(w, req)
+		})
+	}
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	r.MiddlewareGroup(func(r *teapot.Router) {
+		r.Use(mw)
+		r.GET("/protected", handler)
+	})
+	r.GET("/open", handler)
+
+	srv := httptest.NewServer(r)
+	defer srv.Close()
+
+	log = nil
+	resp, _ := http.Get(srv.URL + "/open")
+	_ = resp.Body.Close()
+	assert.Empty(t, log, "mw must not fire for /open")
+
+	log = nil
+	resp, _ = http.Get(srv.URL + "/protected")
+	_ = resp.Body.Close()
+	assert.Equal(t, []string{"mw:/protected"}, log, "mw must fire for /protected")
+}

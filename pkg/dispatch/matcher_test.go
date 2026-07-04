@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -143,4 +144,74 @@ func TestHeaderEqualsConstructor(t *testing.T) {
 	m := HeaderEquals("Content-Type", "application/json")
 	assert.IsType(t, HeaderValueMatcher{}, m)
 	assert.Equal(t, 2, m.Specificity())
+}
+
+func TestHostSubdomainMatcher(t *testing.T) {
+	matcher := HostSubdomainMatcher{CanonicalDomain: "s3.example.com"}
+
+	tests := []struct {
+		name     string
+		host     string
+		expected bool
+	}{
+		{"subdomain of canonical domain", "mybucket.s3.example.com", true},
+		{"subdomain with port", "mybucket.s3.example.com:9000", true},
+		{"bare canonical domain", "s3.example.com", false},
+		{"unrelated host", "example.org", false},
+		{"IP host", "192.168.1.10", false},
+		{"substring, not suffix", "s3.example.com.evil.com", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "http://placeholder/", nil)
+			req.Host = tt.host
+			assert.Equal(t, tt.expected, matcher.Matches(req))
+		})
+	}
+}
+
+func TestHostSubdomainMatcherSpecificity(t *testing.T) {
+	matcher := HostSubdomainMatcher{CanonicalDomain: "s3.example.com"}
+	assert.Equal(t, 1, matcher.Specificity())
+}
+
+func TestHostHasSubdomainConstructor(t *testing.T) {
+	m := HostHasSubdomain("s3.example.com")
+	assert.IsType(t, HostSubdomainMatcher{}, m)
+	assert.Equal(t, 1, m.Specificity())
+}
+
+// TestHostHasSubdomainWithDispatcher verifies the matcher composes with
+// Dispatcher the same way the query/header matchers do, for the two-router
+// (path-style vs. subdomain-style) use case it was built for.
+func TestHostHasSubdomainWithDispatcher(t *testing.T) {
+	d := New(func(b *Builder) {
+		b.When(HostHasSubdomain("s3.example.com")).Do(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("subdomain"))
+		})
+		b.Default(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("path"))
+		})
+	})
+
+	tests := []struct {
+		name     string
+		host     string
+		expected string
+	}{
+		{"subdomain host routes to subdomain handler", "mybucket.s3.example.com", "subdomain"},
+		{"bare canonical domain falls through to default", "s3.example.com", "path"},
+		{"unrelated host falls through to default", "example.org", "path"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "http://placeholder/", nil)
+			req.Host = tt.host
+			rec := httptest.NewRecorder()
+			d.ServeHTTP(rec, req)
+			assert.Equal(t, tt.expected, rec.Body.String())
+		})
+	}
 }

@@ -1,6 +1,10 @@
 package dispatch
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/mallardduck/teapot-router/pkg/urlbuilder"
+)
 
 // Matcher defines a condition for dispatching to a handler.
 // All matchers must match for a route to be selected (AND semantics when
@@ -90,4 +94,32 @@ func (m HeaderValueMatcher) Specificity() int {
 // HeaderEquals returns a Matcher that matches when the given header equals value.
 func HeaderEquals(key, value string) Matcher {
 	return HeaderValueMatcher{Key: key, Value: value}
+}
+
+// HostSubdomainMatcher matches when the request's Host header is a strict
+// subdomain of CanonicalDomain, per urlbuilder.SubdomainFromHost. This is the
+// building block for serving two addressing styles (e.g. path-style vs.
+// virtual-hosted-style S3 requests, or per-tenant subdomains) from the same
+// process: route the subdomain case to one handler, and fall through to a
+// Default for everything else (bare canonical domain, IPs, unrelated hosts).
+type HostSubdomainMatcher struct {
+	CanonicalDomain string
+}
+
+// Matches reports whether r.Host is a subdomain of CanonicalDomain.
+func (m HostSubdomainMatcher) Matches(r *http.Request) bool {
+	_, ok := urlbuilder.SubdomainFromHost(r.Host, m.CanonicalDomain)
+	return ok
+}
+
+// Specificity returns 1 (existence check).
+func (m HostSubdomainMatcher) Specificity() int {
+	return 1
+}
+
+// HostHasSubdomain returns a Matcher that matches when the request's Host
+// header is a subdomain of canonicalDomain (see urlbuilder.SubdomainFromHost
+// for exact semantics, e.g. how ports and case are handled).
+func HostHasSubdomain(canonicalDomain string) Matcher {
+	return HostSubdomainMatcher{CanonicalDomain: canonicalDomain}
 }

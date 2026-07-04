@@ -1,0 +1,42 @@
+version: 2
+
+project_name: teapot-router
+
+# This is a pure Go library — nothing to compile or archive. GoReleaser is
+# used only for its changelog generation and GitHub Release management.
+builds:
+  - skip: true
+
+archives:
+  - formats: [ none ]
+
+checksum:
+  disable: true
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 100
+    - title: Bug fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 200
+    - title: Refactors
+      regexp: '^.*?refactor(\(.+\))??!?:.+$'
+      order: 300
+    - title: Other changes
+      order: 999
+  filters:
+    exclude:
+      - '^docs?:'
+      - '^tests?:'
+      - '^chore:'
+      - '^ci:'
+      - Merge pull request
+      - Merge branch
+
+release:
+  draft: true
+  name_template: "{{ .Tag }}"

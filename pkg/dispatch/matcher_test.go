@@ -188,10 +188,10 @@ func TestHostHasSubdomainConstructor(t *testing.T) {
 func TestHostHasSubdomainWithDispatcher(t *testing.T) {
 	d := New(func(b *Builder) {
 		b.When(HostHasSubdomain("s3.example.com")).Do(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("subdomain"))
+			_, _ = w.Write([]byte("subdomain"))
 		})
 		b.Default(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("path"))
+			_, _ = w.Write([]byte("path"))
 		})
 	})
 

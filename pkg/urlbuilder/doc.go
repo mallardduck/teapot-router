@@ -69,6 +69,26 @@
 //	// Development: S3_CANONICAL_DOMAIN=""
 //	// Production:  S3_CANONICAL_DOMAIN="s3.example.com"
 //
+// # Subdomain-Style Addressing
+//
+// SubdomainFromHost and Builder.SubdomainURL are general host-based routing
+// primitives for apps that address a resource via a subdomain label rather
+// than (or in addition to) a URL path — e.g. S3 virtual-hosted-style bucket
+// access ("mybucket.s3.example.com") or per-tenant subdomains.
+//
+//	// Resolve a label from an inbound request's Host header.
+//	label, ok := urlbuilder.SubdomainFromHost(r.Host, "s3.example.com")
+//	// label == "mybucket", ok == true for Host: mybucket.s3.example.com
+//
+//	// Build a subdomain-style URL for a given label.
+//	urls := urlbuilder.New("s3.example.com")
+//	url, ok := urls.SubdomainURL("mybucket", "/path/to/object.txt")
+//	// url == "https://mybucket.s3.example.com/path/to/object.txt"
+//
+// Pairing SubdomainFromHost with pkg/dispatch's HostHasSubdomain matcher lets
+// a single process serve both addressing styles, dispatching per request
+// based on whether Host resolves to a subdomain.
+//
 // For complete documentation and examples, see:
 // https://github.com/mallardduck/teapot-router/blob/main/docs/URLBUILDER.md
 package urlbuilder

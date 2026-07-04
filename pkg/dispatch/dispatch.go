@@ -1,6 +1,6 @@
 // Package dispatch provides a router-agnostic HTTP request dispatcher that
-// routes to handlers based on Matcher conditions (query parameters, and
-// eventually other request attributes like headers).
+// routes to handlers based on Matcher conditions — query parameters, headers,
+// and Host-header subdomain checks.
 //
 // A Dispatcher implements http.Handler and can be used with any Go HTTP router.
 // Routes are evaluated in specificity order — the first route whose matchers
@@ -15,6 +15,20 @@
 //	})
 //
 //	http.Handle("/bucket", d)  // works with any router
+//
+// # Host-based dispatch
+//
+// HostHasSubdomain matches when the request's Host header is a subdomain of
+// a configured canonical domain (see pkg/urlbuilder's SubdomainFromHost for
+// exact semantics). This is the building block for serving two addressing
+// styles from one process — e.g. S3 path-style vs. virtual-hosted-style
+// requests, or per-tenant subdomains — by routing the subdomain case to one
+// handler and falling through to Default for everything else:
+//
+//	d := dispatch.New(func(b *dispatch.Builder) {
+//	    b.When(dispatch.HostHasSubdomain("s3.example.com")).Do(vhostRouter.ServeHTTP)
+//	    b.Default(pathRouter.ServeHTTP)
+//	})
 package dispatch
 
 import (

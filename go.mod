@@ -3,7 +3,7 @@ module github.com/mallardduck/teapot-router
 go 1.25
 
 require (
-	github.com/go-chi/chi/v5 v5.3.0
+	github.com/go-chi/chi/v5 v5.3.1
 	github.com/stretchr/testify v1.11.1
 )
 

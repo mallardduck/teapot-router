@@ -17,10 +17,10 @@ import (
 // later changes to the subdomain matching path cannot silently break it.
 func TestSubdomainDispatcherMountedOnRoute(t *testing.T) {
 	vhost := dispatch.New(func(b *dispatch.Builder) {
-		b.When(dispatch.HostHasSubdomain("s3.example.com")).Do(func(w http.ResponseWriter, _ *http.Request) {
+		b.When(dispatch.HostHasSubdomain("s3.example.com")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("subdomain"))
 		})
-		b.Default(func(w http.ResponseWriter, _ *http.Request) {
+		b.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("path"))
 		})
 	})

@@ -38,9 +38,12 @@ path := r.MustURL("object.get", "bucket", "photos", "key", "2024/vacation.jpg")
 full := urls.BuildURL(r, path)
 // "https://s3.example.com/photos/2024/vacation.jpg"
 
-urls.BucketURL(r, "photos")                   // bucket-level URL
-urls.ObjectURL(r, "photos", "2024/a.jpg")     // object-level URL
-urls.SubdomainURL("photos", "/2024/a.jpg")    // "https://photos.s3.example.com/2024/a.jpg", true</code></pre>
+bucket := urls.BucketURL(r, "photos")              // bucket-level URL
+object := urls.ObjectURL(r, "photos", "2024/a.jpg") // object-level URL
+
+// SubdomainURL returns false when the label cannot form a valid subdomain.
+sub, ok := urls.SubdomainURL("photos", "/2024/a.jpg")
+// "https://photos.s3.example.com/2024/a.jpg", true</code></pre>
     <ul>
       <li>The scheme is <code>https</code> when the request is TLS or <code>X-Forwarded-Proto</code> says so. Otherwise it is <code>http</code>.</li>
       <li>Generated URLs are lowercase and never end in a trailing dot.</li>

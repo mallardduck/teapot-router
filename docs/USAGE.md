@@ -112,6 +112,7 @@ so that the `dispatch` package does not need to be imported separately:
 - `m.QueryEquals("key", "value")` — matches if the query param equals a specific value
 - `m.HeaderExists("key")` — matches if the header is present with a non-empty value
 - `m.HeaderEquals("key", "value")` — matches if the header equals a specific value
+- `m.HostHasSubdomain("canonical.domain")` — matches if the Host header is a subdomain of the canonical domain
 - Multiple matchers in one `When` are ANDed: `When(m.QueryExists("partNumber"), m.QueryExists("uploadId"))`
 
 Both styles coexist in the same router — use `Dispatch` where you have a dense
@@ -226,8 +227,17 @@ urls := urlbuilder.New("s3.example.com")
 url, ok := urls.SubdomainURL("mybucket", "/path/to/object.txt")    // https://mybucket.s3.example.com/path/to/object.txt
 ```
 
-> `teapot.Matchers` does not expose `HostHasSubdomain` yet, so use the `dispatch` package directly as shown above. See
-> [V1-SCOPE.md](V1-SCOPE.md).
+Inside a teapot router, the same matcher is available through `Dispatch`:
+
+```go
+r.Dispatch("GET", "/{key:.*}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
+    d.FuncDefault(pathObjectHandler)
+    d.When(m.HostHasSubdomain("s3.example.com")).FuncDo(vhostObjectHandler)
+})
+```
+
+Matching follows `urlbuilder.SubdomainFromHost`: ports are ignored, matching is case-insensitive, and a bare canonical
+domain or an unrelated host does not match.
 
 ---
 

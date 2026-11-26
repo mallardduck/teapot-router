@@ -6,8 +6,10 @@ import (
 	"strings"
 )
 
-// SubdomainFromHost extracts the leftmost DNS label from host when host is a
-// strict subdomain of canonicalDomain, i.e. "{label}.{canonicalDomain}".
+// SubdomainFromHost extracts the label from host when host is a strict
+// subdomain of canonicalDomain, i.e. "{label}.{canonicalDomain}". The label is
+// everything left of canonicalDomain, so a dotted label such as
+// "my.dotted.bucket" is returned whole (S3 bucket names may contain dots).
 // It returns ok=false when:
 //   - canonicalDomain is empty (subdomain resolution disabled)
 //   - host equals canonicalDomain exactly (bare domain, not a subdomain)
@@ -54,8 +56,9 @@ func SubdomainFromHost(host, canonicalDomain string) (label string, ok bool) {
 	return label, true
 }
 
-// SubdomainURL builds an absolute URL using label as the leftmost subdomain
-// of the Builder's canonical domain: https://{label}.{canonicalDomain}{path}.
+// SubdomainURL builds an absolute URL using label as the subdomain of the
+// Builder's canonical domain: https://{label}.{canonicalDomain}{path}. A path
+// without a leading slash gets one added.
 // It returns ok=false if the Builder has no canonical domain configured or
 // label is empty - subdomain-style URLs have no meaningful "detect from
 // request" fallback the way BuildURL does, since the domain itself must be

@@ -13,7 +13,8 @@ composition, and route introspection. It stays a router. It does not implement a
 - **Registration:** `GET`/`POST`/`PUT`/`DELETE`/`HEAD`/`PATCH`/`OPTIONS`, `Handle`, `Func()` variants,
   `RegisterExternal` (phantom routes).
 - **Named routes:** `Name`, `URL`, `MustURL`, wildcard substitution.
-- **Query and header dispatch:** `Query`, `QueryValue`, `Dispatch` with `Default`/`When`, and `Matchers`.
+- **Query, header, and subdomain dispatch:** `Query`, `QueryValue`, `Dispatch` with `Default`/`When`, and `Matchers`
+  (including `HostHasSubdomain`).
 - **Composition:** `Group`, `NamedGroup`, `SubRouter`, `Mount`, `MountNamed`, with late propagation.
 - **Middleware:** `Use`, `With`, `MiddlewareGroup`, and chi middleware compatibility.
 - **Resources:** `Resource` and `ResourceHandlers`.
@@ -35,7 +36,6 @@ composition, and route introspection. It stays a router. It does not implement a
 | Item | Where it is documented | Status |
 |---|---|---|
 | `RegisterDebugRoute` convenience method | `docs/USAGE.md`, `docs/ROUTES-LISTING.md` | Planned |
-| `HostHasSubdomain` on `teapot.Matchers` | `docs/USAGE.md` (subdomain section) | Planned; use `pkg/dispatch` directly until then |
 | Sortable HTML route table | `docs/ROUTES-LISTING.md` | Planned, or remove the claim |
 
 Each of these is marked "planned" in the docs that mention it. Remove the marker when the feature lands.

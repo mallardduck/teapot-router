@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Routing · teapot-router</title>
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="layout">
+  <nav class="side">
+    <a class="brand" href="index.html">teapot-router ☕️</a>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="routing.html" aria-current="page">Routing</a></li>
+      <li><a href="composition.html">Composition</a></li>
+      <li><a href="urls-and-routes.html">URLs &amp; route listing</a></li>
+      <li><a href="migrating.html">Migrating to v1</a></li>
+    </ul>
+    <div class="ext">
+      <div><a href="https://github.com/go-chi/chi">chi on GitHub</a></div>
+      <div><a href="https://pkg.go.dev/github.com/go-chi/chi/v5">chi API (pkg.go.dev)</a></div>
+      <div><a href="https://github.com/mallardduck/teapot-router">teapot-router on GitHub</a></div>
+    </div>
+  </nav>
+
+  <main>
+    <h1>Routing</h1>
+    <p class="lead">Named routes, query and header dispatch, and S3 action context. For path patterns and middleware, see the <a href="https://github.com/go-chi/chi">chi docs</a>.</p>
+
+    <h2>Named routes</h2>
+    <p>Name a route with <code>.Name()</code>, then build its path later with <code>URL</code> or <code>MustURL</code>.</p>
+<pre><code>r.GET("/users/{id}", showUser).Name("users.show")
+
+path := r.MustURL("users.show", "id", "42")       // "/users/42"
+path, err := r.URL("users.show", "id", "42")      // error-returning form</code></pre>
+    <p>Parameters are alternating key and value pairs, and each key must match a placeholder in the pattern.
+      Wildcards written as <code>{key:.*}</code> match slashes and are substituted the same way:</p>
+<pre><code>r.GET("/{bucket}/{key:.*}", getObject).Name("object.get")
+
+r.MustURL("object.get", "bucket", "photos", "key", "2024/vacation.jpg")
+// "/photos/2024/vacation.jpg"</code></pre>
+    <p><code>URL</code> returns an error when the name is unknown, when the pairs are odd in count, or when a placeholder is left unfilled.</p>
+
+    <h2>Query dispatch</h2>
+    <p>Routes on the same method and path can differ by query parameters. This is how S3 sub-resources such as <code>?acl</code> work.</p>
+<pre><code>r.GET("/{bucket}", listObjects).Name("bucket.list").Action("s3:ListBucket")
+
+r.GET("/{bucket}", getBucketAcl).Name("bucket.acl").
+    Action("s3:GetBucketAcl").
+    Query("acl") // matches when ?acl is present
+
+r.GET("/{bucket}", getVersioning).Name("bucket.versioning").
+    Action("s3:GetBucketVersioning").
+    QueryValue("type", "full") // matches when ?type=full</code></pre>
+    <p>More specific matches win, so a route that requires two query parameters beats one that requires one.</p>
+
+    <h3>Grouped with Dispatch</h3>
+    <p>When one path has many variants, <code>Dispatch</code> keeps them in one block:</p>
+<pre><code>r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
+    d.DefaultFunc(listObjects).Name("bucket.list").Action("s3:ListBucket")
+    d.When(m.QueryEquals("list-type", "2")).DoFunc(listObjectsV2).Name("bucket.list-v2")
+    d.When(m.QueryExists("acl")).DoFunc(getBucketAcl).Name("bucket.acl")
+    d.When(m.QueryExists("versioning")).DoFunc(getVersioning).Name("bucket.versioning")
+})</code></pre>
+    <ul>
+      <li><code>Default</code> / <code>DefaultFunc</code>: the fallback when no <code>When</code> matches.</li>
+      <li><code>When(...)</code>: a conditional route. Multiple matchers are ANDed.</li>
+      <li><code>Do</code> / <code>DoFunc</code>: the handler for a <code>When</code> route. Takes an <code>http.Handler</code> or a function.</li>
+      <li><code>.Name()</code>, <code>.Action()</code>, <code>.With()</code>: the same chain as the fluent API.</li>
+    </ul>
+    <p>Built-in matchers on <code>teapot.Matchers</code>:</p>
+    <table>
+      <thead><tr><th>Matcher</th><th>Matches when</th></tr></thead>
+      <tbody>
+        <tr><td><code>QueryExists(key)</code></td><td>the query parameter is present, any value</td></tr>
+        <tr><td><code>QueryEquals(key, value)</code></td><td>the query parameter equals the value</td></tr>
+        <tr><td><code>HeaderExists(key)</code></td><td>the header is present and non-empty</td></tr>
+        <tr><td><code>HeaderEquals(key, value)</code></td><td>the header equals the value</td></tr>
+        <tr><td><code>HostHasSubdomain(domain)</code></td><td>the Host is a subdomain of <code>domain</code> (see <a href="composition.html#subdomains">Composition</a>)</td></tr>
+      </tbody>
+    </table>
+    <p>The fluent <code>Query</code> style and <code>Dispatch</code> coexist in the same router. Use whichever reads better for each path.</p>
+
+    <h2>Action context</h2>
+    <p>Each route can carry an action string, which is stored in the request context:</p>
+<pre><code>r.GET("/{bucket}/{key:.*}", getObject).
+    Name("object.get").
+    Action("s3:GetObject")
+
+func getObject(w http.ResponseWriter, r *http.Request) {
+    action := teapot.GetAction(r)           // "s3:GetObject"
+    name := teapot.GetRouteName(r)          // "object.get"
+    bucket := teapot.URLParam(r, "bucket")
+    key := teapot.URLParam(r, "key")
+    // Use action for authorization, logging, metrics...
+}</code></pre>
+    <p><code>URLParams(r)</code> returns all URL parameters as a map.</p>
+
+    <h2>Direct handlers and external routes</h2>
+<pre><code>r.Handle("GET", "/health", healthHandler).Name("health")
+r.HandleFunc("GET", "/ping", pingFunc).Name("ping")
+
+// Documented and usable for URL building, but not served locally
+r.RegisterExternal("GET", "https://auth.example.com/login", "auth.login", "auth:Login")</code></pre>
+
+    <h2>Finalize for production</h2>
+    <p>Call <code>Finalize()</code> after registering routes. It precomputes handler chains and builds all dispatchers up front, so the first request does no setup. It is optional.</p>
+<pre><code>r.Finalize()
+http.ListenAndServe(":8080", r)</code></pre>
+
+    <div class="pager">
+      <span></span>
+      <a href="composition.html">Composition →</a>
+    </div>
+  </main>
+</div>
+</body>
+</html>

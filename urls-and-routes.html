@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>URLs &amp; route listing · teapot-router</title>
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="layout">
+  <nav class="side">
+    <a class="brand" href="index.html">teapot-router ☕️</a>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="routing.html">Routing</a></li>
+      <li><a href="composition.html">Composition</a></li>
+      <li><a href="urls-and-routes.html" aria-current="page">URLs &amp; route listing</a></li>
+      <li><a href="migrating.html">Migrating to v1</a></li>
+    </ul>
+    <div class="ext">
+      <div><a href="https://github.com/go-chi/chi">chi on GitHub</a></div>
+      <div><a href="https://pkg.go.dev/github.com/go-chi/chi/v5">chi API (pkg.go.dev)</a></div>
+      <div><a href="https://github.com/mallardduck/teapot-router">teapot-router on GitHub</a></div>
+    </div>
+  </nav>
+
+  <main>
+    <h1>URLs &amp; route listing</h1>
+    <p class="lead">Build absolute URLs from named routes, and list the routes your router serves.</p>
+
+    <h2>Absolute URLs</h2>
+    <p><code>r.MustURL</code> returns a path. The <code>urlbuilder</code> package turns that into a full URL, using the request for scheme detection and a canonical domain you set:</p>
+<pre><code>import "github.com/mallardduck/teapot-router/pkg/urlbuilder"
+
+urls := urlbuilder.New("s3.example.com")
+
+path := r.MustURL("object.get", "bucket", "photos", "key", "2024/vacation.jpg")
+full := urls.BuildURL(r, path)
+// "https://s3.example.com/photos/2024/vacation.jpg"
+
+urls.BucketURL(r, "photos")                   // bucket-level URL
+urls.ObjectURL(r, "photos", "2024/a.jpg")     // object-level URL
+urls.SubdomainURL("photos", "/2024/a.jpg")    // "https://photos.s3.example.com/2024/a.jpg", true</code></pre>
+    <ul>
+      <li>The scheme is <code>https</code> when the request is TLS or <code>X-Forwarded-Proto</code> says so. Otherwise it is <code>http</code>.</li>
+      <li>Generated URLs are lowercase and never end in a trailing dot.</li>
+    </ul>
+
+    <h2>Listing routes</h2>
+    <p>Every router can report its routes:</p>
+<pre><code>for _, route := range r.Routes() {
+    fmt.Printf("%s %s -> %s (%s)\n", route.Method, route.Pattern, route.Name, route.Action)
+}
+
+// Across several routers, including mounted sub-routers
+all := teapot.AggregateRoutes(r, admin)</code></pre>
+
+    <h3>Debug endpoint</h3>
+    <p>Register an HTTP endpoint that lists routes as JSON or HTML. Put it behind a debug flag, not in production:</p>
+<pre><code>if debug {
+    r.RegisterDebugRoute("/.internal/routes", "debug.routes")
+}</code></pre>
+
+    <h3>Formatters</h3>
+    <p>Write a route list in table, JSON, or compact form to any <code>io.Writer</code>:</p>
+<pre><code>teapot.FormatRoutesTable(os.Stdout, routes)
+teapot.FormatRoutesJSON(os.Stdout, routes)
+teapot.FormatRoutesCompact(os.Stdout, routes)</code></pre>
+    <p>Use <code>teapot.FilterRoutes</code> to narrow a list before formatting. Use <code>teapot.NewListRoutesHandler</code> when you need the handler outside <code>RegisterDebugRoute</code>.</p>
+
+    <h3>Try it</h3>
+    <p>The repository has a runnable example, a mock S3 route table, in <code>examples/routes-cli</code>:</p>
+<pre><code>go run ./examples/routes-cli           # table
+go run ./examples/routes-cli --json    # JSON
+go run ./examples/routes-cli --compact # compact</code></pre>
+
+    <h2>Standalone dispatch</h2>
+    <p>The <code>dispatch</code> package routes by query, header, and host without teapot. It is an <code>http.Handler</code>, so it works with the standard library, chi, or any other router:</p>
+<pre><code>import "github.com/mallardduck/teapot-router/pkg/dispatch"
+
+d := dispatch.New(func(b *dispatch.Builder) {
+    b.DefaultFunc(listHandler)
+    b.When(dispatch.QueryEquals("format", "xml")).DoFunc(xmlHandler)
+    b.When(dispatch.QueryExists("search")).DoFunc(searchHandler)
+})
+
+http.Handle("/api/items", d)</code></pre>
+
+    <div class="pager">
+      <a href="composition.html">← Composition</a>
+      <a href="migrating.html">Migrating to v1 →</a>
+    </div>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Composition · teapot-router</title>
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="layout">
+  <nav class="side">
+    <a class="brand" href="index.html">teapot-router ☕️</a>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="routing.html">Routing</a></li>
+      <li><a href="composition.html" aria-current="page">Composition</a></li>
+      <li><a href="urls-and-routes.html">URLs &amp; route listing</a></li>
+      <li><a href="migrating.html">Migrating to v1</a></li>
+    </ul>
+    <div class="ext">
+      <div><a href="https://github.com/go-chi/chi">chi on GitHub</a></div>
+      <div><a href="https://pkg.go.dev/github.com/go-chi/chi/v5">chi API (pkg.go.dev)</a></div>
+      <div><a href="https://github.com/mallardduck/teapot-router">teapot-router on GitHub</a></div>
+    </div>
+  </nav>
+
+  <main>
+    <h1>Composition</h1>
+    <p class="lead">Groups, sub-routers, mounting, subdomains, and resources. Middleware itself works as it does in chi.</p>
+
+    <h2>Groups</h2>
+<pre><code>// Path prefix
+r.Group("/api/v1", func(r *teapot.Router) {
+    r.GET("/users", listUsers).Name("users.list")
+})
+
+// Path prefix and name prefix
+r.NamedGroup("/{bucket}", "bucket", func(r *teapot.Router) {
+    r.GET("", listObjects).Name("list")                   // "bucket.list"
+    r.GET("", getBucketAcl).Name("acl").Query("acl")      // "bucket.acl"
+})
+
+// Middleware scoped to the group
+r.MiddlewareGroup(func(r *teapot.Router) {
+    r.GET("/data", dataHandler).Name("api.data")
+}, apiKeyMiddleware)</code></pre>
+
+    <h2>Sub-routers</h2>
+    <p><code>SubRouter(prefix)</code> returns a child router that can also run on its own. Its routes show up in the parent with the prefix added.</p>
+<pre><code>admin := r.SubRouter("/admin")
+admin.GET("/dashboard", dashHandler).Name("dashboard")
+// "dashboard" is visible in both admin and r, as "/admin/dashboard"</code></pre>
+
+    <h2>Mounting</h2>
+<pre><code>r.Mount("/static", http.FileServer(http.Dir("./static")))</code></pre>
+    <p>Mounting a <code>*teapot.Router</code> does more. Its existing routes are copied into the parent with the prefix added. Routes added to it later also show up in the parent, because mounting links the two routers.</p>
+<pre><code>api := teapot.New()
+api.GET("/users", listUsers).Name("users.list")
+
+r.Mount("/api/v1", api)
+
+api.GET("/profile", profile).Name("users.profile") // also visible in r</code></pre>
+    <p>Names can get a prefix when mounting:</p>
+<pre><code>r.MountNamed("/api/v1", "v1", api)     // "users.list" becomes "v1.users.list"
+
+r.Mount("/api/v2", api).Name("v2")     // same, with the fluent form</code></pre>
+    <p>Naming after mounting renames the routes already propagated.</p>
+
+    <h2 id="subdomains">Subdomains</h2>
+    <p>For APIs that address resources by subdomain (<code>mybucket.s3.example.com</code>) as well as by path, use the <code>dispatch</code> matcher with the <code>urlbuilder</code> helpers:</p>
+<pre><code>d := dispatch.New(func(b *dispatch.Builder) {
+    b.When(dispatch.HostHasSubdomain("s3.example.com")).DoFunc(vhostHandler)
+    b.DefaultFunc(pathHandler)
+})
+http.ListenAndServe(":8080", d)
+
+// Inside a handler:
+label, ok := urlbuilder.SubdomainFromHost(r.Host, "s3.example.com") // "mybucket", true</code></pre>
+    <p>Inside a teapot router, use <code>m.HostHasSubdomain(...)</code> in a <code>Dispatch</code> block. Ports are ignored, matching is case-insensitive, and a trailing dot on either side is ignored.</p>
+
+    <h2>Resources</h2>
+    <p>A resource is a controller value. Each standard action is registered only if the controller has that method.</p>
+<pre><code>type PhotoController struct{ db *sql.DB }
+
+func (c *PhotoController) Index(w http.ResponseWriter, r *http.Request)   { /* list */ }
+func (c *PhotoController) Show(w http.ResponseWriter, r *http.Request)    { /* one */ }
+func (c *PhotoController) Update(w http.ResponseWriter, r *http.Request)  { /* PUT and PATCH */ }
+func (c *PhotoController) Destroy(w http.ResponseWriter, r *http.Request) { /* DELETE */ }
+
+r.Resource("photos", &PhotoController{db: db})</code></pre>
+    <table>
+      <thead><tr><th>Action</th><th>Method and path</th><th>Route name</th></tr></thead>
+      <tbody>
+        <tr><td><code>Index</code></td><td><code>GET /photos</code></td><td><code>photos.index</code></td></tr>
+        <tr><td><code>Create</code></td><td><code>GET /photos/create</code></td><td><code>photos.create</code></td></tr>
+        <tr><td><code>Store</code></td><td><code>POST /photos</code> (<code>StoreVerb</code> can change it)</td><td><code>photos.store</code></td></tr>
+        <tr><td><code>Show</code></td><td><code>GET /photos/{photo}</code></td><td><code>photos.show</code></td></tr>
+        <tr><td><code>Edit</code></td><td><code>GET /photos/{photo}/edit</code></td><td><code>photos.edit</code></td></tr>
+        <tr><td><code>Update</code></td><td><code>PUT</code> and <code>PATCH /photos/{photo}</code></td><td><code>photos.update</code></td></tr>
+        <tr><td><code>Destroy</code></td><td><code>DELETE /photos/{photo}</code></td><td><code>photos.destroy</code></td></tr>
+      </tbody>
+    </table>
+    <p>Options:</p>
+<pre><code>r.Resource("photos", &PhotoController{db: db},
+    teapot.Only("index", "show"),                       // or teapot.Except("destroy")
+    teapot.Middleware(authMiddleware),                  // this resource only
+    teapot.Path("/pictures"),                           // replaces /photos
+    teapot.Param("pictureId"),                          // replaces {photo}
+    teapot.Names(map[string]string{"index": "list"}),   // photos.list
+    teapot.StoreVerb(teapot.PUT),                       // Store uses PUT
+)</code></pre>
+    <p><code>Resource</code> panics at registration for invalid input: an unknown action, <code>Only</code> combined with <code>Except</code>, a <code>Path</code> without a leading slash, or a <code>StoreVerb</code> other than <code>POST</code> or <code>PUT</code>.</p>
+
+    <h2>Middleware</h2>
+    <p>Use chi middleware as you would in chi:</p>
+<pre><code>r.Use(middleware.Logger, middleware.Recoverer)
+
+r.GET("/admin", adminHandler).Name("admin").With(authMiddleware)</code></pre>
+    <p>The underlying chi router is available through <code>r.Chi()</code> when you need chi features directly.</p>
+
+    <div class="pager">
+      <a href="routing.html">← Routing</a>
+      <a href="urls-and-routes.html">URLs &amp; route listing →</a>
+    </div>
+  </main>
+</div>
+</body>
+</html>

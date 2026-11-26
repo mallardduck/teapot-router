@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Migrating to v1 · teapot-router</title>
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="layout">
+  <nav class="side">
+    <a class="brand" href="index.html">teapot-router ☕️</a>
+    <ul>
+      <li><a href="index.html">Overview</a></li>
+      <li><a href="routing.html">Routing</a></li>
+      <li><a href="composition.html">Composition</a></li>
+      <li><a href="urls-and-routes.html">URLs &amp; route listing</a></li>
+      <li><a href="migrating.html" aria-current="page">Migrating to v1</a></li>
+    </ul>
+    <div class="ext">
+      <div><a href="https://github.com/go-chi/chi">chi on GitHub</a></div>
+      <div><a href="https://pkg.go.dev/github.com/go-chi/chi/v5">chi API (pkg.go.dev)</a></div>
+      <div><a href="https://github.com/mallardduck/teapot-router">teapot-router on GitHub</a></div>
+    </div>
+  </nav>
+
+  <main>
+    <h1>Migrating to v1</h1>
+    <p class="lead">Changes since <code>v0.15.2</code> that affect existing code. Each entry says what breaks and how to update.</p>
+
+    <h2>Breaking changes</h2>
+
+    <h3><code>Resource</code> takes a controller and options</h3>
+    <p><code>ResourceHandlers</code>, <code>ResourceHandlerBuilder</code>, and <code>NewResourceHandlers</code> are removed.</p>
+<pre><code>// before
+r.Resource("photos", "/photos", "photo", teapot.ResourceHandlers{
+    Index: http.HandlerFunc(listPhotos),
+    Show:  http.HandlerFunc(showPhoto),
+})
+
+// after
+type PhotoController struct{}
+
+func (PhotoController) Index(w http.ResponseWriter, r *http.Request) { listPhotos(w, r) }
+func (PhotoController) Show(w http.ResponseWriter, r *http.Request)  { showPhoto(w, r) }
+
+r.Resource("photos", PhotoController{})</code></pre>
+    <ul>
+      <li>The path defaults to <code>/</code> plus the name. Use <code>teapot.Path</code> to change it.</li>
+      <li>The parameter defaults to the singular of the name. Use <code>teapot.Param</code> to change it.</li>
+      <li><code>UpdateMethod</code> is gone. <code>Update</code> registers both <code>PUT</code> and <code>PATCH</code>.</li>
+      <li><code>Head</code> is gone. See <a href="#head">HEAD fallback</a>.</li>
+      <li><code>StoreVerb</code> must be <code>POST</code> or <code>PUT</code>. Other values panic at registration.</li>
+    </ul>
+
+    <h3><code>Router.Func()</code> is removed</h3>
+<pre><code>// before
+r.Func().GET("/users", listUsers)
+
+// after
+r.GET("/users", http.HandlerFunc(listUsers))
+// or
+r.HandleFunc("GET", "/users", listUsers)</code></pre>
+
+    <h3><code>dispatch</code> handlers take <code>http.Handler</code></h3>
+    <p><code>Builder.Default</code> and <code>Route.Do</code> now take <code>http.Handler</code>, matching <code>teapot.Dispatch</code>. For a function, use <code>DefaultFunc</code> and <code>DoFunc</code>:</p>
+<pre><code>// before
+b.Default(listV1)
+b.When(dispatch.QueryExists("acl")).Do(getACL)
+
+// after
+b.DefaultFunc(listV1)
+b.When(dispatch.QueryExists("acl")).DoFunc(getACL)</code></pre>
+    <p>A router or any other <code>http.Handler</code> can now be passed directly, for example <code>Do(vhostRouter)</code>.</p>
+
+    <h3>Renamed: <code>FuncDefault</code> and <code>FuncDo</code></h3>
+    <p>These are now <code>DefaultFunc</code> and <code>DoFunc</code>. This affects release-candidate users (v0.16.0-rc.1).</p>
+
+    <h2>Behavior changes</h2>
+    <ul>
+      <li id="head"><strong>HEAD fallback.</strong> A HEAD request with no HEAD route is served by the GET route for the same path. It used to return 405. An explicit HEAD route still wins.</li>
+      <li><strong>Host matching.</strong> A trailing dot on a host (<code>bucket.example.com.</code>) is ignored, and matching is case-insensitive. Generated URLs are lowercase and never carry a trailing dot.</li>
+      <li><strong>SubdomainURL</strong> adds a leading slash when the path lacks one.</li>
+    </ul>
+
+    <h2>Additions</h2>
+    <ul>
+      <li><code>Router.RegisterDebugRoute(path, name)</code> registers the route listing endpoint.</li>
+      <li><code>Matchers.HostHasSubdomain(domain)</code> for <code>Dispatch</code> callbacks.</li>
+      <li><code>Router.HandleFunc(method, pattern, fn)</code>, plus <code>DefaultFunc</code> and <code>DoFunc</code> on <code>dispatch</code>.</li>
+      <li>The HTML route table is sortable by method, pattern, and name.</li>
+      <li>The <code>Only</code>, <code>Except</code>, <code>Middleware</code>, <code>Path</code>, <code>Param</code>, <code>Names</code>, and <code>StoreVerb</code> options for <code>Resource</code>.</li>
+    </ul>
+
+    <h2>Dependencies</h2>
+    <p>New: <code>github.com/jinzhu/inflection</code>, used for the default <code>Resource</code> parameter name.</p>
+
+    <div class="pager">
+      <a href="urls-and-routes.html">← URLs &amp; route listing</a>
+      <span></span>
+    </div>
+  </main>
+</div>
+</body>
+</html>

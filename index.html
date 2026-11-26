@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>teapot-router</title>
+  <meta name="description" content="Named routes, query dispatch, and S3 action context on top of chi.">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<div class="layout">
+  <nav class="side">
+    <a class="brand" href="index.html">teapot-router ☕️</a>
+    <ul>
+      <li><a href="index.html" aria-current="page">Overview</a></li>
+      <li><a href="routing.html">Routing</a></li>
+      <li><a href="composition.html">Composition</a></li>
+      <li><a href="urls-and-routes.html">URLs &amp; route listing</a></li>
+      <li><a href="migrating.html">Migrating to v1</a></li>
+    </ul>
+    <div class="ext">
+      <div><a href="https://github.com/go-chi/chi">chi on GitHub</a></div>
+      <div><a href="https://pkg.go.dev/github.com/go-chi/chi/v5">chi API (pkg.go.dev)</a></div>
+      <div><a href="https://github.com/mallardduck/teapot-router">teapot-router on GitHub</a></div>
+    </div>
+  </nav>
+
+  <main>
+    <h1>teapot-router</h1>
+    <p class="lead">Routes, gently steeped. Named routes, query dispatch, and S3 action context, built on <a href="https://github.com/go-chi/chi">chi</a>.</p>
+
+    <div class="callout">
+      <strong>Read the chi docs first.</strong> teapot-router is a thin layer over chi, not a replacement. Routing basics,
+      URL parameters, middleware, and the <code>http.Handler</code> model all work the same way here. The
+      <a href="https://github.com/go-chi/chi">chi README</a>, the <a href="https://pkg.go.dev/github.com/go-chi/chi/v5">chi API docs</a>,
+      and <a href="https://github.com/go-chi/docs">go-chi/docs</a> are the primary references. These pages cover only what teapot-router adds.
+    </div>
+
+    <h2>Install</h2>
+<pre><code>go get github.com/mallardduck/teapot-router</code></pre>
+
+    <h2>A taste</h2>
+    <p>Register routes with names, then build URLs from those names:</p>
+<pre><code>r := teapot.New()
+
+r.GET("/users", listUsers).Name("users.index")
+r.GET("/users/{id}", showUser).Name("users.show")
+
+path := r.MustURL("users.show", "id", "42") // "/users/42"</code></pre>
+
+    <p>Route the same path to different handlers based on query parameters, the way S3 does:</p>
+<pre><code>r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
+    d.DefaultFunc(listObjects).Name("bucket.list").Action("s3:ListBucket")
+    d.When(m.QueryExists("acl")).DoFunc(getBucketAcl).Name("bucket.acl").Action("s3:GetBucketAcl")
+})</code></pre>
+
+    <h2>Pages</h2>
+    <ul>
+      <li><a href="routing.html">Routing</a>: named routes, query and header dispatch, S3 action context.</li>
+      <li><a href="composition.html">Composition</a>: groups, sub-routers, mounting, subdomains, resources.</li>
+      <li><a href="urls-and-routes.html">URLs &amp; route listing</a>: absolute URLs, the route table endpoint, and CLI formatters.</li>
+      <li><a href="migrating.html">Migrating to v1</a>: breaking changes since v0.15.2.</li>
+    </ul>
+
+    <div class="callout">
+      <strong>Status:</strong> pre-v1. The API can still change until v1.0. Feedback is welcome on the
+      <a href="https://github.com/mallardduck/teapot-router/issues">issue tracker</a>.
+    </div>
+  </main>
+</div>
+</body>
+</html>

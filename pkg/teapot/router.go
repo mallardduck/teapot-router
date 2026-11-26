@@ -855,7 +855,19 @@ func (r *Router) matchPattern(pattern, path string) bool {
 
 // ServeHTTP implements http.Handler
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// HEAD falls back to the GET route for the same path when no HEAD route
+	// exists. net/http discards the body of HEAD responses, so the GET handler
+	// can run unchanged.
+	if req.Method == http.MethodHead && !r.matches(http.MethodHead, req.URL.Path) && r.matches(http.MethodGet, req.URL.Path) {
+		req = req.Clone(req.Context())
+		req.Method = http.MethodGet
+	}
 	r.mux.ServeHTTP(w, req)
+}
+
+// matches reports whether the router has a route for method and path.
+func (r *Router) matches(method, path string) bool {
+	return r.mux.Match(chi.NewRouteContext(), method, path)
 }
 
 // URL generates a URL path for a named route with optional parameter substitution.

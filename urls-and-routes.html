@@ -112,6 +112,16 @@ http.Handle("/api/items", d)</code></pre>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
-<script>hljs.highlightAll();</script>
+<script>
+  // Every block is explicitly Go, except blocks where each line is a
+  // "go ..." command, which are shell. Auto-detection is not used.
+  document.querySelectorAll('pre code').forEach(function (el) {
+    var lines = el.textContent.split('
+').filter(function (l) { return l.trim() !== ''; });
+    var shell = lines.length > 0 && lines.every(function (l) { return /^go /.test(l.trim()); });
+    el.className = 'language-' + (shell ? 'bash' : 'go');
+    hljs.highlightElement(el);
+  });
+</script>
 </body>
 </html>

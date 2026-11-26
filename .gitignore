@@ -10,3 +10,4 @@ go.work.sum
 .idea/
 .vscode/
 .ai/
+.junie/

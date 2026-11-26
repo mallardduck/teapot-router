@@ -22,12 +22,12 @@ func serveBody(d *Dispatcher, url string) string {
 	return rec.Body.String()
 }
 
-// FuncDefault and FuncDo should be equivalent to passing an http.HandlerFunc
+// DefaultFunc and DoFunc should be equivalent to passing an http.HandlerFunc
 // to Default and Do.
 func TestFuncVariantsRegisterHandlers(t *testing.T) {
 	d := New(func(b *Builder) {
-		b.FuncDefault(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("default")) })
-		b.When(QueryExists("special")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+		b.DefaultFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("default")) })
+		b.When(QueryExists("special")).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("special"))
 		})
 	})

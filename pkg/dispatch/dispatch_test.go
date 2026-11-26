@@ -10,7 +10,7 @@ import (
 
 func TestDispatcherDefault(t *testing.T) {
 	d := New(func(b *Builder) {
-		b.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
+		b.DefaultFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("default"))
 		})
 	})
@@ -24,13 +24,13 @@ func TestDispatcherDefault(t *testing.T) {
 
 func TestDispatcherQueryRouting(t *testing.T) {
 	d := New(func(b *Builder) {
-		b.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
+		b.DefaultFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("fallback"))
 		})
-		b.When(QueryExists("action")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+		b.When(QueryExists("action")).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("action"))
 		})
-		b.When(QueryEquals("type", "v2")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+		b.When(QueryEquals("type", "v2")).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("v2"))
 		})
 	})
@@ -60,14 +60,14 @@ func TestDispatcherSpecificityOrder(t *testing.T) {
 	// QueryEquals (specificity 2) should be checked before QueryExists (specificity 1)
 	// regardless of registration order.
 	d := New(func(b *Builder) {
-		b.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
+		b.DefaultFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("fallback"))
 		})
 		// Register Exists first — sort must still put Equals ahead
-		b.When(QueryExists("type")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+		b.When(QueryExists("type")).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("exists"))
 		})
-		b.When(QueryEquals("type", "special")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+		b.When(QueryEquals("type", "special")).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("special"))
 		})
 	})
@@ -87,15 +87,15 @@ func TestDispatcherSpecificityOrder(t *testing.T) {
 
 func TestDispatcherAndSemantics(t *testing.T) {
 	d := New(func(b *Builder) {
-		b.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
+		b.DefaultFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("fallback"))
 		})
 		// Both a AND b required (specificity 2: 1+1)
-		b.When(QueryExists("a"), QueryExists("b")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+		b.When(QueryExists("a"), QueryExists("b")).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("both"))
 		})
 		// Only a required (specificity 1)
-		b.When(QueryExists("a")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+		b.When(QueryExists("a")).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("a-only"))
 		})
 	})
@@ -133,7 +133,7 @@ func TestDispatcherNoRoutes(t *testing.T) {
 
 func TestDispatcherNoDefaultNoMatch(t *testing.T) {
 	d := New(func(b *Builder) {
-		b.When(QueryExists("required")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+		b.When(QueryExists("required")).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("matched"))
 		})
 	})
@@ -157,16 +157,16 @@ func TestDispatcherMixedSpecificity(t *testing.T) {
 	// Exists("a")                  = specificity 1
 	// Default                      = specificity 0
 	d := New(func(b *Builder) {
-		b.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
+		b.DefaultFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("default"))
 		})
-		b.When(QueryExists("a")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+		b.When(QueryExists("a")).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("a-exists"))
 		})
-		b.When(QueryEquals("a", "x")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+		b.When(QueryEquals("a", "x")).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("a-equals-x"))
 		})
-		b.When(QueryExists("a"), QueryEquals("b", "1")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+		b.When(QueryExists("a"), QueryEquals("b", "1")).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("a-and-b1"))
 		})
 	})
@@ -199,7 +199,7 @@ func TestDispatcherEqualSpecificityKeepsRegistrationOrder(t *testing.T) {
 	d := New(func(b *Builder) {
 		for i := range n {
 			label := string(rune('a' + i))
-			b.When(QueryExists(label)).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+			b.When(QueryExists(label)).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 				_, _ = w.Write([]byte(label))
 			})
 		}

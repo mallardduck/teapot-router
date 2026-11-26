@@ -94,16 +94,16 @@ single block — clearer than scattering individual calls across many lines:
 
 ```go
 r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
-    d.FuncDefault(listObjects).Name("bucket.list").Action("s3:ListBucket")
-    d.When(m.QueryEquals("list-type", "2")).FuncDo(listObjectsV2).Name("bucket.list-v2").Action("s3:ListObjectsV2")
-    d.When(m.QueryExists("acl")).FuncDo(getBucketAcl).Name("bucket.acl").Action("s3:GetBucketAcl")
-    d.When(m.QueryExists("versioning")).FuncDo(getVersioning).Name("bucket.versioning").Action("s3:GetBucketVersioning")
+    d.DefaultFunc(listObjects).Name("bucket.list").Action("s3:ListBucket")
+    d.When(m.QueryEquals("list-type", "2")).DoFunc(listObjectsV2).Name("bucket.list-v2").Action("s3:ListObjectsV2")
+    d.When(m.QueryExists("acl")).DoFunc(getBucketAcl).Name("bucket.acl").Action("s3:GetBucketAcl")
+    d.When(m.QueryExists("versioning")).DoFunc(getVersioning).Name("bucket.versioning").Action("s3:GetBucketVersioning")
 })
 ```
 
 - `Default(handler)` — the fallback, matches when no other route's conditions match
 - `When(matchers...).Do(handler)` — a conditional route; all matchers must match (AND)
-- `FuncDefault(fn)` and `FuncDo(fn)` — the same, for a plain function literal or named function
+- `DefaultFunc(fn)` and `DoFunc(fn)` — the same, for a plain function literal or named function
 - `.Name()`, `.Action()`, `.With()` — same fluent chain as the scattered API, available on both `Default` and `When` routes
 
 The `m` parameter (type `teapot.Matchers`) exposes all built-in matcher constructors
@@ -127,9 +127,9 @@ The `dispatch` package works independently of teapot with any Go HTTP router:
 import "github.com/mallardduck/teapot-router/pkg/dispatch"
 
 d := dispatch.New(func(b *dispatch.Builder) {
-    b.FuncDefault(listHandler)
-    b.When(dispatch.QueryEquals("format", "xml")).FuncDo(xmlHandler)
-    b.When(dispatch.QueryExists("search")).FuncDo(searchHandler)
+    b.DefaultFunc(listHandler)
+    b.When(dispatch.QueryEquals("format", "xml")).DoFunc(xmlHandler)
+    b.When(dispatch.QueryExists("search")).DoFunc(searchHandler)
 })
 
 // d implements http.Handler — works with stdlib, chi, gorilla, or anything else
@@ -217,8 +217,8 @@ import (
 
 // vhostHandler and pathHandler are plain functions.
 d := dispatch.New(func(b *dispatch.Builder) {
-    b.When(dispatch.HostHasSubdomain("s3.example.com")).FuncDo(vhostHandler)
-    b.FuncDefault(pathHandler)
+    b.When(dispatch.HostHasSubdomain("s3.example.com")).DoFunc(vhostHandler)
+    b.DefaultFunc(pathHandler)
 })
 http.ListenAndServe(":8080", d)
 
@@ -232,8 +232,8 @@ Inside a teapot router, the same matcher is available through `Dispatch`:
 
 ```go
 r.Dispatch("GET", "/{key:.*}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
-    d.FuncDefault(pathObjectHandler)
-    d.When(m.HostHasSubdomain("s3.example.com")).FuncDo(vhostObjectHandler)
+    d.DefaultFunc(pathObjectHandler)
+    d.When(m.HostHasSubdomain("s3.example.com")).DoFunc(vhostObjectHandler)
 })
 ```
 
@@ -301,6 +301,12 @@ r.Handle("GET", "/health", healthHandler).Name("health")
 ```
 
 This is a more flexible alternative to `GET()`, `POST()`, etc. when you already have an `http.Handler` instance.
+
+For a plain function, use `HandleFunc`, which is shorthand for `Handle` with `http.HandlerFunc`:
+
+```go
+r.HandleFunc("GET", "/health", healthFunc).Name("health")
+```
 
 ---
 
@@ -429,9 +435,9 @@ the query variants explicitly:
 ```go
 // Inside the NamedGroup("/{bucket}", ...) callback:
 r.Dispatch("GET", "", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
-    d.FuncDefault(listObjects).Name("list").Action("s3:ListBucket")
-    d.When(m.QueryExists("acl")).FuncDo(getBucketAcl).Name("acl.get").Action("s3:GetBucketAcl")
-    d.When(m.QueryExists("versions")).FuncDo(listObjectVersions).Name("versions").Action("s3:ListBucketVersions")
+    d.DefaultFunc(listObjects).Name("list").Action("s3:ListBucket")
+    d.When(m.QueryExists("acl")).DoFunc(getBucketAcl).Name("acl.get").Action("s3:GetBucketAcl")
+    d.When(m.QueryExists("versions")).DoFunc(listObjectVersions).Name("versions").Action("s3:ListBucketVersions")
 })
 ```
 

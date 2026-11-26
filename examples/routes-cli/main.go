@@ -138,11 +138,11 @@ func setupRoutes() *teapot.Router {
 	// presence distinguishes the copy variant.  The remaining QueryPUT routes
 	// below (acl, tagging, …) are added to this same dispatcher automatically.
 	router.Dispatch("PUT", "/{bucket}/{key:.*}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
-		d.FuncDefault(putObject).Name("s3.object.put").Action("api:s3:PutObject")
-		d.When(m.HeaderExists("X-Amz-Copy-Source")).FuncDo(copyObject).Name("s3.object.copy").Action("api:s3:CopyObject")
+		d.DefaultFunc(putObject).Name("s3.object.put").Action("api:s3:PutObject")
+		d.When(m.HeaderExists("X-Amz-Copy-Source")).DoFunc(copyObject).Name("s3.object.copy").Action("api:s3:CopyObject")
 
-		d.When(m.QueryExists("partNumber"), m.QueryExists("uploadId")).FuncDo(uploadPart).Name("s3.multipart.upload-part").Action("api:s3:UploadPart")
-		d.When(m.QueryExists("partNumber"), m.QueryExists("uploadId"), m.HeaderExists("X-Amz-Copy-Source")).FuncDo(uploadPartCopy).Name("s3.multipart.upload-part-copy").Action("api:s3:UploadPartCopy")
+		d.When(m.QueryExists("partNumber"), m.QueryExists("uploadId")).DoFunc(uploadPart).Name("s3.multipart.upload-part").Action("api:s3:UploadPart")
+		d.When(m.QueryExists("partNumber"), m.QueryExists("uploadId"), m.HeaderExists("X-Amz-Copy-Source")).DoFunc(uploadPartCopy).Name("s3.multipart.upload-part-copy").Action("api:s3:UploadPartCopy")
 	})
 
 	// Query-based object operations

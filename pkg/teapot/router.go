@@ -277,6 +277,12 @@ func (r *Router) Handle(method, pattern string, handler http.Handler) *RouteBuil
 	return r.handleDirect(method, pattern, handler)
 }
 
+// HandleFunc registers a plain function for the method and pattern. It is
+// shorthand for Handle(method, pattern, http.HandlerFunc(fn)).
+func (r *Router) HandleFunc(method, pattern string, fn func(http.ResponseWriter, *http.Request)) *RouteBuilder {
+	return r.Handle(method, pattern, http.HandlerFunc(fn))
+}
+
 // RegisterExternal adds a "phantom" route to the router.
 // Phantom routes are only for documentation and do not dispatch requests.
 // They appear in the Routes() listing and can be used for URL generation.

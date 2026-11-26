@@ -9,9 +9,9 @@
 // Basic usage:
 //
 //	d := dispatch.New(func(b *dispatch.Builder) {
-//	    b.FuncDefault(listV1)                                          // fallback
-//	    b.When(dispatch.QueryEquals("list-type", "2")).FuncDo(listV2)  // specific match
-//	    b.When(dispatch.QueryExists("location")).FuncDo(getLocation)   // existence match
+//	    b.DefaultFunc(listV1)                                          // fallback
+//	    b.When(dispatch.QueryEquals("list-type", "2")).DoFunc(listV2)  // specific match
+//	    b.When(dispatch.QueryExists("location")).DoFunc(getLocation)   // existence match
 //	})
 //
 //	http.Handle("/bucket", d)  // works with any router
@@ -124,12 +124,12 @@ func (rt *Route) Do(h http.Handler) {
 	rt.route.handler = h
 }
 
-// FuncDefault is Default for a plain function.
-func (b *Builder) FuncDefault(h func(http.ResponseWriter, *http.Request)) {
+// DefaultFunc is Default for a plain function.
+func (b *Builder) DefaultFunc(h func(http.ResponseWriter, *http.Request)) {
 	b.Default(http.HandlerFunc(h))
 }
 
-// FuncDo is Do for a plain function.
-func (rt *Route) FuncDo(h func(http.ResponseWriter, *http.Request)) {
+// DoFunc is Do for a plain function.
+func (rt *Route) DoFunc(h func(http.ResponseWriter, *http.Request)) {
 	rt.Do(http.HandlerFunc(h))
 }

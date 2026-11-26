@@ -178,8 +178,8 @@ func (db *DispatchBuilder) Default(h http.Handler) *DispatchRoute {
 	return &DispatchRoute{builder: db, config: cfg}
 }
 
-// FuncDefault sets the fallback handler using a plain function literal.
-func (db *DispatchBuilder) FuncDefault(h func(http.ResponseWriter, *http.Request)) *DispatchRoute {
+// DefaultFunc sets the fallback handler using a plain function literal.
+func (db *DispatchBuilder) DefaultFunc(h func(http.ResponseWriter, *http.Request)) *DispatchRoute {
 	return db.Default(http.HandlerFunc(h))
 }
 
@@ -197,8 +197,8 @@ func (dr *DispatchRoute) Do(h http.Handler) *DispatchRoute {
 	return dr
 }
 
-// FuncDo sets the handler for this conditional route using a plain function literal.
-func (dr *DispatchRoute) FuncDo(h func(http.ResponseWriter, *http.Request)) *DispatchRoute {
+// DoFunc sets the handler for this conditional route using a plain function literal.
+func (dr *DispatchRoute) DoFunc(h func(http.ResponseWriter, *http.Request)) *DispatchRoute {
 	return dr.Do(http.HandlerFunc(h))
 }
 

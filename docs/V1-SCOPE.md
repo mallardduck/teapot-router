@@ -39,8 +39,9 @@ None. Everything in the V1 scope is built. Open decisions are listed under "API 
 
 Breaking changes must land before the v1.0.0 tag. Open questions:
 
-- `DispatchBuilder.Default` (`pkg/teapot`) takes `http.Handler`, while `dispatch.Builder.Default` takes
-  `http.HandlerFunc`.
+- **Decided:** `Default` and `Do` take `http.Handler` in both `pkg/teapot` and `pkg/dispatch`. `FuncDefault` and
+  `FuncDo` take plain functions in both. This is a breaking change for `pkg/dispatch` callers who passed function
+  literals to `Default` or `Do`; they now call the `Func` variants.
 - `ResourceHandlers` (struct) and `ResourceHandlerBuilder` (fluent) both exist.
 - `FuncRouter` and the `Func*` variants overlap with `Handle`.
 

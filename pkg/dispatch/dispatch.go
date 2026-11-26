@@ -9,9 +9,9 @@
 // Basic usage:
 //
 //	d := dispatch.New(func(b *dispatch.Builder) {
-//	    b.Default(listV1)                                          // fallback
-//	    b.When(dispatch.QueryEquals("list-type", "2")).Do(listV2)  // specific match
-//	    b.When(dispatch.QueryExists("location")).Do(getLocation)   // existence match
+//	    b.FuncDefault(listV1)                                          // fallback
+//	    b.When(dispatch.QueryEquals("list-type", "2")).FuncDo(listV2)  // specific match
+//	    b.When(dispatch.QueryExists("location")).FuncDo(getLocation)   // existence match
 //	})
 //
 //	http.Handle("/bucket", d)  // works with any router
@@ -26,8 +26,8 @@
 // handler and falling through to Default for everything else:
 //
 //	d := dispatch.New(func(b *dispatch.Builder) {
-//	    b.When(dispatch.HostHasSubdomain("s3.example.com")).Do(vhostRouter.ServeHTTP)
-//	    b.Default(pathRouter.ServeHTTP)
+//	    b.When(dispatch.HostHasSubdomain("s3.example.com")).Do(vhostRouter)
+//	    b.Default(pathRouter)
 //	})
 package dispatch
 

@@ -90,5 +90,5 @@
 // based on whether Host resolves to a subdomain.
 //
 // For complete documentation and examples, see:
-// https://github.com/mallardduck/teapot-router/blob/main/docs/URLBUILDER.md
+// https://mallardduck.github.io/teapot-router/urls-and-routes.html
 package urlbuilder

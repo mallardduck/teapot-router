@@ -1,3 +1,11 @@
-**/*.out
-**/coverage.*
-**/*.exe
+# Build output
+/out/
+/dist/
+*.exe
+
+# Go workspace sum (kept? — committed once deps exist; ignore local cache only)
+go.work.sum
+
+# IDE
+.idea/
+.vscode/

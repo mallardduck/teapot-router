@@ -79,9 +79,10 @@ func (o ListRoutesOptions) resolveBaseURL(req *http.Request) string {
 // RegisterDebugRoute registers the route listing endpoint at path, named name.
 // It is a convenience wrapper around GET, NewListRoutesHandler, and Name.
 //
-// STUB: not implemented yet. Returns nil and registers nothing.
+// The endpoint is registered like any other route, so it appears in its own
+// listing. Guard the call (for example, behind a debug flag) in production.
 func (r *Router) RegisterDebugRoute(path, name string) *RouteBuilder {
-	return nil
+	return r.GET(path, NewListRoutesHandler(r, nil)).Name(name)
 }
 
 // NewListRoutesHandler returns an HTTP handler that displays registered routes.

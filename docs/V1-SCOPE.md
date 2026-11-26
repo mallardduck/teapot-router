@@ -39,8 +39,8 @@ None. Everything in the V1 scope is built. Open decisions are listed under "API 
 
 Breaking changes must land before the v1.0.0 tag. Open questions:
 
-- **Decided:** `Default` and `Do` take `http.Handler` in both `pkg/teapot` and `pkg/dispatch`. `FuncDefault` and
-  `FuncDo` take plain functions in both. This is a breaking change for `pkg/dispatch` callers who passed function
+- **Decided:** `Default` and `Do` take `http.Handler` in both `pkg/teapot` and `pkg/dispatch`. `DefaultFunc` and
+  `DoFunc` take plain functions in both. This is a breaking change for `pkg/dispatch` callers who passed function
   literals to `Default` or `Do`; they now call the `Func` variants.
 - **Decided:** `Resource` takes a controller value and functional options. `ResourceHandlers` and `ResourceHandlerBuilder` are removed. Routes are registered inside a group per resource, so middleware is scoped to that resource.
 - **Decided:** `FuncRouter` (`Router.Func()`) is removed. Callers wrap functions with `http.HandlerFunc`, or use the `Func*` variants on `dispatch` and `DispatchBuilder`.

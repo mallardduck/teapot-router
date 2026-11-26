@@ -6,8 +6,10 @@ import (
 	"strings"
 )
 
-// SubdomainFromHost extracts the leftmost DNS label from host when host is a
-// strict subdomain of canonicalDomain, i.e. "{label}.{canonicalDomain}".
+// SubdomainFromHost extracts the label from host when host is a strict
+// subdomain of canonicalDomain, i.e. "{label}.{canonicalDomain}". The label is
+// everything left of canonicalDomain, so a dotted label such as
+// "my.dotted.bucket" is returned whole (S3 bucket names may contain dots).
 // It returns ok=false when:
 //   - canonicalDomain is empty (subdomain resolution disabled)
 //   - host equals canonicalDomain exactly (bare domain, not a subdomain)
@@ -16,7 +18,8 @@ import (
 //     rather than as a dot-separated suffix, e.g. "canonicalDomain.evil.com")
 //
 // A port suffix on host, if present, is stripped before comparison. Matching
-// is case-insensitive; the returned label is lowercased.
+// is case-insensitive, and one trailing dot (the DNS root label) is ignored on
+// either side. The returned label is lowercased.
 //
 // This is a general host-based routing primitive - e.g. a multi-tenant app
 // keying a tenant off a subdomain, or S3-style virtual-hosted bucket
@@ -26,6 +29,7 @@ import (
 // that would let a client pick the resolved label independently of what was
 // actually signed or authenticated.
 func SubdomainFromHost(host, canonicalDomain string) (label string, ok bool) {
+	canonicalDomain = normalizeHost(canonicalDomain)
 	if canonicalDomain == "" {
 		return "", false
 	}
@@ -34,8 +38,7 @@ func SubdomainFromHost(host, canonicalDomain string) (label string, ok bool) {
 		host = h
 	}
 
-	host = strings.ToLower(host)
-	canonicalDomain = strings.ToLower(canonicalDomain)
+	host = normalizeHost(host)
 
 	if host == canonicalDomain {
 		return "", false
@@ -54,15 +57,32 @@ func SubdomainFromHost(host, canonicalDomain string) (label string, ok bool) {
 	return label, true
 }
 
-// SubdomainURL builds an absolute URL using label as the leftmost subdomain
-// of the Builder's canonical domain: https://{label}.{canonicalDomain}{path}.
+// SubdomainURL builds an absolute URL using label as the subdomain of the
+// Builder's canonical domain: https://{label}.{canonicalDomain}{path}. A path
+// without a leading slash gets one added.
 // It returns ok=false if the Builder has no canonical domain configured or
 // label is empty - subdomain-style URLs have no meaningful "detect from
 // request" fallback the way BuildURL does, since the domain itself must be
 // fixed for the label to resolve at all.
 func (b *Builder) SubdomainURL(label, path string) (url string, ok bool) {
+	label = strings.ToLower(label)
 	if b.canonicalDomain == "" || label == "" {
 		return "", false
 	}
+	if path != "" && !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
 	return fmt.Sprintf("https://%s.%s%s", label, b.canonicalDomain, path), true
+}
+
+// normalizeHost returns the canonical comparison form of a host name: ASCII
+// lowercase, with a single trailing dot removed. The trailing dot is the
+// explicit DNS root label (RFC 1034 §3.1), so "example.com." and
+// "example.com" name the same host. Only one dot is removed: "example.com.."
+// stays malformed and matches nothing.
+//
+// Callers pass a host without its port. The input is otherwise left literal,
+// so malformed values are never repaired into valid ones.
+func normalizeHost(host string) string {
+	return strings.TrimSuffix(strings.ToLower(host), ".")
 }

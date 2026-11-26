@@ -23,11 +23,12 @@ func TestRouteContextMiddleware(t *testing.T) {
 		r := teapot.New()
 
 		var capturedAction, capturedName string
-		r.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
+		r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
 			capturedName = teapot.GetRouteName(req)
 			_, _ = w.Write([]byte("OK"))
-		}).Action("test:Action").Name("test.route")
+		})).
+			Action("test:Action").Name("test.route")
 
 		r.Finalize()
 
@@ -42,15 +43,17 @@ func TestRouteContextMiddleware(t *testing.T) {
 		r := teapot.New()
 
 		var capturedAction string
-		r.Func().QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {
+		r.QueryGET("/bucket", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
 			_, _ = w.Write([]byte("LIST"))
-		}).Action("s3:ListBucket")
+		})).
+			Action("s3:ListBucket")
 
-		r.Func().QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {
+		r.QueryGET("/bucket", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
 			_, _ = w.Write([]byte("ACL"))
-		}).Action("s3:GetBucketAcl").Query("acl")
+		})).
+			Action("s3:GetBucketAcl").Query("acl")
 
 		r.Finalize()
 
@@ -72,15 +75,17 @@ func TestRouteContextMiddleware(t *testing.T) {
 
 		var capturedAction string
 		// Only query-specific routes, no fallback
-		r.Func().QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {
+		r.QueryGET("/bucket", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
 			_, _ = w.Write([]byte("ACL"))
-		}).Action("s3:GetBucketAcl").Query("acl")
+		})).
+			Action("s3:GetBucketAcl").Query("acl")
 
-		r.Func().QueryGET("/bucket", func(w http.ResponseWriter, req *http.Request) {
+		r.QueryGET("/bucket", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
 			_, _ = w.Write([]byte("VERSIONING"))
-		}).Action("s3:GetBucketVersioning").Query("versioning")
+		})).
+			Action("s3:GetBucketVersioning").Query("versioning")
 
 		r.Finalize()
 
@@ -106,7 +111,7 @@ func TestRouteContextMiddleware(t *testing.T) {
 			})
 		})
 
-		r.Func().GET("/test", testutil.StringResponseWriterBuilder("OK")).Action("test:Action")
+		r.GET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("OK"))).Action("test:Action")
 
 		r.Finalize()
 
@@ -122,11 +127,12 @@ func TestRouteContextMiddleware(t *testing.T) {
 
 		var capturedAction, capturedName string
 
-		r.Func().GET("/users/{id}", func(w http.ResponseWriter, req *http.Request) {
+		r.GET("/users/{id}", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
 			capturedName = teapot.GetRouteName(req)
 			_, _ = w.Write([]byte("USER"))
-		}).Action("users:Get").Name("users.get")
+		})).
+			Action("users:Get").Name("users.get")
 
 		r.Finalize()
 
@@ -145,7 +151,7 @@ func TestMatchPattern(t *testing.T) {
 	t.Run("exact match", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/exact/path", testutil.StringResponseWriterBuilder("EXACT"))
+		r.GET("/exact/path", http.HandlerFunc(testutil.StringResponseWriterBuilder("EXACT")))
 
 		r.Finalize()
 
@@ -156,7 +162,7 @@ func TestMatchPattern(t *testing.T) {
 	t.Run("no parameters - must be exact", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/static", testutil.StringResponseWriterBuilder("STATIC"))
+		r.GET("/static", http.HandlerFunc(testutil.StringResponseWriterBuilder("STATIC")))
 
 		r.Finalize()
 
@@ -171,7 +177,7 @@ func TestMatchPattern(t *testing.T) {
 	t.Run("wildcard at end - path with more segments", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/files/*", testutil.StringResponseWriterBuilder("FILES"))
+		r.GET("/files/*", http.HandlerFunc(testutil.StringResponseWriterBuilder("FILES")))
 
 		r.Finalize()
 
@@ -183,7 +189,7 @@ func TestMatchPattern(t *testing.T) {
 	t.Run("wildcard at end - path with fewer segments", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/files/prefix/*", testutil.StringResponseWriterBuilder("FILES"))
+		r.GET("/files/prefix/*", http.HandlerFunc(testutil.StringResponseWriterBuilder("FILES")))
 
 		r.Finalize()
 
@@ -195,7 +201,7 @@ func TestMatchPattern(t *testing.T) {
 	t.Run("wildcard at end - path with exact segments", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/files/{bucket}/*", testutil.StringResponseWriterBuilder("FILES"))
+		r.GET("/files/{bucket}/*", http.HandlerFunc(testutil.StringResponseWriterBuilder("FILES")))
 
 		r.Finalize()
 
@@ -207,7 +213,7 @@ func TestMatchPattern(t *testing.T) {
 	t.Run("different number of segments", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/a/b/c", testutil.StringResponseWriterBuilder("ABC"))
+		r.GET("/a/b/c", http.HandlerFunc(testutil.StringResponseWriterBuilder("ABC")))
 
 		r.Finalize()
 
@@ -223,10 +229,10 @@ func TestMatchPattern(t *testing.T) {
 		r := teapot.New()
 
 		var capturedID string
-		r.Func().GET("/users/{id}", func(w http.ResponseWriter, req *http.Request) {
+		r.GET("/users/{id}", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			capturedID = teapot.URLParam(req, "id")
 			_, _ = w.Write([]byte("USER"))
-		})
+		}))
 
 		r.Finalize()
 
@@ -244,7 +250,7 @@ func TestMatchPattern(t *testing.T) {
 	t.Run("literal segment must match exactly", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/users/{id}/posts", testutil.StringResponseWriterBuilder("POSTS"))
+		r.GET("/users/{id}/posts", http.HandlerFunc(testutil.StringResponseWriterBuilder("POSTS")))
 
 		r.Finalize()
 
@@ -260,11 +266,11 @@ func TestMatchPattern(t *testing.T) {
 		r := teapot.New()
 
 		var capturedBucket, capturedKey string
-		r.Func().GET("/{bucket}/{key}", func(w http.ResponseWriter, req *http.Request) {
+		r.GET("/{bucket}/{key}", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			capturedBucket = teapot.URLParam(req, "bucket")
 			capturedKey = teapot.URLParam(req, "key")
 			_, _ = w.Write([]byte("OK"))
-		})
+		}))
 
 		r.Finalize()
 
@@ -279,7 +285,7 @@ func TestMatchPattern(t *testing.T) {
 	t.Run("pattern with trailing slash vs path without", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/test/", testutil.StringResponseWriterBuilder("SLASH"))
+		r.GET("/test/", http.HandlerFunc(testutil.StringResponseWriterBuilder("SLASH")))
 
 		r.Finalize()
 
@@ -291,7 +297,7 @@ func TestMatchPattern(t *testing.T) {
 	t.Run("empty segments after trim", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/", testutil.StringResponseWriterBuilder("ROOT"))
+		r.GET("/", http.HandlerFunc(testutil.StringResponseWriterBuilder("ROOT")))
 
 		r.Finalize()
 
@@ -305,7 +311,7 @@ func TestFindMatchingRouteEdgeCases(t *testing.T) {
 	t.Run("no matching method", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/test", testutil.StringResponseWriterBuilder("GET"))
+		r.GET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("GET")))
 
 		r.Finalize()
 
@@ -318,7 +324,7 @@ func TestFindMatchingRouteEdgeCases(t *testing.T) {
 		r := teapot.New()
 
 		// Only routes with query matchers (no fallback)
-		r.Func().QueryGET("/bucket", testutil.StringResponseWriterBuilder("ACL")).Query("acl")
+		r.QueryGET("/bucket", http.HandlerFunc(testutil.StringResponseWriterBuilder("ACL"))).Query("acl")
 
 		r.Finalize()
 
@@ -330,9 +336,9 @@ func TestFindMatchingRouteEdgeCases(t *testing.T) {
 	t.Run("dispatcher route with fallback", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().QueryGET("/bucket", testutil.StringResponseWriterBuilder("LIST")) // No query matcher - fallback
+		r.QueryGET("/bucket", http.HandlerFunc(testutil.StringResponseWriterBuilder("LIST"))) // No query matcher - fallback
 
-		r.Func().QueryGET("/bucket", testutil.StringResponseWriterBuilder("ACL")).Query("acl")
+		r.QueryGET("/bucket", http.HandlerFunc(testutil.StringResponseWriterBuilder("ACL"))).Query("acl")
 
 		r.Finalize()
 
@@ -344,7 +350,7 @@ func TestFindMatchingRouteEdgeCases(t *testing.T) {
 	t.Run("route not found - no matches", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/test", testutil.StringResponseWriterBuilder("TEST"))
+		r.GET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("TEST")))
 
 		r.Finalize()
 
@@ -363,11 +369,12 @@ func TestRouteContextMiddlewareWithGroups(t *testing.T) {
 
 		r.Group("/api", func(r *teapot.Router) {
 			r.Group("/v1", func(r *teapot.Router) {
-				r.Func().GET("/users", func(w http.ResponseWriter, req *http.Request) {
+				r.GET("/users", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 					capturedAction = teapot.GetAction(req)
 					capturedName = teapot.GetRouteName(req)
 					_, _ = w.Write([]byte("USERS"))
-				}).Action("api:GetUsers").Name("api.users")
+				})).
+					Action("api:GetUsers").Name("api.users")
 			})
 		})
 
@@ -388,11 +395,12 @@ func TestRouteContextInjectionBeforeFinalize(t *testing.T) {
 		r := teapot.New()
 
 		var capturedAction, capturedName string
-		r.Func().GET("/test", func(w http.ResponseWriter, req *http.Request) {
+		r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			capturedAction = teapot.GetAction(req)
 			capturedName = teapot.GetRouteName(req)
 			_, _ = w.Write([]byte("OK"))
-		}).Action("test:Action").Name("test.route")
+		})).
+			Action("test:Action").Name("test.route")
 
 		// Don't finalize - should still work via slow path
 
@@ -410,7 +418,7 @@ func TestRouteContextWithNilCases(t *testing.T) {
 	t.Run("chi context with empty route pattern", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/test", testutil.StringResponseWriterBuilder("OK"))
+		r.GET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("OK")))
 
 		r.Finalize()
 
@@ -449,7 +457,7 @@ func TestTryFastPath(t *testing.T) {
 
 	t.Run("finds direct route via chi context", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().GET("/test", testutil.NoopResponse).Action("test:Action").Name("test.name")
+		r.GET("/test", http.HandlerFunc(testutil.NoopResponse)).Action("test:Action").Name("test.name")
 		r.Finalize()
 
 		// Simulate Chi's RouteContext
@@ -466,8 +474,8 @@ func TestTryFastPath(t *testing.T) {
 
 	t.Run("finds dispatcher route via chi context", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().QueryGET("/bucket", testutil.NoopResponse).Action("s3:ListBucket")
-		r.Func().QueryGET("/bucket", testutil.NoopResponse).Action("s3:GetBucketAcl").Query("acl")
+		r.QueryGET("/bucket", http.HandlerFunc(testutil.NoopResponse)).Action("s3:ListBucket")
+		r.QueryGET("/bucket", http.HandlerFunc(testutil.NoopResponse)).Action("s3:GetBucketAcl").Query("acl")
 		r.Finalize()
 
 		// Simulate Chi's RouteContext
@@ -484,7 +492,7 @@ func TestTryFastPath(t *testing.T) {
 
 	t.Run("returns nil for non-existent route", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().GET("/test", testutil.NoopResponse)
+		r.GET("/test", http.HandlerFunc(testutil.NoopResponse))
 		r.Finalize()
 
 		// Simulate Chi's RouteContext for different route
@@ -502,7 +510,7 @@ func TestTryFastPath(t *testing.T) {
 func TestTryFallbackPath(t *testing.T) {
 	t.Run("exact match on direct route", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().GET("/exact", testutil.NoopResponse).Action("exact:Action")
+		r.GET("/exact", http.HandlerFunc(testutil.NoopResponse)).Action("exact:Action")
 		r.Finalize()
 
 		route := r.TryFallbackPath("GET", "/exact")
@@ -512,7 +520,7 @@ func TestTryFallbackPath(t *testing.T) {
 
 	t.Run("pattern match with path parameters", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().GET("/users/{id}", testutil.NoopResponse).Action("users:Get")
+		r.GET("/users/{id}", http.HandlerFunc(testutil.NoopResponse)).Action("users:Get")
 		r.Finalize()
 
 		route := r.TryFallbackPath("GET", "/users/123")
@@ -522,7 +530,7 @@ func TestTryFallbackPath(t *testing.T) {
 
 	t.Run("wildcard pattern match", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().GET("/files/*", testutil.NoopResponse).Action("files:Get")
+		r.GET("/files/*", http.HandlerFunc(testutil.NoopResponse)).Action("files:Get")
 		r.Finalize()
 
 		route := r.TryFallbackPath("GET", "/files/a/b/c")
@@ -532,7 +540,7 @@ func TestTryFallbackPath(t *testing.T) {
 
 	t.Run("returns nil for non-matching route", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().GET("/test", testutil.NoopResponse)
+		r.GET("/test", http.HandlerFunc(testutil.NoopResponse))
 		r.Finalize()
 
 		route := r.TryFallbackPath("GET", "/other")
@@ -541,7 +549,7 @@ func TestTryFallbackPath(t *testing.T) {
 
 	t.Run("returns nil for different method", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().GET("/test", testutil.NoopResponse)
+		r.GET("/test", http.HandlerFunc(testutil.NoopResponse))
 		r.Finalize()
 
 		route := r.TryFallbackPath("POST", "/test")
@@ -698,7 +706,7 @@ func TestRouteContextMiddlewareFactory(t *testing.T) {
 
 	t.Run("created middleware injects context", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().GET("/test", testutil.NoopResponse).Action("test:Action").Name("test.name")
+		r.GET("/test", http.HandlerFunc(testutil.NoopResponse)).Action("test:Action").Name("test.name")
 		r.Finalize()
 
 		// Create middleware
@@ -732,7 +740,7 @@ func TestRouteContextMiddlewareFactory(t *testing.T) {
 func TestServeHTTP(t *testing.T) {
 	t.Run("fast path - injects context and calls next", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().GET("/test", testutil.NoopResponse).Action("test:Action").Name("test.name")
+		r.GET("/test", http.HandlerFunc(testutil.NoopResponse)).Action("test:Action").Name("test.name")
 		r.Finalize()
 
 		// Create middleware
@@ -766,7 +774,7 @@ func TestServeHTTP(t *testing.T) {
 
 	t.Run("fallback path - injects context and calls next", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().GET("/users/{id}", testutil.NoopResponse).Action("users:Get").Name("users.get")
+		r.GET("/users/{id}", http.HandlerFunc(testutil.NoopResponse)).Action("users:Get").Name("users.get")
 		r.Finalize()
 
 		// Create middleware
@@ -795,7 +803,7 @@ func TestServeHTTP(t *testing.T) {
 
 	t.Run("no matching route - still calls next without context", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().GET("/test", testutil.NoopResponse)
+		r.GET("/test", http.HandlerFunc(testutil.NoopResponse))
 		r.Finalize()
 
 		// Create middleware
@@ -824,8 +832,8 @@ func TestServeHTTP(t *testing.T) {
 
 	t.Run("dispatcher route - injects early fallback context", func(t *testing.T) {
 		r := teapot.New()
-		r.Func().QueryGET("/bucket", testutil.NoopResponse).Action("s3:ListBucket")
-		r.Func().QueryGET("/bucket", testutil.NoopResponse).Action("s3:GetBucketAcl").Query("acl")
+		r.QueryGET("/bucket", http.HandlerFunc(testutil.NoopResponse)).Action("s3:ListBucket")
+		r.QueryGET("/bucket", http.HandlerFunc(testutil.NoopResponse)).Action("s3:GetBucketAcl").Query("acl")
 		r.Finalize()
 
 		// Create middleware

@@ -187,10 +187,10 @@ func TestHostHasSubdomainConstructor(t *testing.T) {
 // (path-style vs. subdomain-style) use case it was built for.
 func TestHostHasSubdomainWithDispatcher(t *testing.T) {
 	d := New(func(b *Builder) {
-		b.When(HostHasSubdomain("s3.example.com")).Do(func(w http.ResponseWriter, r *http.Request) {
+		b.When(HostHasSubdomain("s3.example.com")).FuncDo(func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte("subdomain"))
 		})
-		b.Default(func(w http.ResponseWriter, r *http.Request) {
+		b.FuncDefault(func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte("path"))
 		})
 	})

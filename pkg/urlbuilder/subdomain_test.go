@@ -123,6 +123,14 @@ func TestSubdomainURL(t *testing.T) {
 			wantOK:          true,
 		},
 		{
+			name:            "path without leading slash is separated from host",
+			canonicalDomain: "s3.example.com",
+			label:           "mybucket",
+			path:            "key/with/parts.txt",
+			wantURL:         "https://mybucket.s3.example.com/key/with/parts.txt",
+			wantOK:          true,
+		},
+		{
 			name:            "no canonical domain configured",
 			canonicalDomain: "",
 			label:           "mybucket",
@@ -148,4 +156,11 @@ func TestSubdomainURL(t *testing.T) {
 			assert.Equal(t, tt.wantURL, url)
 		})
 	}
+}
+
+func TestSubdomainFromHostEmptyLabelRejected(t *testing.T) {
+	// A host that is only the dot-prefixed canonical domain has no label.
+	label, ok := urlbuilder.SubdomainFromHost(".s3.example.com", "s3.example.com")
+	assert.False(t, ok)
+	assert.Empty(t, label)
 }

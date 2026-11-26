@@ -1068,10 +1068,10 @@ func TestDispatcherPromotionWithSharedHandler(t *testing.T) {
 		//   r.QueryGET("/{bucket}", deps.getBucketVersioning).Query("versioning")…
 		//   r.QueryPUT("/{bucket}", deps.putBucketVersioning).Query("versioning")…
 		r := teapot.New()
-		r.Func().PUT("/{bucket}", fallback).Name("put-create").Action("put-create")
-		r.Func().GET("/{bucket}", fallback).Name("get-list").Action("get-list")
-		r.Func().QueryGET("/{bucket}", stub).Query("versioning").Name("get-versioning").Action("get-versioning")
-		r.Func().QueryPUT("/{bucket}", stub).Query("versioning").Name("put-versioning").Action("put-versioning")
+		r.PUT("/{bucket}", http.HandlerFunc(fallback)).Name("put-create").Action("put-create")
+		r.GET("/{bucket}", http.HandlerFunc(fallback)).Name("get-list").Action("get-list")
+		r.QueryGET("/{bucket}", http.HandlerFunc(stub)).Query("versioning").Name("get-versioning").Action("get-versioning")
+		r.QueryPUT("/{bucket}", http.HandlerFunc(stub)).Query("versioning").Name("put-versioning").Action("put-versioning")
 
 		tests := []struct {
 			method   string
@@ -1100,10 +1100,10 @@ func TestDispatcherPromotionWithSharedHandler(t *testing.T) {
 		// goes through handleDirect's "dispatcher already exists" branch —
 		// no second mux.Method() call.
 		r := teapot.New()
-		r.Func().QueryGET("/{bucket}", stub).Query("versioning").Name("get-versioning").Action("get-versioning")
-		r.Func().QueryGET("/{bucket}", stub).Query("acl").Name("get-acl").Action("get-acl")
-		r.Func().QueryGET("/{bucket}", stub).Query("cors").Name("get-cors").Action("get-cors")
-		r.Func().GET("/{bucket}", fallback).Name("get-list").Action("get-list")
+		r.QueryGET("/{bucket}", http.HandlerFunc(stub)).Query("versioning").Name("get-versioning").Action("get-versioning")
+		r.QueryGET("/{bucket}", http.HandlerFunc(stub)).Query("acl").Name("get-acl").Action("get-acl")
+		r.QueryGET("/{bucket}", http.HandlerFunc(stub)).Query("cors").Name("get-cors").Action("get-cors")
+		r.GET("/{bucket}", http.HandlerFunc(fallback)).Name("get-list").Action("get-list")
 
 		tests := []struct {
 			path     string
@@ -1133,14 +1133,14 @@ func TestDispatcherPromotionWithSharedHandler(t *testing.T) {
 		// each route is reachable regardless of its position among peers with
 		// equal specificity.
 		r := teapot.New()
-		r.Func().GET("/{bucket}", fallback).Name("list").Action("list")
+		r.GET("/{bucket}", http.HandlerFunc(fallback)).Name("list").Action("list")
 
 		queryKeys := []string{
 			"versioning", "acl", "cors", "policy", "lifecycle",
 			"location", "requestPayment", "analytics", "versions", "uploads",
 		}
 		for _, key := range queryKeys {
-			r.Func().QueryGET("/{bucket}", stub).Query(key).Name(key).Action(key)
+			r.QueryGET("/{bucket}", http.HandlerFunc(stub)).Query(key).Name(key).Action(key)
 		}
 
 		// Every query key must reach its own stub
@@ -1169,10 +1169,10 @@ func TestDispatcherPromotionWithSharedHandler(t *testing.T) {
 		// second time on the /* pattern.  Verifies the overwrite takes effect
 		// on the translated pattern, not just plain {param} patterns.
 		r := teapot.New()
-		r.Func().GET("/{bucket}/{key:.*}", fallback).Name("get-object").Action("get-object")
-		r.Func().QueryGET("/{bucket}/{key:.*}", stub).Query("tagging").Name("get-tagging").Action("get-tagging")
-		r.Func().QueryGET("/{bucket}/{key:.*}", stub).Query("retention").Name("get-retention").Action("get-retention")
-		r.Func().QueryGET("/{bucket}/{key:.*}", stub).Query("acl").Name("get-acl").Action("get-acl")
+		r.GET("/{bucket}/{key:.*}", http.HandlerFunc(fallback)).Name("get-object").Action("get-object")
+		r.QueryGET("/{bucket}/{key:.*}", http.HandlerFunc(stub)).Query("tagging").Name("get-tagging").Action("get-tagging")
+		r.QueryGET("/{bucket}/{key:.*}", http.HandlerFunc(stub)).Query("retention").Name("get-retention").Action("get-retention")
+		r.QueryGET("/{bucket}/{key:.*}", http.HandlerFunc(stub)).Query("acl").Name("get-acl").Action("get-acl")
 
 		tests := []struct {
 			path     string

@@ -94,15 +94,16 @@ single block — clearer than scattering individual calls across many lines:
 
 ```go
 r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
-    d.Default(listObjects).Name("bucket.list").Action("s3:ListBucket")
-    d.When(m.QueryEquals("list-type", "2")).Do(listObjectsV2).Name("bucket.list-v2").Action("s3:ListObjectsV2")
-    d.When(m.QueryExists("acl")).Do(getBucketAcl).Name("bucket.acl").Action("s3:GetBucketAcl")
-    d.When(m.QueryExists("versioning")).Do(getVersioning).Name("bucket.versioning").Action("s3:GetBucketVersioning")
+    d.FuncDefault(listObjects).Name("bucket.list").Action("s3:ListBucket")
+    d.When(m.QueryEquals("list-type", "2")).FuncDo(listObjectsV2).Name("bucket.list-v2").Action("s3:ListObjectsV2")
+    d.When(m.QueryExists("acl")).FuncDo(getBucketAcl).Name("bucket.acl").Action("s3:GetBucketAcl")
+    d.When(m.QueryExists("versioning")).FuncDo(getVersioning).Name("bucket.versioning").Action("s3:GetBucketVersioning")
 })
 ```
 
 - `Default(handler)` — the fallback, matches when no other route's conditions match
 - `When(matchers...).Do(handler)` — a conditional route; all matchers must match (AND)
+- `FuncDefault(fn)` and `FuncDo(fn)` — the same, for a plain function literal or named function
 - `.Name()`, `.Action()`, `.With()` — same fluent chain as the scattered API, available on both `Default` and `When` routes
 
 The `m` parameter (type `teapot.Matchers`) exposes all built-in matcher constructors
@@ -112,6 +113,7 @@ so that the `dispatch` package does not need to be imported separately:
 - `m.QueryEquals("key", "value")` — matches if the query param equals a specific value
 - `m.HeaderExists("key")` — matches if the header is present with a non-empty value
 - `m.HeaderEquals("key", "value")` — matches if the header equals a specific value
+- `m.HostHasSubdomain("canonical.domain")` — matches if the Host header is a subdomain of the canonical domain
 - Multiple matchers in one `When` are ANDed: `When(m.QueryExists("partNumber"), m.QueryExists("uploadId"))`
 
 Both styles coexist in the same router — use `Dispatch` where you have a dense
@@ -125,9 +127,9 @@ The `dispatch` package works independently of teapot with any Go HTTP router:
 import "github.com/mallardduck/teapot-router/pkg/dispatch"
 
 d := dispatch.New(func(b *dispatch.Builder) {
-    b.Default(listHandler)
-    b.When(dispatch.QueryEquals("format", "xml")).Do(xmlHandler)
-    b.When(dispatch.QueryExists("search")).Do(searchHandler)
+    b.FuncDefault(listHandler)
+    b.When(dispatch.QueryEquals("format", "xml")).FuncDo(xmlHandler)
+    b.When(dispatch.QueryExists("search")).FuncDo(searchHandler)
 })
 
 // d implements http.Handler — works with stdlib, chi, gorilla, or anything else
@@ -194,6 +196,50 @@ adminRouter := r.SubRouter("/admin")
 adminRouter.GET("/dashboard", dashHandler).Name("dashboard")
 // "dashboard" route is now visible in both adminRouter and r (as "/admin/dashboard")
 ```
+
+---
+
+## Subdomain Routing
+
+Some APIs address resources by subdomain (`mybucket.s3.example.com`) as well as by path. Two packages provide the
+building blocks:
+
+- `urlbuilder.SubdomainFromHost(host, canonicalDomain)` returns the leading label when `host` is a strict subdomain of
+  `canonicalDomain`.
+- `dispatch.HostHasSubdomain(canonicalDomain)` is a matcher that is true for those requests, so one process can route
+  subdomain and path requests to different handlers.
+
+```go
+import (
+    "github.com/mallardduck/teapot-router/pkg/dispatch"
+    "github.com/mallardduck/teapot-router/pkg/urlbuilder"
+)
+
+// vhostHandler and pathHandler are plain functions.
+d := dispatch.New(func(b *dispatch.Builder) {
+    b.When(dispatch.HostHasSubdomain("s3.example.com")).FuncDo(vhostHandler)
+    b.FuncDefault(pathHandler)
+})
+http.ListenAndServe(":8080", d)
+
+// Inside a handler:
+label, ok := urlbuilder.SubdomainFromHost(r.Host, "s3.example.com") // "mybucket", true
+urls := urlbuilder.New("s3.example.com")
+url, ok := urls.SubdomainURL("mybucket", "/path/to/object.txt")    // https://mybucket.s3.example.com/path/to/object.txt
+```
+
+Inside a teapot router, the same matcher is available through `Dispatch`:
+
+```go
+r.Dispatch("GET", "/{key:.*}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
+    d.FuncDefault(pathObjectHandler)
+    d.When(m.HostHasSubdomain("s3.example.com")).FuncDo(vhostObjectHandler)
+})
+```
+
+Matching follows `urlbuilder.SubdomainFromHost`: ports are ignored, matching is case-insensitive, and one trailing dot
+(the DNS root label) is ignored on either side, so `mybucket.s3.example.com.` and `s3.example.com.` both work. A bare
+canonical domain or an unrelated host does not match. Generated URLs are lowercase and never carry a trailing dot.
 
 ---
 
@@ -383,9 +429,9 @@ the query variants explicitly:
 ```go
 // Inside the NamedGroup("/{bucket}", ...) callback:
 r.Dispatch("GET", "", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
-    d.Default(listObjects).Name("list").Action("s3:ListBucket")
-    d.When(m.QueryExists("acl")).Do(getBucketAcl).Name("acl.get").Action("s3:GetBucketAcl")
-    d.When(m.QueryExists("versions")).Do(listObjectVersions).Name("versions").Action("s3:ListBucketVersions")
+    d.FuncDefault(listObjects).Name("list").Action("s3:ListBucket")
+    d.When(m.QueryExists("acl")).FuncDo(getBucketAcl).Name("acl.get").Action("s3:GetBucketAcl")
+    d.When(m.QueryExists("versions")).FuncDo(listObjectVersions).Name("versions").Action("s3:ListBucketVersions")
 })
 ```
 
@@ -393,17 +439,48 @@ r.Dispatch("GET", "", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
 
 ## Additional Features
 
-**RESTful Resource Scaffolding:**
+**RESTful Resources:**
+
+A resource is a controller value. Each standard action is registered only if the controller has the matching method.
 
 ```go
-r.Resource("photos", "/photos", "photo", teapot.ResourceHandlers{
-Index:   listPhotos,  // GET    /photos
-Store:   createPhoto, // POST   /photos
-Show:    showPhoto,   // GET    /photos/{photo}
-Update:  updatePhoto, // PUT    /photos/{photo}
-Destroy: deletePhoto, // DELETE /photos/{photo}
-})
+type PhotoController struct{ db *sql.DB }
+
+func (c *PhotoController) Index(w http.ResponseWriter, r *http.Request)   { /* list */ }
+func (c *PhotoController) Show(w http.ResponseWriter, r *http.Request)    { /* one */ }
+func (c *PhotoController) Update(w http.ResponseWriter, r *http.Request)  { /* PUT and PATCH */ }
+func (c *PhotoController) Destroy(w http.ResponseWriter, r *http.Request) { /* DELETE */ }
+
+r.Resource("photos", &PhotoController{db: db})
 ```
+
+| Action | Method and path | Route name |
+|---|---|---|
+| `Index` | `GET /photos` | `photos.index` |
+| `Create` | `GET /photos/create` | `photos.create` |
+| `Store` | `POST /photos` (`StoreVerb(teapot.PUT)` changes it) | `photos.store` |
+| `Show` | `GET /photos/{photo}` | `photos.show` |
+| `Edit` | `GET /photos/{photo}/edit` | `photos.edit` |
+| `Update` | `PUT` and `PATCH /photos/{photo}` | `photos.update` |
+| `Destroy` | `DELETE /photos/{photo}` | `photos.destroy` |
+
+Options refine the defaults. The path defaults to `/` plus the name, and the parameter defaults to the singular form of
+the name (`photos` gives `{photo}`):
+
+```go
+r.Resource("photos", &PhotoController{db: db},
+    teapot.Only("index", "show"),              // or teapot.Except("destroy")
+    teapot.Middleware(authMiddleware),         // applies to this resource only
+    teapot.Path("/pictures"),                  // replaces /photos
+    teapot.Param("pictureId"),                 // replaces {photo}
+    teapot.Names(map[string]string{"index": "list"}), // photos.list
+)
+```
+
+`Resource` panics at registration on invalid input: an unknown action name, `Only` combined with `Except`, a `Path`
+without a leading slash, or a `StoreVerb` other than `POST` or `PUT`.
+
+HEAD is not registered per resource. A HEAD request to any path with a GET route is served by that GET route.
 
 **URL Builder Package:**
 

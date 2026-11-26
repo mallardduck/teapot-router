@@ -203,7 +203,7 @@ func TestDispatchMiddleware(t *testing.T) {
 
 func TestDispatchConflictWithDirect(t *testing.T) {
 	r := New()
-	r.Func().GET("/conflict", testutil.NoopResponse)
+	r.GET("/conflict", http.HandlerFunc(testutil.NoopResponse))
 
 	assert.Panics(t, func() {
 		r.Dispatch("GET", "/conflict", func(d *DispatchBuilder, m Matchers) {
@@ -214,7 +214,7 @@ func TestDispatchConflictWithDirect(t *testing.T) {
 
 func TestDispatchConflictWithExistingDispatcher(t *testing.T) {
 	r := New()
-	r.Func().QueryGET("/conflict", testutil.NoopResponse).Query("foo")
+	r.QueryGET("/conflict", http.HandlerFunc(testutil.NoopResponse)).Query("foo")
 
 	assert.Panics(t, func() {
 		r.Dispatch("GET", "/conflict", func(d *DispatchBuilder, m Matchers) {
@@ -246,7 +246,7 @@ func TestDispatchDuplicateName(t *testing.T) {
 
 func TestDispatchNameConflictWithFluentAPI(t *testing.T) {
 	r := New()
-	r.Func().GET("/other", testutil.NoopResponse).Name("taken")
+	r.GET("/other", http.HandlerFunc(testutil.NoopResponse)).Name("taken")
 
 	assert.Panics(t, func() {
 		r.Dispatch("GET", "/different-path", func(d *DispatchBuilder, m Matchers) {
@@ -259,9 +259,10 @@ func TestDispatchCoexistsWithFluentAPI(t *testing.T) {
 	r := New()
 
 	// Fluent-style route on one path
-	r.Func().GET("/fluent", func(w http.ResponseWriter, _ *http.Request) {
+	r.GET("/fluent", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("fluent"))
-	}).Name("fluent.route")
+	})).
+		Name("fluent.route")
 
 	// Dispatch-style route on a different path
 	r.Dispatch("GET", "/grouped", func(d *DispatchBuilder, m Matchers) {

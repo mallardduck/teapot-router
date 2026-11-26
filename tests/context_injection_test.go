@@ -203,7 +203,7 @@ func TestContextInjection_WithMiddleware(t *testing.T) {
 		_, _ = w.Write([]byte("OK"))
 	}
 
-	r.Func().GET("/protected", handler).
+	r.GET("/protected", http.HandlerFunc(handler)).
 		Name("protected.resource").
 		Action("read:protected").
 		With(checkContextMiddleware)
@@ -285,7 +285,7 @@ func TestContextInjection_WildcardParams(t *testing.T) {
 		_, _ = w.Write([]byte("OK"))
 	}
 
-	r.Func().GET("/{bucket}/{key:.*}", handler).
+	r.GET("/{bucket}/{key:.*}", http.HandlerFunc(handler)).
 		Name("object.get").
 		Action("s3:GetObject")
 
@@ -446,7 +446,7 @@ func TestContextInjection_EmptyValues(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	r.Func().GET("/no-metadata", handler)
+	r.GET("/no-metadata", http.HandlerFunc(handler))
 
 	req := httptest.NewRequest("GET", "/no-metadata", nil)
 	w := httptest.NewRecorder()
@@ -502,7 +502,7 @@ func TestContextInjection_GlobalVsRouteMiddleware(t *testing.T) {
 		r.Use(teapot.RouteContextMiddleware(r))
 		r.Use(routeLevelMiddleware)
 
-		r.Func().GET("/test", testutil.OKResponse).
+		r.GET("/test", http.HandlerFunc(testutil.OKResponse)).
 			Name("test.route").
 			Action("test:Action").
 			With(routeSpecificMiddleware)
@@ -565,20 +565,20 @@ func TestContextInjection_RouteContextMiddleware(t *testing.T) {
 		r.Use(auditMiddleware)
 
 		// Direct routes
-		r.Func().GET("/users", testutil.OKResponse).
+		r.GET("/users", http.HandlerFunc(testutil.OKResponse)).
 			Name("users.index").
 			Action("list:users")
 
-		r.Func().GET("/users/{id}", testutil.OKResponse).
+		r.GET("/users/{id}", http.HandlerFunc(testutil.OKResponse)).
 			Name("users.show").
 			Action("read:user")
 
 		// Query-multiplexed routes
-		r.Func().QueryGET("/{bucket}", testutil.OKResponse).
+		r.QueryGET("/{bucket}", http.HandlerFunc(testutil.OKResponse)).
 			Name("bucket.list").
 			Action("s3:ListBucket")
 
-		r.Func().QueryGET("/{bucket}", testutil.OKResponse).
+		r.QueryGET("/{bucket}", http.HandlerFunc(testutil.OKResponse)).
 			Query("acl").
 			Name("bucket.acl").
 			Action("s3:GetBucketAcl")
@@ -652,17 +652,17 @@ func TestContextInjection_RouteContextMiddleware_QueryFallback(t *testing.T) {
 		r.Use(auditMiddleware)
 
 		// Fallback route (no query params)
-		r.Func().GET("/{bucket}", handler).
+		r.GET("/{bucket}", http.HandlerFunc(handler)).
 			Name("bucket.head").
 			Action("s3:HeadBucket")
 
 		// Query-specific routes (will trigger auto-promotion)
-		r.Func().QueryGET("/{bucket}", handler).
+		r.QueryGET("/{bucket}", http.HandlerFunc(handler)).
 			Query("acl").
 			Name("bucket.acl").
 			Action("s3:GetBucketAcl")
 
-		r.Func().QueryGET("/{bucket}", handler).
+		r.QueryGET("/{bucket}", http.HandlerFunc(handler)).
 			Query("versioning").
 			Name("bucket.versioning").
 			Action("s3:GetBucketVersioning")

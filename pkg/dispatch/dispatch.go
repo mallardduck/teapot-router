@@ -9,9 +9,9 @@
 // Basic usage:
 //
 //	d := dispatch.New(func(b *dispatch.Builder) {
-//	    b.Default(listV1)                                          // fallback
-//	    b.When(dispatch.QueryEquals("list-type", "2")).Do(listV2)  // specific match
-//	    b.When(dispatch.QueryExists("location")).Do(getLocation)   // existence match
+//	    b.FuncDefault(listV1)                                          // fallback
+//	    b.When(dispatch.QueryEquals("list-type", "2")).FuncDo(listV2)  // specific match
+//	    b.When(dispatch.QueryExists("location")).FuncDo(getLocation)   // existence match
 //	})
 //
 //	http.Handle("/bucket", d)  // works with any router
@@ -26,8 +26,8 @@
 // handler and falling through to Default for everything else:
 //
 //	d := dispatch.New(func(b *dispatch.Builder) {
-//	    b.When(dispatch.HostHasSubdomain("s3.example.com")).Do(vhostRouter.ServeHTTP)
-//	    b.Default(pathRouter.ServeHTTP)
+//	    b.When(dispatch.HostHasSubdomain("s3.example.com")).Do(vhostRouter)
+//	    b.Default(pathRouter)
 //	})
 package dispatch
 
@@ -44,7 +44,7 @@ type Dispatcher struct {
 }
 
 type route struct {
-	handler  http.HandlerFunc
+	handler  http.Handler
 	matchers []Matcher
 }
 
@@ -101,7 +101,7 @@ type Builder struct {
 
 // Default sets the fallback handler — it matches when no other route's matchers match.
 // Only one Default should be set per Dispatcher; the last one wins if multiple are added.
-func (b *Builder) Default(h http.HandlerFunc) {
+func (b *Builder) Default(h http.Handler) {
 	b.routes = append(b.routes, &route{handler: h})
 }
 
@@ -120,6 +120,16 @@ type Route struct {
 }
 
 // Do will set the handler for this conditional route.
-func (rt *Route) Do(h http.HandlerFunc) {
+func (rt *Route) Do(h http.Handler) {
 	rt.route.handler = h
+}
+
+// FuncDefault is Default for a plain function.
+func (b *Builder) FuncDefault(h func(http.ResponseWriter, *http.Request)) {
+	b.Default(http.HandlerFunc(h))
+}
+
+// FuncDo is Do for a plain function.
+func (rt *Route) FuncDo(h func(http.ResponseWriter, *http.Request)) {
+	rt.Do(http.HandlerFunc(h))
 }

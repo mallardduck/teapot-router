@@ -51,54 +51,47 @@ go test -bench=. ./tests/teapot/
 
 ```
 teapot-router/
-├── pkg/                      # Public packages (importable by users)
-│   ├── teapot/              # Main router package
-│   │   ├── router.go                 # Router implementation
-│   │   ├── router_test.go            # Unit tests
-│   │   ├── routes_helpers.go         # Route listing/formatting helpers
-│   │   ├── routes_test.go            # Route introspection tests
-│   │   ├── resource_test.go          # Resource routing tests
-│   │   ├── helpers_test.go           # Helper function tests
-│   │   ├── validation_test.go        # Route validation tests
-│   │   └── optimized_handler.go      # Performance-optimized handlers
-│   └── urlbuilder/          # URL builder utility
-│       ├── doc.go                    # Package documentation
-│       ├── urlbuilder.go             # URL builder implementation
-│       └── urlbuilder_test.go        # URL builder tests
-├── internal/                # Private packages (internal use only)
-│   └── core/               # Core implementation details
-│       ├── context.go               # Context key definitions
-│       ├── dispatcher.go            # Query multiplexing dispatcher
-│       ├── query_matchers.go        # Query parameter matchers
-│       └── route.go                 # Route metadata & pattern translation
-├── tests/                   # Integration and benchmark tests
-│   ├── s3_example_test.go          # S3 API integration test
-│   ├── chi_wildcard_test.go        # Chi wildcard behavior reference
-│   ├── finalize_example_test.go    # Finalized examples
-│   ├── teapot/                     # Teapot-specific tests
-│   │   ├── finalize_bench_test.go  # Finalized benchmarks
-│   │   ├── minimal_bench_test.go   # Minimal benchmarks
-│   │   └── router_bench_test.go    # Router benchmarks
-│   └── urlbuilder/                 # URL builder tests
-├── examples/                # Example applications
-│   └── routes-cli/         # CLI tool to list routes (like Laravel's route:list)
-│       └── main.go
-├── docs/                    # Documentation
-│   ├── s3-api-router-info.md       # S3 API routing documentation
-│   ├── URLBUILDER.md               # URL builder documentation
-│   ├── ROUTES-LISTING.md           # Route listing documentation
-│   ├── TEST-ORGANIZATION.md        # Test organization guide
-│   ├── feature-comparison.md       # Feature comparison
-│   ├── optimization-options.md     # Optimization strategies
-│   ├── option-comparison.md        # Option comparisons
-│   └── option-2a-results.md        # Results from option 2a
-├── go.mod                   # Go module definition
-├── go.sum                   # Dependency checksums
-├── README.md               # User-facing documentation
-├── PLAN.md                 # Implementation plan
-├── STRUCTURE.md            # Project structure documentation
-├── SUMMARY.md              # Implementation summary
-└── DEVELOPMENT.md          # This file
+├── pkg/                          # Public packages (importable by users)
+│   ├── teapot/                   # Main router package
+│   │   ├── router.go             # Router implementation
+│   │   ├── dispatch.go           # Dispatch builder (query/header multiplexing)
+│   │   ├── resource.go           # RESTful resource scaffolding
+│   │   ├── middleware.go         # Middleware and middleware groups
+│   │   ├── routes_helpers.go     # Route listing/formatting helpers
+│   │   ├── optimized_handler.go  # Finalized (performance-optimized) handlers
+│   │   └── *_test.go             # Unit tests, next to the code they cover
+│   ├── dispatch/                 # Standalone dispatcher (no teapot dependency)
+│   │   ├── dispatch.go           # Dispatcher and builder
+│   │   └── matcher.go            # Query, header, and host matchers
+│   └── urlbuilder/               # Absolute URL builder and subdomain helpers
+│       ├── doc.go                # Package documentation
+│       ├── urlbuilder.go         # URL builder implementation
+│       └── subdomain.go          # Subdomain extraction
+├── internal/                     # Private packages (internal use only)
+│   ├── core/                     # Core implementation details
+│   │   ├── context.go            # Context key definitions
+│   │   ├── dispatcher.go         # Query multiplexing dispatcher
+│   │   └── route.go              # Route metadata & pattern translation
+│   └── testutil/                 # Shared test helpers
+├── tests/                        # Integration and benchmark tests
+│   ├── integration/              # Header dispatch and S3 dispatcher integration tests
+│   ├── teapot/                   # Benchmarks (run with -bench)
+│   └── urlbuilder/               # URL builder example tests
+├── examples/
+│   └── routes-cli/               # Mock S3-style route table and route listing demo
+│       ├── main.go
+│       └── s3-api-router-info.md # S3 API operations mapped to routes
+├── docs/                         # User documentation
+│   ├── USAGE.md                  # Usage guide
+│   ├── URLBUILDER.md             # URL builder guide
+│   ├── ROUTES-LISTING.md         # Route listing guide
+│   └── V1-SCOPE.md               # V1 scope and decisions
+├── .github/workflows/            # CI and release workflows
+├── go.mod
+├── go.sum
+├── README.md                     # User-facing overview
+├── DEVELOPMENT.md                # This file
+└── LICENSE
 ```
 
 ### Package Organization
@@ -396,7 +389,7 @@ Follow standard Go conventions:
 
 ### Adding a New Feature
 
-1. Design the API (update PLAN.md if significant)
+1. Design the API (update docs/V1-SCOPE.md if the change affects V1 scope)
 2. Add tests first (TDD approach)
 3. Implement the feature
 4. Update documentation (README.md, godoc comments)
@@ -528,18 +521,17 @@ go vet ./...
 ## Additional Resources
 
 - [README.md](README.md) - User-facing documentation
-- [STRUCTURE.md](STRUCTURE.md) - Detailed structure documentation
-- [PLAN.md](PLAN.md) - Implementation plan and design decisions
 - [docs/](docs/) - Additional documentation
+    - [USAGE.md](docs/USAGE.md) - Usage guide
     - [URLBUILDER.md](docs/URLBUILDER.md) - URL builder guide
     - [ROUTES-LISTING.md](docs/ROUTES-LISTING.md) - Route listing guide
-    - [TEST-ORGANIZATION.md](docs/TEST-ORGANIZATION.md) - Test organization
+    - [V1-SCOPE.md](docs/V1-SCOPE.md) - V1 scope, decisions, and remaining work
 
 ## Getting Help
 
 - Check existing [documentation](docs/)
 - Look at [tests](tests/) for usage examples
-- Review the [implementation plan](PLAN.md)
+- Review the [V1 scope](docs/V1-SCOPE.md)
 - Open an issue for bugs or feature requests
 
 ## License

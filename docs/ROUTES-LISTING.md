@@ -70,7 +70,7 @@ The debug endpoint supports both JSON and HTML:
 
 - Clean table layout
 - Color-coded HTTP methods
-- Sortable by method/pattern/name
+- Sortable by method/pattern/name (click a column header)
 - Shows route actions for S3 routes
 
 ### Advanced Usage
@@ -80,7 +80,7 @@ The debug endpoint supports both JSON and HTML:
 router.RegisterDebugRoute("/.internal/routes", "debug.routes")
 
 // Option 2: Manual registration (more control)
-handler := router.RoutesHandler()
+handler := teapot.NewListRoutesHandler(router, nil)
 router.GET("/.internal/routes", handler).Name("debug.routes")
 
 // Option 3: Environment-based
@@ -89,7 +89,7 @@ router.RegisterDebugRoute("/.internal/routes", "debug.routes")
 }
 
 // Option 4: With middleware
-router.GET("/.internal/routes", router.RoutesHandler()).
+router.GET("/.internal/routes", teapot.NewListRoutesHandler(router, nil)).
 Name("debug.routes").
 With(authMiddleware)
 
@@ -98,7 +98,7 @@ With(authMiddleware)
 filter := func(route teapot.RouteInfo) bool {
     return !strings.HasPrefix(route.Pattern, "/.internal/")
 }
-router.GET("/routes", teapot.NewListRoutesHandler(router, filter))
+router.GET("/routes", teapot.NewListRoutesHandler(router, &teapot.ListRoutesOptions{Filter: filter}))
 ```
 
 ## CLI Route Listing
@@ -156,7 +156,7 @@ func setupRoutes() *teapot.Router {
 ### Table Output
 
 ```bash
-$ go run cmd/routes/main.go
+$ go run examples/routes-cli/main.go
 
 METHOD  PATTERN             NAME               ACTION
 ------  -------             ----               ------
@@ -173,7 +173,7 @@ PUT     /{bucket}           s3.buckets.create  s3:CreateBucket
 ### JSON Output
 
 ```bash
-$ go run cmd/routes/main.go --json
+$ go run examples/routes-cli/main.go --json
 
 {
   "count": 8,
@@ -197,7 +197,7 @@ $ go run cmd/routes/main.go --json
 ### Compact Output
 
 ```bash
-$ go run cmd/routes/main.go --compact
+$ go run examples/routes-cli/main.go --compact
 
 GET     /                                        home
 GET     /api/users                               api.users.index
@@ -366,7 +366,7 @@ Add authentication for production debug endpoints:
 
 ```go
 if debug {
-router.GET("/.internal/routes", router.RoutesHandler()).
+router.GET("/.internal/routes", teapot.NewListRoutesHandler(router, nil)).
 Name("debug.routes").
 With(adminAuth)
 }
@@ -378,14 +378,14 @@ Use the CLI command in CI/CD to verify routes:
 
 ```bash
 # Check route count
-ROUTE_COUNT=$(go run cmd/routes/main.go --json | jq '.count')
+ROUTE_COUNT=$(go run examples/routes-cli/main.go --json | jq '.count')
 if [ "$ROUTE_COUNT" -lt 10 ]; then
     echo "Error: Expected at least 10 routes"
     exit 1
 fi
 
 # Check for required routes
-go run cmd/routes/main.go --json | jq '.routes[].Name' | grep -q "api.users.index"
+go run examples/routes-cli/main.go --json | jq '.routes[].Name' | grep -q "api.users.index"
 ```
 
 ### 4. Listing Routes Without Real Handler Dependencies
@@ -424,7 +424,7 @@ func (stubHandlers) ListUsers()  http.Handler { return teapot.NoopHandler }
 func (stubHandlers) ShowUser()   http.Handler { return teapot.NoopHandler }
 func (stubHandlers) CreateUser() http.Handler { return teapot.NoopHandler }
 
-// cmd/routes/main.go — prints routes with zero real dependencies.
+// examples/routes-cli/main.go — prints routes with zero real dependencies.
 func main() {
     r := teapot.New()
     RegisterRoutes(r, stubHandlers{})
@@ -456,14 +456,14 @@ fmt.Fprintf(f, "Name: `%s`\n\n", r.Name)
 
 ## Complete Example
 
-See [examples/routes-cli/main.go](../../examples/routes-cli/main.go) for a complete working example.
+See [examples/routes-cli/main.go](../examples/routes-cli/main.go) for a complete working example.
 
 ## API Reference
 
 ### Router Methods
 
 - `Routes() []RouteInfo` - Get all registered routes
-- `RoutesHandler() http.HandlerFunc` - Get HTTP handler for debug endpoint
+- `NewListRoutesHandler(router *Router, opts *ListRoutesOptions) http.HandlerFunc` - HTTP handler for the debug endpoint (`opts` may be nil)
 - `RegisterDebugRoute(path, name string) *RouteBuilder` - Convenience method
 
 ### Formatting Functions

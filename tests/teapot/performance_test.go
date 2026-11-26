@@ -40,7 +40,7 @@ func TestDirectVsQueryPerformance(t *testing.T) {
 func TestQueryMethodPanic(t *testing.T) {
 	msg := testutil.CapturePanic(func() {
 		r := teapot.New()
-		r.Func().GET("/test", testutil.NoopResponse).Query("param")
+		r.GET("/test", http.HandlerFunc(testutil.NoopResponse)).Query("param")
 	})
 
 	if msg == "" {
@@ -52,7 +52,7 @@ func TestQueryMethodPanic(t *testing.T) {
 func TestQueryValueMethodPanic(t *testing.T) {
 	msg := testutil.CapturePanic(func() {
 		r := teapot.New()
-		r.Func().GET("/test", testutil.NoopResponse).QueryValue("key", "value")
+		r.GET("/test", http.HandlerFunc(testutil.NoopResponse)).QueryValue("key", "value")
 	})
 
 	if msg == "" {
@@ -93,11 +93,12 @@ func BenchmarkQueryRoute(b *testing.B) {
 // Benchmark direct route with context injection
 func BenchmarkDirectRouteWithContext(b *testing.B) {
 	r := teapot.New()
-	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = teapot.GetAction(r)
 		_ = teapot.GetRouteName(r)
 		w.WriteHeader(200)
-	}).Name("test").Action("s3:Test")
+	})).
+		Name("test").Action("s3:Test")
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
@@ -112,11 +113,12 @@ func BenchmarkDirectRouteWithContext(b *testing.B) {
 // Benchmark query route with context injection
 func BenchmarkQueryRouteWithContext(b *testing.B) {
 	r := teapot.New()
-	r.Func().QueryGET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = teapot.GetAction(r)
 		_ = teapot.GetRouteName(r)
 		w.WriteHeader(200)
-	}).Name("test").Action("s3:Test")
+	})).
+		Name("test").Action("s3:Test")
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()

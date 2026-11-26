@@ -14,7 +14,7 @@ import (
 // Benchmark teapot router vs raw Chi for simple routes (no query multiplexing)
 func BenchmarkSimpleRoute_Teapot(b *testing.B) {
 	r := teapot.New()
-	r.Func().GET("/test", testutil.OKResponse)
+	r.GET("/test", http.HandlerFunc(testutil.OKResponse))
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
@@ -43,10 +43,10 @@ func BenchmarkSimpleRoute_Chi(b *testing.B) {
 // Benchmark with URL parameters
 func BenchmarkURLParams_Teapot(b *testing.B) {
 	r := teapot.New()
-	r.Func().GET("/users/{id}", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/users/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = teapot.URLParam(r, "id")
 		w.WriteHeader(200)
-	})
+	}))
 
 	req := httptest.NewRequest("GET", "/users/123", nil)
 	w := httptest.NewRecorder()
@@ -78,9 +78,9 @@ func BenchmarkURLParams_Chi(b *testing.B) {
 // Benchmark query multiplexing (unique to teapot)
 func BenchmarkQueryMultiplexing_SingleRoute(b *testing.B) {
 	r := teapot.New()
-	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/bucket", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-	})
+	}))
 
 	req := httptest.NewRequest("GET", "/bucket", nil)
 	w := httptest.NewRecorder()
@@ -94,9 +94,9 @@ func BenchmarkQueryMultiplexing_SingleRoute(b *testing.B) {
 
 func BenchmarkQueryMultiplexing_ThreeRoutes(b *testing.B) {
 	r := teapot.New()
-	r.Func().GET("/bucket", testutil.OKResponse)
-	r.Func().GET("/bucket", testutil.OKResponse).Query("acl")
-	r.Func().GET("/bucket", testutil.OKResponse).Query("versioning")
+	r.GET("/bucket", http.HandlerFunc(testutil.OKResponse))
+	r.GET("/bucket", http.HandlerFunc(testutil.OKResponse)).Query("acl")
+	r.GET("/bucket", http.HandlerFunc(testutil.OKResponse)).Query("versioning")
 
 	req := httptest.NewRequest("GET", "/bucket", nil)
 	w := httptest.NewRecorder()
@@ -110,9 +110,9 @@ func BenchmarkQueryMultiplexing_ThreeRoutes(b *testing.B) {
 
 func BenchmarkQueryMultiplexing_ThreeRoutes_MatchLast(b *testing.B) {
 	r := teapot.New()
-	r.Func().GET("/bucket", testutil.OKResponse)
-	r.Func().GET("/bucket", testutil.OKResponse).Query("acl")
-	r.Func().GET("/bucket", testutil.OKResponse).Query("versioning")
+	r.GET("/bucket", http.HandlerFunc(testutil.OKResponse))
+	r.GET("/bucket", http.HandlerFunc(testutil.OKResponse)).Query("acl")
+	r.GET("/bucket", http.HandlerFunc(testutil.OKResponse)).Query("versioning")
 
 	req := httptest.NewRequest("GET", "/bucket?versioning", nil)
 	w := httptest.NewRecorder()
@@ -127,11 +127,12 @@ func BenchmarkQueryMultiplexing_ThreeRoutes_MatchLast(b *testing.B) {
 // Benchmark context injection overhead
 func BenchmarkContextInjection_Teapot(b *testing.B) {
 	r := teapot.New()
-	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = teapot.GetAction(r)
 		_ = teapot.GetRouteName(r)
 		w.WriteHeader(200)
-	}).Name("test").Action("s3:Test")
+	})).
+		Name("test").Action("s3:Test")
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()

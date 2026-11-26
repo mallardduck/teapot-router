@@ -56,8 +56,8 @@
 // Use [Router.Dispatch] to group many query variants on one path explicitly:
 //
 //	r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
-//	    d.Default(listObjects).Name("bucket.list").Action("s3:ListBucket")
-//	    d.When(m.QueryExists("acl")).Do(getBucketAcl).Name("bucket.acl").Action("s3:GetBucketAcl")
+//	    d.FuncDefault(listObjects).Name("bucket.list").Action("s3:ListBucket")
+//	    d.When(m.QueryExists("acl")).FuncDo(getBucketAcl).Name("bucket.acl").Action("s3:GetBucketAcl")
 //	})
 //
 // # Route Groups

@@ -109,27 +109,32 @@ json.NewEncoder(w).Encode(response)
 ### With Resource Scaffolding
 
 ```go
-router := teapot.New()
-urls := urlbuilder.New("s3.example.com")
-
-router.Resource("buckets", "/buckets", "bucket", teapot.ResourceHandlers{
-Index: func (w http.ResponseWriter, r *http.Request) {
-// Generate URLs for related resources
-indexPath, _ := router.URL("buckets.index")
-bucket1Path := router.MustURL("buckets.show", "bucket", "photos")
-bucket2Path := router.MustURL("buckets.show", "bucket", "documents")
-
-response := map[string]interface{}{
-"self": urls.BuildURL(r, indexPath),
-"buckets": []string{
-urls.BuildURL(r, bucket1Path),
-urls.BuildURL(r, bucket2Path),
-},
+type BucketController struct {
+    router *teapot.Router
+    urls   *urlbuilder.Builder
 }
 
-json.NewEncoder(w).Encode(response)
-},
-})
+func (c *BucketController) Index(w http.ResponseWriter, r *http.Request) {
+    // Generate URLs for related resources using named routes
+    indexPath, _ := c.router.URL("buckets.index")
+    bucket1Path := c.router.MustURL("buckets.show", "bucket", "photos")
+    bucket2Path := c.router.MustURL("buckets.show", "bucket", "documents")
+
+    response := map[string]any{
+        "self": c.urls.BuildURL(r, indexPath),
+        "buckets": []string{
+            c.urls.BuildURL(r, bucket1Path),
+            c.urls.BuildURL(r, bucket2Path),
+        },
+    }
+    _ = json.NewEncoder(w).Encode(response)
+}
+
+func (c *BucketController) Show(w http.ResponseWriter, r *http.Request) { /* ... */ }
+
+router := teapot.New()
+urls := urlbuilder.New("s3.example.com")
+router.Resource("buckets", &BucketController{router: router, urls: urls}, teapot.Param("bucket"))
 ```
 
 ## Scheme Detection
@@ -293,5 +298,4 @@ This design allows you to:
 ## See Also
 
 - [Main README](../README.md) - Teapot router overview
-- [Quick Wins Added](../QUICK_WINS_ADDED.md) - All features added
 - [Package Documentation](https://pkg.go.dev/github.com/mallardduck/teapot-router/pkg/urlbuilder)

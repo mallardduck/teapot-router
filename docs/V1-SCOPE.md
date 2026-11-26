@@ -42,7 +42,7 @@ Breaking changes must land before the v1.0.0 tag. Open questions:
 - **Decided:** `Default` and `Do` take `http.Handler` in both `pkg/teapot` and `pkg/dispatch`. `FuncDefault` and
   `FuncDo` take plain functions in both. This is a breaking change for `pkg/dispatch` callers who passed function
   literals to `Default` or `Do`; they now call the `Func` variants.
-- `ResourceHandlers` (struct) and `ResourceHandlerBuilder` (fluent) both exist.
+- **Decided:** `ResourceHandlerBuilder` is removed. `Resource` takes `ResourceHandlers` directly. It can be re-added later with tests.
 - `FuncRouter` and the `Func*` variants overlap with `Handle`.
 
 Record the decision for each item here when it is made.

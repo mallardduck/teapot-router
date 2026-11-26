@@ -27,137 +27,6 @@ type ResourceHandlers struct {
 	UpdateMethod HTTPMethod
 }
 
-// resourceHandlerProvider is an unexported interface implemented by both ResourceHandlers
-// and *ResourceHandlerBuilder, allowing r.Resource() to accept either.
-type resourceHandlerProvider interface {
-	buildHandlers() ResourceHandlers
-}
-
-// buildHandlers implements resourceHandlerProvider for ResourceHandlers (identity).
-func (rh ResourceHandlers) buildHandlers() ResourceHandlers { return rh }
-
-// ResourceHandlerBuilder is a fluent builder for ResourceHandlers.
-// Obtain via NewResourceHandlers(). Each handler field has two setters:
-//   - Field(h http.Handler)                               — for handler structs or named vars
-//   - FuncField(fn func(http.ResponseWriter, *http.Request)) — for inline function literals
-type ResourceHandlerBuilder struct{ h ResourceHandlers }
-
-// NewResourceHandlers returns a new ResourceHandlerBuilder for constructing
-// ResourceHandlers using a fluent API, useful when mixing handler structs and
-// inline function literals.
-func NewResourceHandlers() *ResourceHandlerBuilder { return &ResourceHandlerBuilder{} }
-
-// buildHandlers implements resourceHandlerProvider.
-func (b *ResourceHandlerBuilder) buildHandlers() ResourceHandlers { return b.h }
-
-// Index sets the Index handler.
-func (b *ResourceHandlerBuilder) Index(h http.Handler) *ResourceHandlerBuilder {
-	b.h.Index = h
-	return b
-}
-
-// FuncIndex sets the Index handler using a plain function literal.
-func (b *ResourceHandlerBuilder) FuncIndex(fn func(http.ResponseWriter, *http.Request)) *ResourceHandlerBuilder {
-	b.h.Index = http.HandlerFunc(fn)
-	return b
-}
-
-// Create sets the Create handler.
-func (b *ResourceHandlerBuilder) Create(h http.Handler) *ResourceHandlerBuilder {
-	b.h.Create = h
-	return b
-}
-
-// FuncCreate sets the Create handler using a plain function literal.
-func (b *ResourceHandlerBuilder) FuncCreate(fn func(http.ResponseWriter, *http.Request)) *ResourceHandlerBuilder {
-	b.h.Create = http.HandlerFunc(fn)
-	return b
-}
-
-// Store sets the Store handler.
-func (b *ResourceHandlerBuilder) Store(h http.Handler) *ResourceHandlerBuilder {
-	b.h.Store = h
-	return b
-}
-
-// FuncStore sets the Store handler using a plain function literal.
-func (b *ResourceHandlerBuilder) FuncStore(fn func(http.ResponseWriter, *http.Request)) *ResourceHandlerBuilder {
-	b.h.Store = http.HandlerFunc(fn)
-	return b
-}
-
-// Show sets the Show handler.
-func (b *ResourceHandlerBuilder) Show(h http.Handler) *ResourceHandlerBuilder {
-	b.h.Show = h
-	return b
-}
-
-// FuncShow sets the Show handler using a plain function literal.
-func (b *ResourceHandlerBuilder) FuncShow(fn func(http.ResponseWriter, *http.Request)) *ResourceHandlerBuilder {
-	b.h.Show = http.HandlerFunc(fn)
-	return b
-}
-
-// Edit sets the Edit handler.
-func (b *ResourceHandlerBuilder) Edit(h http.Handler) *ResourceHandlerBuilder {
-	b.h.Edit = h
-	return b
-}
-
-// FuncEdit sets the Edit handler using a plain function literal.
-func (b *ResourceHandlerBuilder) FuncEdit(fn func(http.ResponseWriter, *http.Request)) *ResourceHandlerBuilder {
-	b.h.Edit = http.HandlerFunc(fn)
-	return b
-}
-
-// Update sets the Update handler.
-func (b *ResourceHandlerBuilder) Update(h http.Handler) *ResourceHandlerBuilder {
-	b.h.Update = h
-	return b
-}
-
-// FuncUpdate sets the Update handler using a plain function literal.
-func (b *ResourceHandlerBuilder) FuncUpdate(fn func(http.ResponseWriter, *http.Request)) *ResourceHandlerBuilder {
-	b.h.Update = http.HandlerFunc(fn)
-	return b
-}
-
-// Destroy sets the Destroy handler.
-func (b *ResourceHandlerBuilder) Destroy(h http.Handler) *ResourceHandlerBuilder {
-	b.h.Destroy = h
-	return b
-}
-
-// FuncDestroy sets the Destroy handler using a plain function literal.
-func (b *ResourceHandlerBuilder) FuncDestroy(fn func(http.ResponseWriter, *http.Request)) *ResourceHandlerBuilder {
-	b.h.Destroy = http.HandlerFunc(fn)
-	return b
-}
-
-// Head sets the Head handler.
-func (b *ResourceHandlerBuilder) Head(h http.Handler) *ResourceHandlerBuilder {
-	b.h.Head = h
-	return b
-}
-
-// FuncHead sets the Head handler using a plain function literal.
-func (b *ResourceHandlerBuilder) FuncHead(fn func(http.ResponseWriter, *http.Request)) *ResourceHandlerBuilder {
-	b.h.Head = http.HandlerFunc(fn)
-	return b
-}
-
-// StoreMethod sets the HTTP method used for the Store route.
-func (b *ResourceHandlerBuilder) StoreMethod(m HTTPMethod) *ResourceHandlerBuilder {
-	b.h.StoreMethod = m
-	return b
-}
-
-// UpdateMethod sets the HTTP method used for the Update route.
-func (b *ResourceHandlerBuilder) UpdateMethod(m HTTPMethod) *ResourceHandlerBuilder {
-	b.h.UpdateMethod = m
-	return b
-}
-
 // Resource creates RESTful resource routes following Laravel/Rails conventions.
 // This is a convenience method for scaffolding standard CRUD operations.
 //
@@ -171,22 +40,12 @@ func (b *ResourceHandlerBuilder) UpdateMethod(m HTTPMethod) *ResourceHandlerBuil
 //   - DELETE /path/{param}      -> name.destroy (Destroy handler)
 //   - HEAD   /path/{param}      -> name.head    (Head handler)
 //
-// handlers may be a ResourceHandlers struct or a *ResourceHandlerBuilder from NewResourceHandlers().
-//
-// Example (struct literal — handler fields now accept any http.Handler):
+// Example:
 //
 //	r.Resource("photos", "/photos", "photo", teapot.ResourceHandlers{
-//	    Index:   listPhotos,      // http.HandlerFunc var satisfies http.Handler
-//	    Show:    myPhotoStruct,   // struct implementing http.Handler
+//	    Index: listPhotos,       // any http.Handler, e.g. http.HandlerFunc(fn)
+//	    Show:  myPhotoStruct,    // struct implementing http.Handler
 //	})
-//
-// Example (builder with inline functions):
-//
-//	r.Resource("photos", "/photos", "photo",
-//	    teapot.NewResourceHandlers().
-//	        FuncIndex(func(w http.ResponseWriter, r *http.Request) { ... }).
-//	        Show(myPhotoStruct),
-//	)
 //
 // Example (S3-style with PUT for creation):
 //
@@ -197,9 +56,7 @@ func (b *ResourceHandlerBuilder) UpdateMethod(m HTTPMethod) *ResourceHandlerBuil
 //	    Destroy:     deleteBucket,
 //	    StoreMethod: teapot.PUT,  // S3 uses PUT to create buckets
 //	})
-func (r *Router) Resource(name, path, param string, handlers resourceHandlerProvider) {
-	h := handlers.buildHandlers()
-
+func (r *Router) Resource(name, path, param string, h ResourceHandlers) {
 	// Determine HTTP methods with defaults
 	storeMethod := h.StoreMethod
 	if storeMethod == "" {

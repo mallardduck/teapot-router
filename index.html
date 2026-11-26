@@ -12,16 +12,29 @@
   <nav class="side">
     <a class="brand" href="index.html">teapot-router ☕️</a>
     <ul>
-      <li><a href="index.html" aria-current="page">Overview</a></li>
+      <li><a href="index.html" aria-current="page">Overview</a>
+        <ul class="toc">
+          <li><a href="#install">Install</a></li>
+          <li><a href="#a-taste">A taste</a></li>
+          <li><a href="#pages">Pages</a></li>
+        </ul></li>
       <li><a href="routing.html">Routing</a></li>
       <li><a href="composition.html">Composition</a></li>
       <li><a href="urls-and-routes.html">URLs &amp; route listing</a></li>
       <li><a href="migrating.html">Migrating to v1</a></li>
     </ul>
     <div class="ext">
-      <div><a href="https://github.com/go-chi/chi">chi on GitHub</a></div>
-      <div><a href="https://pkg.go.dev/github.com/go-chi/chi/v5">chi API (pkg.go.dev)</a></div>
-      <div><a href="https://github.com/mallardduck/teapot-router">teapot-router on GitHub</a></div>
+      <div class="ext-group">
+        <div class="ext-label">teapot-router</div>
+        <div><a href="https://github.com/mallardduck/teapot-router">GitHub</a></div>
+        <div><a href="https://pkg.go.dev/github.com/mallardduck/teapot-router">Go docs</a></div>
+      </div>
+      <div class="ext-group">
+        <div class="ext-label">chi</div>
+        <div><a href="https://go-chi.io/">chi docs</a></div>
+        <div><a href="https://github.com/go-chi/chi">GitHub</a></div>
+        <div><a href="https://pkg.go.dev/github.com/go-chi/chi/v5">Go docs</a></div>
+      </div>
     </div>
   </nav>
 
@@ -36,10 +49,10 @@
       and <a href="https://github.com/go-chi/docs">go-chi/docs</a> are the primary references. These pages cover only what teapot-router adds.
     </div>
 
-    <h2>Install</h2>
+    <h2 id="install">Install</h2>
 <pre><code>go get github.com/mallardduck/teapot-router</code></pre>
 
-    <h2>A taste</h2>
+    <h2 id="a-taste">A taste</h2>
     <p>Register routes with names, then build URLs from those names:</p>
 <pre><code>r := teapot.New()
 
@@ -54,7 +67,7 @@ path := r.MustURL("users.show", "id", "42") // "/users/42"</code></pre>
     d.When(m.QueryExists("acl")).DoFunc(getBucketAcl).Name("bucket.acl").Action("s3:GetBucketAcl")
 })</code></pre>
 
-    <h2>Pages</h2>
+    <h2 id="pages">Pages</h2>
     <ul>
       <li><a href="routing.html">Routing</a>: named routes, query and header dispatch, S3 action context.</li>
       <li><a href="composition.html">Composition</a>: groups, sub-routers, mounting, subdomains, resources.</li>

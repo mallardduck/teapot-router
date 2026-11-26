@@ -12,15 +12,30 @@
     <a class="brand" href="index.html">teapot-router ☕️</a>
     <ul>
       <li><a href="index.html">Overview</a></li>
-      <li><a href="routing.html" aria-current="page">Routing</a></li>
+      <li><a href="routing.html" aria-current="page">Routing</a>
+        <ul class="toc">
+          <li><a href="#named-routes">Named routes</a></li>
+          <li><a href="#query-dispatch">Query dispatch</a></li>
+          <li><a href="#action-context">Action context</a></li>
+          <li><a href="#direct-handlers-and-external-routes">Direct handlers and external routes</a></li>
+          <li><a href="#finalize-for-production">Finalize for production</a></li>
+        </ul></li>
       <li><a href="composition.html">Composition</a></li>
       <li><a href="urls-and-routes.html">URLs &amp; route listing</a></li>
       <li><a href="migrating.html">Migrating to v1</a></li>
     </ul>
     <div class="ext">
-      <div><a href="https://github.com/go-chi/chi">chi on GitHub</a></div>
-      <div><a href="https://pkg.go.dev/github.com/go-chi/chi/v5">chi API (pkg.go.dev)</a></div>
-      <div><a href="https://github.com/mallardduck/teapot-router">teapot-router on GitHub</a></div>
+      <div class="ext-group">
+        <div class="ext-label">teapot-router</div>
+        <div><a href="https://github.com/mallardduck/teapot-router">GitHub</a></div>
+        <div><a href="https://pkg.go.dev/github.com/mallardduck/teapot-router">Go docs</a></div>
+      </div>
+      <div class="ext-group">
+        <div class="ext-label">chi</div>
+        <div><a href="https://go-chi.io/">chi docs</a></div>
+        <div><a href="https://github.com/go-chi/chi">GitHub</a></div>
+        <div><a href="https://pkg.go.dev/github.com/go-chi/chi/v5">Go docs</a></div>
+      </div>
     </div>
   </nav>
 
@@ -28,7 +43,7 @@
     <h1>Routing</h1>
     <p class="lead">Named routes, query and header dispatch, and S3 action context. For path patterns and middleware, see the <a href="https://github.com/go-chi/chi">chi docs</a>.</p>
 
-    <h2>Named routes</h2>
+    <h2 id="named-routes">Named routes</h2>
     <p>Name a route with <code>.Name()</code>, then build its path later with <code>URL</code> or <code>MustURL</code>.</p>
 <pre><code>r.GET("/users/{id}", showUser).Name("users.show")
 
@@ -42,7 +57,7 @@ r.MustURL("object.get", "bucket", "photos", "key", "2024/vacation.jpg")
 // "/photos/2024/vacation.jpg"</code></pre>
     <p><code>URL</code> returns an error when the name is unknown, when the pairs are odd in count, or when a placeholder is left unfilled.</p>
 
-    <h2>Query dispatch</h2>
+    <h2 id="query-dispatch">Query dispatch</h2>
     <p>Routes on the same method and path can differ by query parameters. This is how S3 sub-resources such as <code>?acl</code> work.</p>
 <pre><code>r.GET("/{bucket}", listObjects).Name("bucket.list").Action("s3:ListBucket")
 
@@ -82,7 +97,7 @@ r.GET("/{bucket}", getVersioning).Name("bucket.versioning").
     </table>
     <p>The fluent <code>Query</code> style and <code>Dispatch</code> coexist in the same router. Use whichever reads better for each path.</p>
 
-    <h2>Action context</h2>
+    <h2 id="action-context">Action context</h2>
     <p>Each route can carry an action string, which is stored in the request context:</p>
 <pre><code>r.GET("/{bucket}/{key:.*}", getObject).
     Name("object.get").
@@ -97,14 +112,14 @@ func getObject(w http.ResponseWriter, r *http.Request) {
 }</code></pre>
     <p><code>URLParams(r)</code> returns all URL parameters as a map.</p>
 
-    <h2>Direct handlers and external routes</h2>
+    <h2 id="direct-handlers-and-external-routes">Direct handlers and external routes</h2>
 <pre><code>r.Handle("GET", "/health", healthHandler).Name("health")
 r.HandleFunc("GET", "/ping", pingFunc).Name("ping")
 
 // Documented and usable for URL building, but not served locally
 r.RegisterExternal("GET", "https://auth.example.com/login", "auth.login", "auth:Login")</code></pre>
 
-    <h2>Finalize for production</h2>
+    <h2 id="finalize-for-production">Finalize for production</h2>
     <p>Call <code>Finalize()</code> after registering routes. It precomputes handler chains and builds all dispatchers up front, so the first request does no setup. It is optional.</p>
 <pre><code>r.Finalize()
 http.ListenAndServe(":8080", r)</code></pre>

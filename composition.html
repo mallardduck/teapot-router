@@ -13,14 +13,30 @@
     <ul>
       <li><a href="index.html">Overview</a></li>
       <li><a href="routing.html">Routing</a></li>
-      <li><a href="composition.html" aria-current="page">Composition</a></li>
+      <li><a href="composition.html" aria-current="page">Composition</a>
+        <ul class="toc">
+          <li><a href="#groups">Groups</a></li>
+          <li><a href="#sub-routers">Sub-routers</a></li>
+          <li><a href="#mounting">Mounting</a></li>
+          <li><a href="#subdomains">Subdomains</a></li>
+          <li><a href="#resources">Resources</a></li>
+          <li><a href="#middleware">Middleware</a></li>
+        </ul></li>
       <li><a href="urls-and-routes.html">URLs &amp; route listing</a></li>
       <li><a href="migrating.html">Migrating to v1</a></li>
     </ul>
     <div class="ext">
-      <div><a href="https://github.com/go-chi/chi">chi on GitHub</a></div>
-      <div><a href="https://pkg.go.dev/github.com/go-chi/chi/v5">chi API (pkg.go.dev)</a></div>
-      <div><a href="https://github.com/mallardduck/teapot-router">teapot-router on GitHub</a></div>
+      <div class="ext-group">
+        <div class="ext-label">teapot-router</div>
+        <div><a href="https://github.com/mallardduck/teapot-router">GitHub</a></div>
+        <div><a href="https://pkg.go.dev/github.com/mallardduck/teapot-router">Go docs</a></div>
+      </div>
+      <div class="ext-group">
+        <div class="ext-label">chi</div>
+        <div><a href="https://go-chi.io/">chi docs</a></div>
+        <div><a href="https://github.com/go-chi/chi">GitHub</a></div>
+        <div><a href="https://pkg.go.dev/github.com/go-chi/chi/v5">Go docs</a></div>
+      </div>
     </div>
   </nav>
 
@@ -28,7 +44,7 @@
     <h1>Composition</h1>
     <p class="lead">Groups, sub-routers, mounting, subdomains, and resources. Middleware itself works as it does in chi.</p>
 
-    <h2>Groups</h2>
+    <h2 id="groups">Groups</h2>
 <pre><code>// Path prefix
 r.Group("/api/v1", func(r *teapot.Router) {
     r.GET("/users", listUsers).Name("users.list")
@@ -45,13 +61,13 @@ r.MiddlewareGroup(func(r *teapot.Router) {
     r.GET("/data", dataHandler).Name("api.data")
 }, apiKeyMiddleware)</code></pre>
 
-    <h2>Sub-routers</h2>
+    <h2 id="sub-routers">Sub-routers</h2>
     <p><code>SubRouter(prefix)</code> returns a child router that can also run on its own. Its routes show up in the parent with the prefix added.</p>
 <pre><code>admin := r.SubRouter("/admin")
 admin.GET("/dashboard", dashHandler).Name("dashboard")
 // "dashboard" is visible in both admin and r, as "/admin/dashboard"</code></pre>
 
-    <h2>Mounting</h2>
+    <h2 id="mounting">Mounting</h2>
 <pre><code>r.Mount("/static", http.FileServer(http.Dir("./static")))</code></pre>
     <p>Mounting a <code>*teapot.Router</code> does more. Its existing routes are copied into the parent with the prefix added. Routes added to it later also show up in the parent, because mounting links the two routers.</p>
 <pre><code>api := teapot.New()
@@ -78,7 +94,7 @@ http.ListenAndServe(":8080", d)
 label, ok := urlbuilder.SubdomainFromHost(r.Host, "s3.example.com") // "mybucket", true</code></pre>
     <p>Inside a teapot router, use <code>m.HostHasSubdomain(...)</code> in a <code>Dispatch</code> block. Ports are ignored, matching is case-insensitive, and a trailing dot on either side is ignored.</p>
 
-    <h2>Resources</h2>
+    <h2 id="resources">Resources</h2>
     <p>A resource is a controller value. Each standard action is registered only if the controller has that method.</p>
 <pre><code>type PhotoController struct{ db *sql.DB }
 
@@ -115,7 +131,7 @@ r.Resource("photos", &PhotoController{db: db})</code></pre>
 )</code></pre>
     <p><code>Resource</code> panics at registration for invalid input: an unknown action, <code>Only</code> combined with <code>Except</code>, a <code>Path</code> without a leading slash, or a <code>StoreVerb</code> other than <code>POST</code> or <code>PUT</code>.</p>
 
-    <h2>Middleware</h2>
+    <h2 id="middleware">Middleware</h2>
     <p>Use chi middleware as you would in chi:</p>
 <pre><code>r.Use(middleware.Logger, middleware.Recoverer)
 

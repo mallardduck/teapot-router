@@ -439,20 +439,48 @@ r.Dispatch("GET", "", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
 
 ## Additional Features
 
-**RESTful Resource Scaffolding:**
+**RESTful Resources:**
+
+A resource is a controller value. Each standard action is registered only if the controller has the matching method.
 
 ```go
-r.Resource("photos", "/photos", "photo", teapot.ResourceHandlers{
-    Index:   http.HandlerFunc(listPhotos),  // GET    /photos
-    Store:   http.HandlerFunc(createPhoto), // POST   /photos
-    Show:    http.HandlerFunc(showPhoto),   // GET    /photos/{photo}
-    Update:  http.HandlerFunc(updatePhoto), // PUT    /photos/{photo}
-    Destroy: http.HandlerFunc(deletePhoto), // DELETE /photos/{photo}
-})
+type PhotoController struct{ db *sql.DB }
+
+func (c *PhotoController) Index(w http.ResponseWriter, r *http.Request)   { /* list */ }
+func (c *PhotoController) Show(w http.ResponseWriter, r *http.Request)    { /* one */ }
+func (c *PhotoController) Update(w http.ResponseWriter, r *http.Request)  { /* PUT and PATCH */ }
+func (c *PhotoController) Destroy(w http.ResponseWriter, r *http.Request) { /* DELETE */ }
+
+r.Resource("photos", &PhotoController{db: db})
 ```
 
-Fields take any `http.Handler`, so wrap plain functions with `http.HandlerFunc`. `StoreMethod` must be `POST` or `PUT`,
-and `UpdateMethod` must be `PUT` or `POST`. Leave either empty for the default. Any other value panics at registration.
+| Action | Method and path | Route name |
+|---|---|---|
+| `Index` | `GET /photos` | `photos.index` |
+| `Create` | `GET /photos/create` | `photos.create` |
+| `Store` | `POST /photos` (`StoreVerb(teapot.PUT)` changes it) | `photos.store` |
+| `Show` | `GET /photos/{photo}` | `photos.show` |
+| `Edit` | `GET /photos/{photo}/edit` | `photos.edit` |
+| `Update` | `PUT` and `PATCH /photos/{photo}` | `photos.update` |
+| `Destroy` | `DELETE /photos/{photo}` | `photos.destroy` |
+
+Options refine the defaults. The path defaults to `/` plus the name, and the parameter defaults to the singular form of
+the name (`photos` gives `{photo}`):
+
+```go
+r.Resource("photos", &PhotoController{db: db},
+    teapot.Only("index", "show"),              // or teapot.Except("destroy")
+    teapot.Middleware(authMiddleware),         // applies to this resource only
+    teapot.Path("/pictures"),                  // replaces /photos
+    teapot.Param("pictureId"),                 // replaces {photo}
+    teapot.Names(map[string]string{"index": "list"}), // photos.list
+)
+```
+
+`Resource` panics at registration on invalid input: an unknown action name, `Only` combined with `Except`, a `Path`
+without a leading slash, or a `StoreVerb` other than `POST` or `PUT`.
+
+HEAD is not registered per resource. A HEAD request to any path with a GET route is served by that GET route.
 
 **URL Builder Package:**
 

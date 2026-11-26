@@ -307,8 +307,8 @@ func TestRoutesHTMLShowsHeaderColumnWhenUsed(t *testing.T) {
 	r := New()
 	r.GET("/plain", http.HandlerFunc(testutil.NoopResponse))
 	r.Dispatch("GET", "/h", func(d *DispatchBuilder, m Matchers) {
-		d.When(m.HeaderEquals("X-Kind", "a")).FuncDo(testutil.NoopResponse).Name("h.a")
-		d.FuncDefault(testutil.NoopResponse).Name("h.default")
+		d.When(m.HeaderEquals("X-Kind", "a")).DoFunc(testutil.NoopResponse).Name("h.a")
+		d.DefaultFunc(testutil.NoopResponse).Name("h.default")
 	})
 
 	w := httptest.NewRecorder()

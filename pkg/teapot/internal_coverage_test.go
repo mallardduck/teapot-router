@@ -223,9 +223,9 @@ func TestRoutesPopulatesHeaderParams(t *testing.T) {
 	r := New()
 
 	r.Dispatch("GET", "/header-info", func(d *DispatchBuilder, m Matchers) {
-		d.FuncDefault(testutil.NoopResponse).Name("hi.default")
-		d.When(m.HeaderExists("X-Custom")).FuncDo(testutil.NoopResponse).Name("hi.exists")
-		d.When(m.HeaderEquals("Content-Type", "application/json")).FuncDo(testutil.NoopResponse).Name("hi.value")
+		d.DefaultFunc(testutil.NoopResponse).Name("hi.default")
+		d.When(m.HeaderExists("X-Custom")).DoFunc(testutil.NoopResponse).Name("hi.exists")
+		d.When(m.HeaderEquals("Content-Type", "application/json")).DoFunc(testutil.NoopResponse).Name("hi.value")
 	})
 
 	routes := r.Routes()
@@ -319,7 +319,7 @@ func TestDispatchRouteUnnamed(t *testing.T) {
 	r := New()
 
 	r.Dispatch("GET", "/unnamed", func(d *DispatchBuilder, m Matchers) {
-		d.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
+		d.DefaultFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("unnamed-ok"))
 		})
 		// Intentionally no .Name() call
@@ -338,8 +338,8 @@ func TestNewListRoutesHandlerHTMLWithHeaders(t *testing.T) {
 	r := New()
 
 	r.Dispatch("GET", "/hht", func(d *DispatchBuilder, m Matchers) {
-		d.FuncDefault(testutil.NoopResponse).Name("hht.default")
-		d.When(m.HeaderEquals("X-Copy", "source")).FuncDo(testutil.NoopResponse).Name("hht.copy")
+		d.DefaultFunc(testutil.NoopResponse).Name("hht.default")
+		d.When(m.HeaderEquals("X-Copy", "source")).DoFunc(testutil.NoopResponse).Name("hht.copy")
 	})
 
 	handler := NewListRoutesHandler(r, nil)

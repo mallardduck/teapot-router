@@ -15,10 +15,10 @@ func TestDispatchHostHasSubdomain(t *testing.T) {
 	r := New()
 
 	r.Dispatch("GET", "/", func(d *DispatchBuilder, m Matchers) {
-		d.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
+		d.DefaultFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("path"))
 		})
-		d.When(m.HostHasSubdomain("s3.example.com")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+		d.When(m.HostHasSubdomain("s3.example.com")).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("subdomain"))
 		})
 	})
@@ -52,10 +52,10 @@ func TestDispatchHostHasSubdomainCombinedWithQuery(t *testing.T) {
 	r := New()
 
 	r.Dispatch("GET", "/", func(d *DispatchBuilder, m Matchers) {
-		d.FuncDefault(func(w http.ResponseWriter, _ *http.Request) {
+		d.DefaultFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("default"))
 		})
-		d.When(m.HostHasSubdomain("s3.example.com"), m.QueryExists("acl")).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+		d.When(m.HostHasSubdomain("s3.example.com"), m.QueryExists("acl")).DoFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("subdomain-acl"))
 		})
 	})

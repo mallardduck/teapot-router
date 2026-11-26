@@ -19,7 +19,7 @@ func TestDispatchNameConflictAcrossPathsPanics(t *testing.T) {
 
 	msg := testutil.CapturePanic(func() {
 		r.Dispatch("POST", "/b", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
-			d.FuncDefault(testutil.NoopResponse).Name("shared")
+			d.DefaultFunc(testutil.NoopResponse).Name("shared")
 		})
 	})
 	require.NotEmpty(t, msg, "expected panic")
@@ -32,7 +32,7 @@ func TestDispatchNameSharedAcrossMethodsSamePathAllowed(t *testing.T) {
 
 	assert.NotPanics(t, func() {
 		r.Dispatch("POST", "/a", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
-			d.FuncDefault(testutil.NoopResponse).Name("shared")
+			d.DefaultFunc(testutil.NoopResponse).Name("shared")
 		})
 	})
 }

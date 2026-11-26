@@ -11,6 +11,35 @@ import (
 	"github.com/mallardduck/teapot-router/pkg/urlbuilder"
 )
 
+// bucketsController implements the bucket actions for the examples below.
+type bucketsController struct {
+	router *teapot.Router
+	urls   *urlbuilder.Builder
+}
+
+func (c *bucketsController) Index(w http.ResponseWriter, r *http.Request) {
+	// Generate URLs for response using named routes
+	indexPath, _ := c.router.URL("buckets.index")                       // "/buckets"
+	bucket1Path := c.router.MustURL("buckets.show", "bucket", "photos") // "/buckets/photos"
+	bucket2Path := c.router.MustURL("buckets.show", "bucket", "docs")   // "/buckets/docs"
+
+	// Convert paths to full URLs
+	response := map[string]any{
+		"self": c.urls.BuildURL(r, indexPath),
+		"buckets": []string{
+			c.urls.BuildURL(r, bucket1Path),
+			c.urls.BuildURL(r, bucket2Path),
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+func (c *bucketsController) Show(w http.ResponseWriter, r *http.Request) {
+	testutil.NoopResponse(w, r)
+}
+
 // Example showing how to combine teapot's named routes with URL builder
 func ExampleBuilder_BuildURL() {
 	// Create router with named routes
@@ -18,27 +47,7 @@ func ExampleBuilder_BuildURL() {
 	urls := urlbuilder.New("s3.example.com")
 
 	// Register S3 bucket routes
-	router.Resource("buckets", "/buckets", "bucket", teapot.ResourceHandlers{
-		Index: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Generate URLs for response using named routes
-			indexPath, _ := router.URL("buckets.index")                       // "/buckets"
-			bucket1Path := router.MustURL("buckets.show", "bucket", "photos") // "/buckets/photos"
-			bucket2Path := router.MustURL("buckets.show", "bucket", "docs")   // "/buckets/docs"
-
-			// Convert paths to full URLs
-			response := map[string]any{
-				"self": urls.BuildURL(r, indexPath),
-				"buckets": []string{
-					urls.BuildURL(r, bucket1Path),
-					urls.BuildURL(r, bucket2Path),
-				},
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(response)
-		}),
-		Show: http.HandlerFunc(testutil.NoopResponse),
-	})
+	router.Resource("buckets", &bucketsController{router: router, urls: urls}, teapot.Param("bucket"))
 
 	// Test the endpoint
 	req := httptest.NewRequest("GET", "/buckets", nil)

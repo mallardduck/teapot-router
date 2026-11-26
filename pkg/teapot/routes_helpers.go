@@ -196,11 +196,11 @@ var routesPageTmpl = template.Must(template.New("routes").Parse(`<!DOCTYPE html>
     <table>
         <thead>
             <tr>
-                <th>Method</th>
-                <th>Pattern</th>
+                <th data-sort="method">Method</th>
+                <th data-sort="pattern">Pattern</th>
                 {{if .HasQuery}}<th>Query</th>{{end}}
                 {{if .HasHeaders}}<th>Headers</th>{{end}}
-                <th>Name</th>
+                <th data-sort="name">Name</th>
                 <th>Action</th>
             </tr>
         </thead>
@@ -216,6 +216,30 @@ var routesPageTmpl = template.Must(template.New("routes").Parse(`<!DOCTYPE html>
             {{end}}
         </tbody>
     </table>
+    <script>
+    (function () {
+        var table = document.querySelector("table");
+        var tbody = table.tBodies[0];
+        var headers = table.tHead.rows[0].cells;
+        var order = {};
+        Array.prototype.forEach.call(headers, function (th, idx) {
+            if (!th.hasAttribute("data-sort")) return;
+            var key = th.getAttribute("data-sort");
+            th.style.cursor = "pointer";
+            th.addEventListener("click", function () {
+                var asc = order[key] !== "asc";
+                order[key] = asc ? "asc" : "desc";
+                var rows = Array.prototype.slice.call(tbody.rows);
+                rows.sort(function (a, b) {
+                    var x = a.cells[idx].textContent.trim();
+                    var y = b.cells[idx].textContent.trim();
+                    return asc ? x.localeCompare(y) : y.localeCompare(x);
+                });
+                rows.forEach(function (row) { tbody.appendChild(row); });
+            });
+        });
+    })();
+    </script>
 </body>
 </html>`))
 

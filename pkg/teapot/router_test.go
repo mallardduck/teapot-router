@@ -29,11 +29,11 @@ func assertEqual(t *testing.T, got, want any) {
 func TestBasicHTTPMethods(t *testing.T) {
 	r := teapot.New()
 
-	r.Func().GET("/get", testutil.StringResponseWriterBuilder("GET"))
-	r.Func().POST("/post", testutil.StringResponseWriterBuilder("POST"))
-	r.Func().PUT("/put", testutil.StringResponseWriterBuilder("PUT"))
-	r.Func().DELETE("/delete", testutil.StringResponseWriterBuilder("DELETE"))
-	r.Func().HEAD("/head", testutil.OKResponse)
+	r.GET("/get", http.HandlerFunc(testutil.StringResponseWriterBuilder("GET")))
+	r.POST("/post", http.HandlerFunc(testutil.StringResponseWriterBuilder("POST")))
+	r.PUT("/put", http.HandlerFunc(testutil.StringResponseWriterBuilder("PUT")))
+	r.DELETE("/delete", http.HandlerFunc(testutil.StringResponseWriterBuilder("DELETE")))
+	r.HEAD("/head", http.HandlerFunc(testutil.OKResponse))
 
 	assert.Equal(t, "GET", request(t, r, "GET", "/get").Body.String())
 	assert.Equal(t, "POST", request(t, r, "POST", "/post").Body.String())
@@ -46,10 +46,10 @@ func TestBasicHTTPMethods(t *testing.T) {
 func TestURLParameters(t *testing.T) {
 	r := teapot.New()
 
-	r.Func().GET("/users/{id}", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/users/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := teapot.URLParam(r, "id")
 		_, _ = w.Write([]byte("User: " + id))
-	})
+	}))
 
 	w := request(t, r, "GET", "/users/123")
 	assertEqual(t, w.Body.String(), "User: 123")
@@ -59,10 +59,10 @@ func TestURLParameters(t *testing.T) {
 func TestWildcardParameters(t *testing.T) {
 	r := teapot.New()
 
-	r.Func().GET("/files/{path:.*}", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/files/{path:.*}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := teapot.URLParam(r, "path")
 		_, _ = w.Write([]byte("Path: " + path))
-	})
+	}))
 
 	w := request(t, r, "GET", "/files/documents/report.pdf")
 	assertEqual(t, w.Body.String(), "Path: documents/report.pdf")
@@ -72,9 +72,9 @@ func TestWildcardParameters(t *testing.T) {
 func TestNamedRoutes(t *testing.T) {
 	r := teapot.New()
 
-	r.Func().GET("/users/{id}", testutil.NoopResponse).Name("users.show")
+	r.GET("/users/{id}", http.HandlerFunc(testutil.NoopResponse)).Name("users.show")
 
-	r.Func().GET("/posts/{postId}/comments/{commentId}", testutil.NoopResponse).
+	r.GET("/posts/{postId}/comments/{commentId}", http.HandlerFunc(testutil.NoopResponse)).
 		Name("posts.comments.show")
 
 	// Test URL generation
@@ -94,11 +94,12 @@ func TestActionAndNameContext(t *testing.T) {
 	r := teapot.New()
 
 	var capturedAction, capturedName string
-	r.Func().GET("/bucket", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/bucket", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedAction = teapot.GetAction(r)
 		capturedName = teapot.GetRouteName(r)
 		_, _ = w.Write([]byte("OK"))
-	}).Name("bucket.list").Action("s3:ListBucket")
+	})).
+		Name("bucket.list").Action("s3:ListBucket")
 
 	request(t, r, "GET", "/bucket")
 	assertEqual(t, capturedAction, "s3:ListBucket")
@@ -109,11 +110,11 @@ func TestActionAndNameContext(t *testing.T) {
 func TestQueryParameterMatching(t *testing.T) {
 	r := teapot.New()
 
-	r.Func().QueryGET("/bucket", testutil.StringResponseWriterBuilder("LIST")).Name("bucket.list")
+	r.QueryGET("/bucket", http.HandlerFunc(testutil.StringResponseWriterBuilder("LIST"))).Name("bucket.list")
 
-	r.Func().QueryGET("/bucket", testutil.StringResponseWriterBuilder("ACL")).Name("bucket.acl").Query("acl")
+	r.QueryGET("/bucket", http.HandlerFunc(testutil.StringResponseWriterBuilder("ACL"))).Name("bucket.acl").Query("acl")
 
-	r.Func().QueryGET("/bucket", testutil.StringResponseWriterBuilder("VERSIONING")).Name("bucket.versioning").Query("versioning")
+	r.QueryGET("/bucket", http.HandlerFunc(testutil.StringResponseWriterBuilder("VERSIONING"))).Name("bucket.versioning").Query("versioning")
 
 	// No query params = first route (base route)
 	assertEqual(t, request(t, r, "GET", "/bucket").Body.String(), "LIST")
@@ -129,11 +130,11 @@ func TestQueryParameterMatching(t *testing.T) {
 func TestQueryValueMatching(t *testing.T) {
 	r := teapot.New()
 
-	r.Func().QueryGET("/search", testutil.StringResponseWriterBuilder("FULL")).QueryValue("type", "full")
+	r.QueryGET("/search", http.HandlerFunc(testutil.StringResponseWriterBuilder("FULL"))).QueryValue("type", "full")
 
-	r.Func().QueryGET("/search", testutil.StringResponseWriterBuilder("PARTIAL")).QueryValue("type", "partial")
+	r.QueryGET("/search", http.HandlerFunc(testutil.StringResponseWriterBuilder("PARTIAL"))).QueryValue("type", "partial")
 
-	r.Func().QueryGET("/search", testutil.StringResponseWriterBuilder("DEFAULT"))
+	r.QueryGET("/search", http.HandlerFunc(testutil.StringResponseWriterBuilder("DEFAULT")))
 
 	assertEqual(t, request(t, r, "GET", "/search?type=full").Body.String(), "FULL")
 	assertEqual(t, request(t, r, "GET", "/search?type=partial").Body.String(), "PARTIAL")
@@ -146,13 +147,13 @@ func TestMultipleQueryParameterPriority(t *testing.T) {
 	r := teapot.New()
 
 	// More specific (2 params) should match first
-	r.Func().QueryGET("/object", testutil.StringResponseWriterBuilder("TWO_PARAMS")).Query("partNumber").Query("uploadId")
+	r.QueryGET("/object", http.HandlerFunc(testutil.StringResponseWriterBuilder("TWO_PARAMS"))).Query("partNumber").Query("uploadId")
 
 	// Less specific (1 param)
-	r.Func().QueryGET("/object", testutil.StringResponseWriterBuilder("UPLOAD_ID")).Query("uploadId")
+	r.QueryGET("/object", http.HandlerFunc(testutil.StringResponseWriterBuilder("UPLOAD_ID"))).Query("uploadId")
 
 	// No query params
-	r.Func().QueryGET("/object", testutil.StringResponseWriterBuilder("BASE"))
+	r.QueryGET("/object", http.HandlerFunc(testutil.StringResponseWriterBuilder("BASE")))
 
 	// Two params = most specific route
 	assertEqual(t, request(t, r, "GET", "/object?uploadId=123&partNumber=1").Body.String(), "TWO_PARAMS")
@@ -169,8 +170,8 @@ func TestRouteGroups(t *testing.T) {
 	r := teapot.New()
 
 	r.Group("/api", func(r *teapot.Router) {
-		r.Func().GET("/users", testutil.StringResponseWriterBuilder("USERS"))
-		r.Func().GET("/posts", testutil.StringResponseWriterBuilder("POSTS"))
+		r.GET("/users", http.HandlerFunc(testutil.StringResponseWriterBuilder("USERS")))
+		r.GET("/posts", http.HandlerFunc(testutil.StringResponseWriterBuilder("POSTS")))
 	})
 
 	assertEqual(t, request(t, r, "GET", "/api/users").Body.String(), "USERS")
@@ -182,12 +183,12 @@ func TestNamedGroups(t *testing.T) {
 	r := teapot.New()
 
 	r.NamedGroup("/{bucket}", "bucket", func(r *teapot.Router) {
-		r.Func().QueryGET("", testutil.StringResponseWriterBuilder("LIST")).Name("list")
+		r.QueryGET("", http.HandlerFunc(testutil.StringResponseWriterBuilder("LIST"))).Name("list")
 
-		r.Func().QueryGET("", testutil.StringResponseWriterBuilder("ACL")).Name("acl").Query("acl")
+		r.QueryGET("", http.HandlerFunc(testutil.StringResponseWriterBuilder("ACL"))).Name("acl").Query("acl")
 
 		r.NamedGroup("/{key:.*}", "object", func(r *teapot.Router) {
-			r.Func().GET("", testutil.StringResponseWriterBuilder("GET_OBJECT")).Name("get")
+			r.GET("", http.HandlerFunc(testutil.StringResponseWriterBuilder("GET_OBJECT"))).Name("get")
 		})
 	})
 
@@ -216,9 +217,9 @@ func TestRouteMiddleware(t *testing.T) {
 		})
 	}
 
-	r.Func().GET("/protected", testutil.StringResponseWriterBuilder("OK")).With(mw)
+	r.GET("/protected", http.HandlerFunc(testutil.StringResponseWriterBuilder("OK"))).With(mw)
 
-	r.Func().GET("/public", testutil.StringResponseWriterBuilder("OK"))
+	r.GET("/public", http.HandlerFunc(testutil.StringResponseWriterBuilder("OK")))
 
 	// Protected route should trigger middleware
 	middlewareCalled = false
@@ -243,8 +244,8 @@ func TestGlobalMiddleware(t *testing.T) {
 		})
 	})
 
-	r.Func().GET("/a", testutil.NoopResponse)
-	r.Func().GET("/b", testutil.NoopResponse)
+	r.GET("/a", http.HandlerFunc(testutil.NoopResponse))
+	r.GET("/b", http.HandlerFunc(testutil.NoopResponse))
 
 	request(t, r, "GET", "/a")
 	request(t, r, "GET", "/b")
@@ -257,13 +258,13 @@ func TestS3BucketOperations(t *testing.T) {
 	r := teapot.New()
 
 	r.NamedGroup("/{bucket}", "bucket", func(r *teapot.Router) {
-		r.Func().PUT("", testutil.StringResponseWriterBuilder("CREATE")).Name("create").Action("s3:CreateBucket")
+		r.PUT("", http.HandlerFunc(testutil.StringResponseWriterBuilder("CREATE"))).Name("create").Action("s3:CreateBucket")
 
-		r.Func().DELETE("", testutil.StringResponseWriterBuilder("DELETE")).Name("delete").Action("s3:DeleteBucket")
+		r.DELETE("", http.HandlerFunc(testutil.StringResponseWriterBuilder("DELETE"))).Name("delete").Action("s3:DeleteBucket")
 
-		r.Func().QueryGET("", testutil.StringResponseWriterBuilder("LIST")).Name("list").Action("s3:ListBucket")
+		r.QueryGET("", http.HandlerFunc(testutil.StringResponseWriterBuilder("LIST"))).Name("list").Action("s3:ListBucket")
 
-		r.Func().QueryGET("", testutil.StringResponseWriterBuilder("ACL")).Name("acl.get").Action("s3:GetBucketAcl").Query("acl")
+		r.QueryGET("", http.HandlerFunc(testutil.StringResponseWriterBuilder("ACL"))).Name("acl.get").Action("s3:GetBucketAcl").Query("acl")
 	})
 
 	assertEqual(t, request(t, r, "PUT", "/mybucket").Body.String(), "CREATE")
@@ -279,15 +280,16 @@ func TestS3ObjectOperations(t *testing.T) {
 	r.NamedGroup("/{bucket}/{key:.*}", "object", func(r *teapot.Router) {
 		var capturedBucket, capturedKey string
 
-		r.Func().QueryGET("", func(w http.ResponseWriter, r *http.Request) {
+		r.QueryGET("", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			capturedBucket = teapot.URLParam(r, "bucket")
 			capturedKey = teapot.URLParam(r, "key")
 			_, _ = w.Write([]byte("GET"))
-		}).Name("get").Action("s3:GetObject")
+		})).
+			Name("get").Action("s3:GetObject")
 
-		r.Func().PUT("", testutil.StringResponseWriterBuilder("PUT")).Name("put").Action("s3:PutObject")
+		r.PUT("", http.HandlerFunc(testutil.StringResponseWriterBuilder("PUT"))).Name("put").Action("s3:PutObject")
 
-		r.Func().QueryGET("", testutil.StringResponseWriterBuilder("ACL")).Name("acl").Action("s3:GetObjectAcl").Query("acl")
+		r.QueryGET("", http.HandlerFunc(testutil.StringResponseWriterBuilder("ACL"))).Name("acl").Action("s3:GetObjectAcl").Query("acl")
 
 		request(t, r, "GET", "/mybucket/path/to/file.txt")
 		assertEqual(t, capturedBucket, "mybucket")
@@ -303,11 +305,11 @@ func TestS3ObjectOperations(t *testing.T) {
 func TestRouteIntrospection(t *testing.T) {
 	r := teapot.New()
 
-	r.Func().GET("/users", testutil.NoopResponse).
+	r.GET("/users", http.HandlerFunc(testutil.NoopResponse)).
 		Name("users.list").
 		Action("app:ListUsers")
 
-	r.Func().POST("/users", testutil.NoopResponse).
+	r.POST("/users", http.HandlerFunc(testutil.NoopResponse)).
 		Name("users.create").
 		Action("app:CreateUser")
 
@@ -326,7 +328,7 @@ func TestEmptyRouteName(t *testing.T) {
 	r := teapot.New()
 
 	// Should work without a name
-	r.Func().GET("/test", testutil.StringResponseWriterBuilder("OK"))
+	r.GET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("OK")))
 
 	assertEqual(t, request(t, r, "GET", "/test").Body.String(), "OK")
 }
@@ -335,7 +337,7 @@ func TestEmptyRouteName(t *testing.T) {
 func TestTrailingSlashes(t *testing.T) {
 	r := teapot.New()
 
-	r.Func().GET("/path", testutil.StringResponseWriterBuilder("OK"))
+	r.GET("/path", http.HandlerFunc(testutil.StringResponseWriterBuilder("OK")))
 
 	// Chi handles trailing slash redirects by default
 	// Just verify the route works
@@ -347,11 +349,11 @@ func TestTrailingSlashes(t *testing.T) {
 func TestSameNameDifferentMethods(t *testing.T) {
 	r := teapot.New()
 
-	r.Func().GET("/users/{id}", testutil.StringResponseWriterBuilder("SHOW")).Name("users.show")
+	r.GET("/users/{id}", http.HandlerFunc(testutil.StringResponseWriterBuilder("SHOW"))).Name("users.show")
 
-	r.Func().PUT("/users/{id}", testutil.StringResponseWriterBuilder("UPDATE")).Name("users.update")
+	r.PUT("/users/{id}", http.HandlerFunc(testutil.StringResponseWriterBuilder("UPDATE"))).Name("users.update")
 
-	r.Func().DELETE("/users/{id}", testutil.StringResponseWriterBuilder("DELETE")).Name("users.destroy")
+	r.DELETE("/users/{id}", http.HandlerFunc(testutil.StringResponseWriterBuilder("DELETE"))).Name("users.destroy")
 
 	// All should generate the same URL pattern
 	url := r.MustURL("users.show", "id", "42")
@@ -370,7 +372,7 @@ func TestSameNameDifferentMethods(t *testing.T) {
 func TestNotFoundHandler(t *testing.T) {
 	r := teapot.New()
 
-	r.Func().GET("/exists", testutil.StringResponseWriterBuilder("OK"))
+	r.GET("/exists", http.HandlerFunc(testutil.StringResponseWriterBuilder("OK")))
 
 	// Non-existent route should return 404
 	w := request(t, r, "GET", "/nonexistent")
@@ -382,13 +384,14 @@ func TestContextAccess(t *testing.T) {
 	r := teapot.New()
 
 	var values []string
-	r.Func().GET("/{bucket}/{key:.*}", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/{bucket}/{key:.*}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		values = append(values, teapot.GetAction(r))
 		values = append(values, teapot.GetRouteName(r))
 		values = append(values, teapot.URLParam(r, "bucket"))
 		values = append(values, teapot.URLParam(r, "key"))
 		_, _ = w.Write([]byte("OK"))
-	}).Name("object.get").Action("s3:GetObject")
+	})).
+		Name("object.get").Action("s3:GetObject")
 
 	request(t, r, "GET", "/mybucket/path/to/file.txt")
 
@@ -446,12 +449,12 @@ func TestMiddlewareGroupAppliesMiddleware(t *testing.T) {
 	}
 
 	// Routes without middleware
-	r.Func().GET("/public", testutil.StringResponseWriterBuilder("public"))
+	r.GET("/public", http.HandlerFunc(testutil.StringResponseWriterBuilder("public")))
 
 	// Routes with middleware group
 	r.MiddlewareGroup(func(r *teapot.Router) {
-		r.Func().GET("/admin", testutil.StringResponseWriterBuilder("admin"))
-		r.Func().GET("/dashboard", testutil.StringResponseWriterBuilder("dashboard"))
+		r.GET("/admin", http.HandlerFunc(testutil.StringResponseWriterBuilder("admin")))
+		r.GET("/dashboard", http.HandlerFunc(testutil.StringResponseWriterBuilder("dashboard")))
 	}, authMiddleware)
 
 	// Test public route - middleware should NOT be called
@@ -509,10 +512,10 @@ func TestMiddlewareGroupMultipleMiddlewares(t *testing.T) {
 	}
 
 	r.MiddlewareGroup(func(r *teapot.Router) {
-		r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
+		r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			executionOrder = append(executionOrder, "handler")
 			_, _ = w.Write([]byte("ok"))
-		})
+		}))
 	}, mw1, mw2, mw3)
 
 	executionOrder = []string{}
@@ -549,11 +552,11 @@ func TestMiddlewareGroupNestedExecution(t *testing.T) {
 	}
 
 	r.MiddlewareGroup(func(r *teapot.Router) {
-		r.Func().GET("/outer-only", testutil.StringResponseWriterBuilder("outer-only"))
+		r.GET("/outer-only", http.HandlerFunc(testutil.StringResponseWriterBuilder("outer-only")))
 
 		// Nested middleware group
 		r.MiddlewareGroup(func(r *teapot.Router) {
-			r.Func().GET("/both", testutil.StringResponseWriterBuilder("both"))
+			r.GET("/both", http.HandlerFunc(testutil.StringResponseWriterBuilder("both")))
 		}, innerMw)
 	}, outerMw)
 
@@ -585,13 +588,13 @@ func TestMiddlewareGroupMixedMethods(t *testing.T) {
 	}
 
 	r.MiddlewareGroup(func(r *teapot.Router) {
-		r.Func().GET("/resource", testutil.StringResponseWriterBuilder("GET")).Name("resource.show")
+		r.GET("/resource", http.HandlerFunc(testutil.StringResponseWriterBuilder("GET"))).Name("resource.show")
 
-		r.Func().POST("/resource", testutil.StringResponseWriterBuilder("POST")).Name("resource.create")
+		r.POST("/resource", http.HandlerFunc(testutil.StringResponseWriterBuilder("POST"))).Name("resource.create")
 
-		r.Func().PUT("/resource", testutil.StringResponseWriterBuilder("PUT")).Name("resource.update")
+		r.PUT("/resource", http.HandlerFunc(testutil.StringResponseWriterBuilder("PUT"))).Name("resource.update")
 
-		r.Func().DELETE("/resource", testutil.StringResponseWriterBuilder("DELETE")).Name("resource.destroy")
+		r.DELETE("/resource", http.HandlerFunc(testutil.StringResponseWriterBuilder("DELETE"))).Name("resource.destroy")
 	}, authMw)
 
 	routes := r.Routes()
@@ -621,11 +624,11 @@ func TestMiddlewareGroupWithQueryRoutes(t *testing.T) {
 	}
 
 	r.MiddlewareGroup(func(r *teapot.Router) {
-		r.Func().QueryGET("/api", testutil.StringResponseWriterBuilder("base")).Name("api.base")
+		r.QueryGET("/api", http.HandlerFunc(testutil.StringResponseWriterBuilder("base"))).Name("api.base")
 
-		r.Func().QueryGET("/api", testutil.StringResponseWriterBuilder("filter")).Name("api.filter").Query("filter")
+		r.QueryGET("/api", http.HandlerFunc(testutil.StringResponseWriterBuilder("filter"))).Name("api.filter").Query("filter")
 
-		r.Func().QueryGET("/api", testutil.StringResponseWriterBuilder("sort")).Name("api.sort").Query("sort")
+		r.QueryGET("/api", http.HandlerFunc(testutil.StringResponseWriterBuilder("sort"))).Name("api.sort").Query("sort")
 	}, mw)
 
 	routes := r.Routes()
@@ -656,11 +659,11 @@ func TestMiddlewareGroupWithNamesAndActions(t *testing.T) {
 	r := teapot.New()
 
 	r.MiddlewareGroup(func(r *teapot.Router) {
-		r.Func().GET("/users", testutil.NoopResponse).
+		r.GET("/users", http.HandlerFunc(testutil.NoopResponse)).
 			Name("users.index").
 			Action("app:ListUsers")
 
-		r.Func().POST("/users", testutil.NoopResponse).
+		r.POST("/users", http.HandlerFunc(testutil.NoopResponse)).
 			Name("users.create").
 			Action("app:CreateUser")
 	}, func(next http.Handler) http.Handler {
@@ -711,9 +714,9 @@ func TestMiddlewareGroupCombinedWithNamedGroup(t *testing.T) {
 	// Middleware group with named group inside
 	r.MiddlewareGroup(func(r *teapot.Router) {
 		r.NamedGroup("/admin", "admin", func(r *teapot.Router) {
-			r.Func().GET("/users", testutil.StringResponseWriterBuilder("admin users")).Name("users")
+			r.GET("/users", http.HandlerFunc(testutil.StringResponseWriterBuilder("admin users"))).Name("users")
 
-			r.Func().GET("/settings", testutil.StringResponseWriterBuilder("admin settings")).Name("settings")
+			r.GET("/settings", http.HandlerFunc(testutil.StringResponseWriterBuilder("admin settings"))).Name("settings")
 		})
 	}, authMw, adminMw)
 
@@ -760,9 +763,9 @@ func TestMiddlewareGroupWithRouteSpecificMiddleware(t *testing.T) {
 	}
 
 	r.MiddlewareGroup(func(r *teapot.Router) {
-		r.Func().GET("/normal", testutil.StringResponseWriterBuilder("normal"))
+		r.GET("/normal", http.HandlerFunc(testutil.StringResponseWriterBuilder("normal")))
 
-		r.Func().GET("/extra", testutil.StringResponseWriterBuilder("extra")).With(routeMw)
+		r.GET("/extra", http.HandlerFunc(testutil.StringResponseWriterBuilder("extra"))).With(routeMw)
 	}, groupMw)
 
 	// Test normal route - only group middleware
@@ -993,7 +996,7 @@ func TestSubRouterAfterFinalization(t *testing.T) {
 	r := teapot.New()
 
 	// Add route before finalization
-	r.Func().GET("/before", testutil.StringResponseWriterBuilder("before")).Name("before")
+	r.GET("/before", http.HandlerFunc(testutil.StringResponseWriterBuilder("before"))).Name("before")
 
 	// Create sub-router before finalization
 	mw := func(next http.Handler) http.Handler { return next }
@@ -1004,9 +1007,9 @@ func TestSubRouterAfterFinalization(t *testing.T) {
 	asserts.True(r.IsFinalized(), "parent should be finalized")
 
 	// Add routes to sub-router after parent finalization
-	subRouter.Func().GET("/after1", testutil.StringResponseWriterBuilder("after1")).Name("after1")
+	subRouter.GET("/after1", http.HandlerFunc(testutil.StringResponseWriterBuilder("after1"))).Name("after1")
 
-	r.Func().GET("/after2", testutil.StringResponseWriterBuilder("after2")).Name("after2")
+	r.GET("/after2", http.HandlerFunc(testutil.StringResponseWriterBuilder("after2"))).Name("after2")
 
 	// All routes should be registered and accessible
 	routes := r.Routes()

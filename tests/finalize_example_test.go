@@ -15,15 +15,16 @@ func TestFinalizeOptimization(t *testing.T) {
 	r := teapot.New()
 
 	// Register routes
-	r.Func().GET("/simple", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/simple", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("SIMPLE"))
-	})
+	}))
 
-	r.Func().GET("/with-meta", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/with-meta", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		action := teapot.GetAction(r)
 		name := teapot.GetRouteName(r)
 		_, _ = w.Write([]byte(action + ":" + name))
-	}).Name("test").Action("s3:Test")
+	})).
+		Name("test").Action("s3:Test")
 
 	// Optimize before serving
 	r.Finalize()
@@ -46,9 +47,9 @@ func TestFinalizeOptimization(t *testing.T) {
 // TestFinalizeIdempotent ensures calling Finalize multiple times is safe
 func TestFinalizeIdempotent(t *testing.T) {
 	r := teapot.New()
-	r.Func().GET("/test", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("OK"))
-	})
+	}))
 
 	r.Finalize()
 	r.Finalize() // Should be safe to call again
@@ -66,23 +67,27 @@ func TestS3WithFinalize(t *testing.T) {
 	r := teapot.New()
 
 	// Service endpoint
-	r.Func().GET("/", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("LIST_BUCKETS"))
-	}).Name("service.list").Action("s3:ListAllMyBuckets")
+	})).
+		Name("service.list").Action("s3:ListAllMyBuckets")
 
 	// Bucket operations
 	r.NamedGroup("/{bucket}", "bucket", func(r *teapot.Router) {
-		r.Func().PUT("", func(w http.ResponseWriter, r *http.Request) {
+		r.PUT("", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte("CREATE"))
-		}).Name("create").Action("s3:CreateBucket")
+		})).
+			Name("create").Action("s3:CreateBucket")
 
-		r.Func().QueryGET("", func(w http.ResponseWriter, r *http.Request) {
+		r.QueryGET("", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte("LIST"))
-		}).Name("list").Action("s3:ListBucket")
+		})).
+			Name("list").Action("s3:ListBucket")
 
-		r.Func().QueryGET("", func(w http.ResponseWriter, r *http.Request) {
+		r.QueryGET("", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte("ACL"))
-		}).Name("acl").Action("s3:GetBucketAcl").Query("acl")
+		})).
+			Name("acl").Action("s3:GetBucketAcl").Query("acl")
 	})
 
 	// Optimize!

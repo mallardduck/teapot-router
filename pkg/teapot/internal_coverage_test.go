@@ -44,13 +44,13 @@ func TestDebugLogfEnabled(t *testing.T) {
 
 func TestQueryPanicOnDirectRoute(t *testing.T) {
 	r := New()
-	rb := r.Func().GET("/direct-q-panic", testutil.NoopResponse)
+	rb := r.GET("/direct-q-panic", http.HandlerFunc(testutil.NoopResponse))
 	assert.Panics(t, func() { rb.Query("foo") })
 }
 
 func TestQueryValuePanicOnDirectRoute(t *testing.T) {
 	r := New()
-	rb := r.Func().GET("/direct-qv-panic", testutil.NoopResponse)
+	rb := r.GET("/direct-qv-panic", http.HandlerFunc(testutil.NoopResponse))
 	assert.Panics(t, func() { rb.QueryValue("foo", "bar") })
 }
 
@@ -67,14 +67,15 @@ func TestHandleDirectAddedToExistingDispatcher(t *testing.T) {
 	defer log.SetOutput(os.Stderr)
 
 	// QueryGET creates the dispatcher
-	r.Func().QueryGET("/disp-first", func(w http.ResponseWriter, _ *http.Request) {
+	r.QueryGET("/disp-first", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("query"))
-	}).Query("q")
+	})).
+		Query("q")
 
 	// Plain GET on the same pattern → added to existing dispatcher as fallback
-	r.Func().GET("/disp-first", func(w http.ResponseWriter, _ *http.Request) {
+	r.GET("/disp-first", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("direct"))
-	})
+	}))
 
 	assert.Contains(t, buf.String(), "Adding direct route to existing dispatcher")
 
@@ -104,14 +105,15 @@ func TestHandleQueryPromotesDirect(t *testing.T) {
 	defer log.SetOutput(os.Stderr)
 
 	// Direct GET first
-	r.Func().GET("/promote-me", func(w http.ResponseWriter, _ *http.Request) {
+	r.GET("/promote-me", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("original-direct"))
-	})
+	}))
 
 	// QueryGET on same pattern → promotes the direct route to dispatcher fallback
-	r.Func().QueryGET("/promote-me", func(w http.ResponseWriter, _ *http.Request) {
+	r.QueryGET("/promote-me", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("query-route"))
-	}).Query("special")
+	})).
+		Query("special")
 
 	assert.Contains(t, buf.String(), "Auto-promoting direct route to dispatcher")
 
@@ -134,9 +136,10 @@ func TestRouteMethod(t *testing.T) {
 	r := New()
 
 	r.Route("/api", func(sub *Router) {
-		sub.Func().GET("/hello", func(w http.ResponseWriter, _ *http.Request) {
+		sub.GET("/hello", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("hello-from-route"))
-		}).Name("api.hello")
+		})).
+			Name("api.hello")
 	})
 
 	r.Finalize()
@@ -156,7 +159,7 @@ func TestRouteMethod(t *testing.T) {
 
 func TestFindMatchingRouteDirectHit(t *testing.T) {
 	r := New()
-	r.Func().GET("/find-direct", testutil.NoopResponse).Action("direct-action")
+	r.GET("/find-direct", http.HandlerFunc(testutil.NoopResponse)).Action("direct-action")
 
 	route := r.findMatchingRoute("GET", "/find-direct")
 	require.NotNil(t, route)
@@ -166,8 +169,8 @@ func TestFindMatchingRouteDirectHit(t *testing.T) {
 func TestFindMatchingRouteDispatcherWithFallback(t *testing.T) {
 	r := New()
 	// First QueryGET has no .Query() → no matchers → acts as fallback
-	r.Func().QueryGET("/find-disp-fb", testutil.NoopResponse).Action("fallback-action")
-	r.Func().QueryGET("/find-disp-fb", testutil.NoopResponse).Query("x").Action("query-action")
+	r.QueryGET("/find-disp-fb", http.HandlerFunc(testutil.NoopResponse)).Action("fallback-action")
+	r.QueryGET("/find-disp-fb", http.HandlerFunc(testutil.NoopResponse)).Query("x").Action("query-action")
 
 	route := r.findMatchingRoute("GET", "/find-disp-fb")
 	require.NotNil(t, route)
@@ -177,8 +180,8 @@ func TestFindMatchingRouteDispatcherWithFallback(t *testing.T) {
 func TestFindMatchingRouteDispatcherNoFallback(t *testing.T) {
 	r := New()
 	// Only routes with matchers — no fallback route exists
-	r.Func().QueryGET("/find-disp-nofb", testutil.NoopResponse).Query("a").Action("first-action")
-	r.Func().QueryGET("/find-disp-nofb", testutil.NoopResponse).Query("b").Action("second-action")
+	r.QueryGET("/find-disp-nofb", http.HandlerFunc(testutil.NoopResponse)).Query("a").Action("first-action")
+	r.QueryGET("/find-disp-nofb", http.HandlerFunc(testutil.NoopResponse)).Query("b").Action("second-action")
 
 	route := r.findMatchingRoute("GET", "/find-disp-nofb")
 	require.NotNil(t, route)
@@ -188,7 +191,7 @@ func TestFindMatchingRouteDispatcherNoFallback(t *testing.T) {
 
 func TestFindMatchingRouteNoMatch(t *testing.T) {
 	r := New()
-	r.Func().GET("/only-this", testutil.NoopResponse)
+	r.GET("/only-this", http.HandlerFunc(testutil.NoopResponse))
 
 	assert.Nil(t, r.findMatchingRoute("GET", "/not-registered"))
 	assert.Nil(t, r.findMatchingRoute("POST", "/only-this"))

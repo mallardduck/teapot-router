@@ -66,73 +66,72 @@ func main() {
 func setupRoutes() *teapot.Router {
 	router := teapot.New()
 	// Could also do:
-	// funcRouter := router.Func()
 
 	// ==================== SERVICE-LEVEL OPERATIONS ====================
 	// S3 service-level operations (no bucket in path)
-	router.Func().GET("/", listBuckets).Name("s3.service.list-buckets").Action("api:s3:ListBuckets")
+	router.GET("/", http.HandlerFunc(listBuckets)).Name("s3.service.list-buckets").Action("api:s3:ListBuckets")
 
 	// ==================== BUCKET OPERATIONS ====================
 	// Mix of direct routes (PUT, DELETE, HEAD, GET) and query-based routes (QueryGET, QueryPUT).
 	// The router automatically promotes to dispatcher-based routing when needed.
 
-	router.Func().PUT("/{bucket}", createBucket).Name("s3.bucket.create").Action("api:s3:CreateBucket")
-	router.Func().DELETE("/{bucket}", deleteBucket).Name("s3.bucket.delete").Action("api:s3:DeleteBucket")
-	router.Func().HEAD("/{bucket}", headBucket).Name("s3.bucket.head").Action("api:s3:HeadBucket")
-	router.Func().GET("/{bucket}", listObjectsV1).Name("s3.bucket.list-objects-v1").Action("api:s3:ListObjects")
+	router.PUT("/{bucket}", http.HandlerFunc(createBucket)).Name("s3.bucket.create").Action("api:s3:CreateBucket")
+	router.DELETE("/{bucket}", http.HandlerFunc(deleteBucket)).Name("s3.bucket.delete").Action("api:s3:DeleteBucket")
+	router.HEAD("/{bucket}", http.HandlerFunc(headBucket)).Name("s3.bucket.head").Action("api:s3:HeadBucket")
+	router.GET("/{bucket}", http.HandlerFunc(listObjectsV1)).Name("s3.bucket.list-objects-v1").Action("api:s3:ListObjects")
 
 	// Query-based bucket operations
 	// ListObjectsV2 (preferred over v1)
-	router.Func().QueryGET("/{bucket}", listObjectsV2).QueryValue("list-type", "2").Name("s3.bucket.list-objects-v2").Action("api:s3:ListObjectsV2")
+	router.QueryGET("/{bucket}", http.HandlerFunc(listObjectsV2)).QueryValue("list-type", "2").Name("s3.bucket.list-objects-v2").Action("api:s3:ListObjectsV2")
 
 	// Bucket configuration endpoints
-	router.Func().QueryGET("/{bucket}", getBucketLocation).Query("location").Name("s3.bucket.get-location").Action("api:s3:GetBucketLocation")
-	router.Func().QueryGET("/{bucket}", getBucketVersioning).Query("versioning").Name("s3.bucket.get-versioning").Action("api:s3:GetBucketVersioning")
-	router.Func().QueryPUT("/{bucket}", putBucketVersioning).Query("versioning").Name("s3.bucket.put-versioning").Action("api:s3:PutBucketVersioning")
-	router.Func().QueryGET("/{bucket}", getBucketAcl).Query("acl").Name("s3.bucket.get-acl").Action("api:s3:GetBucketAcl")
-	router.Func().QueryPUT("/{bucket}", putBucketAcl).Query("acl").Name("s3.bucket.put-acl").Action("api:s3:PutBucketAcl")
+	router.QueryGET("/{bucket}", http.HandlerFunc(getBucketLocation)).Query("location").Name("s3.bucket.get-location").Action("api:s3:GetBucketLocation")
+	router.QueryGET("/{bucket}", http.HandlerFunc(getBucketVersioning)).Query("versioning").Name("s3.bucket.get-versioning").Action("api:s3:GetBucketVersioning")
+	router.QueryPUT("/{bucket}", http.HandlerFunc(putBucketVersioning)).Query("versioning").Name("s3.bucket.put-versioning").Action("api:s3:PutBucketVersioning")
+	router.QueryGET("/{bucket}", http.HandlerFunc(getBucketAcl)).Query("acl").Name("s3.bucket.get-acl").Action("api:s3:GetBucketAcl")
+	router.QueryPUT("/{bucket}", http.HandlerFunc(putBucketAcl)).Query("acl").Name("s3.bucket.put-acl").Action("api:s3:PutBucketAcl")
 
 	// Bucket policy endpoints
-	router.Func().QueryGET("/{bucket}", getBucketPolicy).Query("policy").Name("s3.bucket.get-policy").Action("api:s3:GetBucketPolicy")
-	router.Func().QueryPUT("/{bucket}", putBucketPolicy).Query("policy").Name("s3.bucket.put-policy").Action("api:s3:PutBucketPolicy")
-	router.Func().QueryDELETE("/{bucket}", deleteBucketPolicy).Query("policy").Name("s3.bucket.delete-policy").Action("api:s3:DeleteBucketPolicy")
+	router.QueryGET("/{bucket}", http.HandlerFunc(getBucketPolicy)).Query("policy").Name("s3.bucket.get-policy").Action("api:s3:GetBucketPolicy")
+	router.QueryPUT("/{bucket}", http.HandlerFunc(putBucketPolicy)).Query("policy").Name("s3.bucket.put-policy").Action("api:s3:PutBucketPolicy")
+	router.QueryDELETE("/{bucket}", http.HandlerFunc(deleteBucketPolicy)).Query("policy").Name("s3.bucket.delete-policy").Action("api:s3:DeleteBucketPolicy")
 
 	// Bucket CORS endpoints
-	router.Func().QueryGET("/{bucket}", getBucketCors).Query("cors").Name("s3.bucket.get-cors").Action("api:s3:GetBucketCors")
-	router.Func().QueryPUT("/{bucket}", putBucketCors).Query("cors").Name("s3.bucket.put-cors").Action("api:s3:PutBucketCors")
+	router.QueryGET("/{bucket}", http.HandlerFunc(getBucketCors)).Query("cors").Name("s3.bucket.get-cors").Action("api:s3:GetBucketCors")
+	router.QueryPUT("/{bucket}", http.HandlerFunc(putBucketCors)).Query("cors").Name("s3.bucket.put-cors").Action("api:s3:PutBucketCors")
 
 	// Bucket lifecycle configuration
 	// Note: Legacy GetBucketLifecycle/PutBucketLifecycle share the same path and query param
 	//       as the modern *Configuration variants; one route per method covers both.
-	router.Func().QueryGET("/{bucket}", getBucketLifecycleConfiguration).Query("lifecycle").Name("s3.bucket.get-lifecycle-configuration").Action("api:s3:GetBucketLifecycleConfiguration")
-	router.Func().QueryPUT("/{bucket}", putBucketLifecycleConfiguration).Query("lifecycle").Name("s3.bucket.put-lifecycle-configuration").Action("api:s3:PutBucketLifecycleConfiguration")
+	router.QueryGET("/{bucket}", http.HandlerFunc(getBucketLifecycleConfiguration)).Query("lifecycle").Name("s3.bucket.get-lifecycle-configuration").Action("api:s3:GetBucketLifecycleConfiguration")
+	router.QueryPUT("/{bucket}", http.HandlerFunc(putBucketLifecycleConfiguration)).Query("lifecycle").Name("s3.bucket.put-lifecycle-configuration").Action("api:s3:PutBucketLifecycleConfiguration")
 
 	// Public access block
-	router.Func().QueryGET("/{bucket}", getPublicAccessBlock).Query("publicAccessBlock").Name("s3.bucket.get-public-access-block").Action("api:s3:GetPublicAccessBlock")
-	router.Func().QueryPUT("/{bucket}", putPublicAccessBlock).Query("publicAccessBlock").Name("s3.bucket.put-public-access-block").Action("api:s3:PutPublicAccessBlock")
+	router.QueryGET("/{bucket}", http.HandlerFunc(getPublicAccessBlock)).Query("publicAccessBlock").Name("s3.bucket.get-public-access-block").Action("api:s3:GetPublicAccessBlock")
+	router.QueryPUT("/{bucket}", http.HandlerFunc(putPublicAccessBlock)).Query("publicAccessBlock").Name("s3.bucket.put-public-access-block").Action("api:s3:PutPublicAccessBlock")
 
 	// Object lock configuration
-	router.Func().QueryPUT("/{bucket}", putObjectLockConfiguration).Query("object-lock").Name("s3.bucket.put-object-lock-configuration").Action("api:s3:PutObjectLockConfiguration")
+	router.QueryPUT("/{bucket}", http.HandlerFunc(putObjectLockConfiguration)).Query("object-lock").Name("s3.bucket.put-object-lock-configuration").Action("api:s3:PutObjectLockConfiguration")
 
 	// Logging, events, payment, and analytics
-	router.Func().QueryPUT("/{bucket}", putBucketLogging).Query("logging").Name("s3.bucket.put-logging").Action("api:s3:PutBucketLogging")
-	router.Func().QueryPUT("/{bucket}", putBucketNotification).Query("notification").Name("s3.bucket.put-notification").Action("api:s3:PutBucketNotification")
-	router.Func().QueryGET("/{bucket}", getBucketRequestPayment).Query("requestPayment").Name("s3.bucket.get-request-payment").Action("api:s3:GetBucketRequestPayment")
-	router.Func().QueryGET("/{bucket}", getBucketAnalyticsConfiguration).Query("analytics").Name("s3.bucket.get-analytics-configuration").Action("api:s3:GetBucketAnalyticsConfiguration")
+	router.QueryPUT("/{bucket}", http.HandlerFunc(putBucketLogging)).Query("logging").Name("s3.bucket.put-logging").Action("api:s3:PutBucketLogging")
+	router.QueryPUT("/{bucket}", http.HandlerFunc(putBucketNotification)).Query("notification").Name("s3.bucket.put-notification").Action("api:s3:PutBucketNotification")
+	router.QueryGET("/{bucket}", http.HandlerFunc(getBucketRequestPayment)).Query("requestPayment").Name("s3.bucket.get-request-payment").Action("api:s3:GetBucketRequestPayment")
+	router.QueryGET("/{bucket}", http.HandlerFunc(getBucketAnalyticsConfiguration)).Query("analytics").Name("s3.bucket.get-analytics-configuration").Action("api:s3:GetBucketAnalyticsConfiguration")
 
 	// List object versions (for versioned buckets)
-	router.Func().QueryGET("/{bucket}", listObjectVersions).Query("versions").Name("s3.bucket.list-object-versions").Action("api:s3:ListObjectVersions")
+	router.QueryGET("/{bucket}", http.HandlerFunc(listObjectVersions)).Query("versions").Name("s3.bucket.list-object-versions").Action("api:s3:ListObjectVersions")
 
 	// List multipart uploads in bucket
-	router.Func().QueryGET("/{bucket}", listMultipartUploads).Query("uploads").Name("s3.bucket.list-multipart-uploads").Action("api:s3:ListMultipartUploads")
+	router.QueryGET("/{bucket}", http.HandlerFunc(listMultipartUploads)).Query("uploads").Name("s3.bucket.list-multipart-uploads").Action("api:s3:ListMultipartUploads")
 
 	// Bulk delete objects
-	router.Func().QueryPOST("/{bucket}", deleteObjects).Query("delete").Name("s3.bucket.delete-objects").Action("api:s3:DeleteObjects")
+	router.QueryPOST("/{bucket}", http.HandlerFunc(deleteObjects)).Query("delete").Name("s3.bucket.delete-objects").Action("api:s3:DeleteObjects")
 
 	// ==================== OBJECT OPERATIONS ====================
-	router.Func().GET("/{bucket}/{key:.*}", getObject).Name("s3.object.get").Action("api:s3:GetObject")
-	router.Func().DELETE("/{bucket}/{key:.*}", deleteObject).Name("s3.object.delete").Action("api:s3:DeleteObject")
-	router.Func().HEAD("/{bucket}/{key:.*}", headObject).Name("s3.object.head").Action("api:s3:HeadObject")
+	router.GET("/{bucket}/{key:.*}", http.HandlerFunc(getObject)).Name("s3.object.get").Action("api:s3:GetObject")
+	router.DELETE("/{bucket}/{key:.*}", http.HandlerFunc(deleteObject)).Name("s3.object.delete").Action("api:s3:DeleteObject")
+	router.HEAD("/{bucket}/{key:.*}", http.HandlerFunc(headObject)).Name("s3.object.head").Action("api:s3:HeadObject")
 
 	// PUT /{bucket}/{key} dispatches on X-Amz-Copy-Source header.
 	// UploadPart / UploadPartCopy also live here: same method+path, and header
@@ -147,39 +146,39 @@ func setupRoutes() *teapot.Router {
 	})
 
 	// Query-based object operations
-	router.Func().QueryGET("/{bucket}/{key:.*}", getObjectAcl).Query("acl").Name("s3.object.get-acl").Action("api:s3:GetObjectAcl")
-	router.Func().QueryPUT("/{bucket}/{key:.*}", putObjectAcl).Query("acl").Name("s3.object.put-acl").Action("api:s3:PutObjectAcl")
+	router.QueryGET("/{bucket}/{key:.*}", http.HandlerFunc(getObjectAcl)).Query("acl").Name("s3.object.get-acl").Action("api:s3:GetObjectAcl")
+	router.QueryPUT("/{bucket}/{key:.*}", http.HandlerFunc(putObjectAcl)).Query("acl").Name("s3.object.put-acl").Action("api:s3:PutObjectAcl")
 
 	// Object tagging
-	router.Func().QueryGET("/{bucket}/{key:.*}", getObjectTagging).Query("tagging").Name("s3.object.get-tagging").Action("api:s3:GetObjectTagging")
-	router.Func().QueryPUT("/{bucket}/{key:.*}", putObjectTagging).Query("tagging").Name("s3.object.put-tagging").Action("api:s3:PutObjectTagging")
+	router.QueryGET("/{bucket}/{key:.*}", http.HandlerFunc(getObjectTagging)).Query("tagging").Name("s3.object.get-tagging").Action("api:s3:GetObjectTagging")
+	router.QueryPUT("/{bucket}/{key:.*}", http.HandlerFunc(putObjectTagging)).Query("tagging").Name("s3.object.put-tagging").Action("api:s3:PutObjectTagging")
 
 	// Object legal hold and retention (compliance)
 	// Note: PutObjectRetention appears under both "Object" and "Locking" scopes in the
 	//       S3 API docs; it is a single route here, as is PutObjectLegalHold.
-	router.Func().QueryGET("/{bucket}/{key:.*}", getObjectLegalHold).Query("legal-hold").Name("s3.object.get-legal-hold").Action("api:s3:GetObjectLegalHold")
-	router.Func().QueryPUT("/{bucket}/{key:.*}", putObjectLegalHold).Query("legal-hold").Name("s3.object.put-legal-hold").Action("api:s3:PutObjectLegalHold")
-	router.Func().QueryGET("/{bucket}/{key:.*}", getObjectRetention).Query("retention").Name("s3.object.get-retention").Action("api:s3:GetObjectRetention")
-	router.Func().QueryPUT("/{bucket}/{key:.*}", putObjectRetention).Query("retention").Name("s3.object.put-retention").Action("api:s3:PutObjectRetention")
+	router.QueryGET("/{bucket}/{key:.*}", http.HandlerFunc(getObjectLegalHold)).Query("legal-hold").Name("s3.object.get-legal-hold").Action("api:s3:GetObjectLegalHold")
+	router.QueryPUT("/{bucket}/{key:.*}", http.HandlerFunc(putObjectLegalHold)).Query("legal-hold").Name("s3.object.put-legal-hold").Action("api:s3:PutObjectLegalHold")
+	router.QueryGET("/{bucket}/{key:.*}", http.HandlerFunc(getObjectRetention)).Query("retention").Name("s3.object.get-retention").Action("api:s3:GetObjectRetention")
+	router.QueryPUT("/{bucket}/{key:.*}", http.HandlerFunc(putObjectRetention)).Query("retention").Name("s3.object.put-retention").Action("api:s3:PutObjectRetention")
 
 	// Object attributes and torrent (legacy)
-	router.Func().QueryGET("/{bucket}/{key:.*}", getObjectAttributes).Query("attributes").Name("s3.object.get-attributes").Action("api:s3:GetObjectAttributes")
-	router.Func().QueryGET("/{bucket}/{key:.*}", getObjectTorrent).Query("torrent").Name("s3.object.get-torrent").Action("api:s3:GetObjectTorrent")
+	router.QueryGET("/{bucket}/{key:.*}", http.HandlerFunc(getObjectAttributes)).Query("attributes").Name("s3.object.get-attributes").Action("api:s3:GetObjectAttributes")
+	router.QueryGET("/{bucket}/{key:.*}", http.HandlerFunc(getObjectTorrent)).Query("torrent").Name("s3.object.get-torrent").Action("api:s3:GetObjectTorrent")
 
 	// ==================== MULTIPART UPLOAD OPERATIONS ====================
 	// Initiate multipart upload
-	router.Func().QueryPOST("/{bucket}/{key:.*}", createMultipartUpload).Query("uploads").Name("s3.multipart.create").Action("api:s3:CreateMultipartUpload")
+	router.QueryPOST("/{bucket}/{key:.*}", http.HandlerFunc(createMultipartUpload)).Query("uploads").Name("s3.multipart.create").Action("api:s3:CreateMultipartUpload")
 
 	// UploadPart / UploadPartCopy are in the PUT dispatch block above.
 
 	// Complete multipart upload
-	router.Func().QueryPOST("/{bucket}/{key:.*}", completeMultipartUpload).Query("uploadId").Name("s3.multipart.complete").Action("api:s3:CompleteMultipartUpload")
+	router.QueryPOST("/{bucket}/{key:.*}", http.HandlerFunc(completeMultipartUpload)).Query("uploadId").Name("s3.multipart.complete").Action("api:s3:CompleteMultipartUpload")
 
 	// Abort multipart upload
-	router.Func().QueryDELETE("/{bucket}/{key:.*}", abortMultipartUpload).Query("uploadId").Name("s3.multipart.abort").Action("api:s3:AbortMultipartUpload")
+	router.QueryDELETE("/{bucket}/{key:.*}", http.HandlerFunc(abortMultipartUpload)).Query("uploadId").Name("s3.multipart.abort").Action("api:s3:AbortMultipartUpload")
 
 	// List parts of a multipart upload
-	router.Func().QueryGET("/{bucket}/{key:.*}", listParts).Query("uploadId").Name("s3.multipart.list-parts").Action("api:s3:ListParts")
+	router.QueryGET("/{bucket}/{key:.*}", http.HandlerFunc(listParts)).Query("uploadId").Name("s3.multipart.list-parts").Action("api:s3:ListParts")
 
 	// ==================== DEBUG ROUTES ====================
 	// Debug route (conditionally registered)
@@ -188,7 +187,7 @@ func setupRoutes() *teapot.Router {
 	}
 
 	// Mock: the favicon handler is an empty stub, like the other handlers in this example.
-	router.Func().GET("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {}).Name("favicon")
+	router.GET("/favicon.ico", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})).Name("favicon")
 
 	return router
 }

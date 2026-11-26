@@ -68,18 +68,17 @@ func ExampleBuilder_development() {
 
 	r := teapot.New()
 
-	r.Func().GET("/{bucket}/{key:.*}", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/{bucket}/{key:.*}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bucket := teapot.URLParam(r, "bucket")
 		key := teapot.URLParam(r, "key")
 
-		// URL will be built from request (http://localhost:9000/...)
 		objectURL := urls.ObjectURL(r, bucket, key)
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"url": objectURL,
 		})
-	})
+	}))
 
 	// Test with local development server
 	req := httptest.NewRequest("GET", "/mybucket/path/to/file.txt", nil)
@@ -97,17 +96,16 @@ func ExampleBuilder_reverseProxy() {
 
 	r := teapot.New()
 
-	r.Func().GET("/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/{bucket}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bucket := teapot.URLParam(r, "bucket")
 
-		// URL builder detects HTTPS from X-Forwarded-Proto header
 		bucketURL := urls.BucketURL(r, bucket)
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"bucket": bucketURL,
 		})
-	})
+	}))
 
 	// Simulate reverse proxy setting X-Forwarded-Proto
 	req := httptest.NewRequest("GET", "/mybucket", nil)

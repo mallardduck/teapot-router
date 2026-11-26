@@ -1,6 +1,7 @@
 package teapot_test
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -27,7 +28,7 @@ func BenchmarkMinimal_Chi(b *testing.B) {
 
 func BenchmarkMinimal_TeapotDirect(b *testing.B) {
 	r := teapot.New()
-	r.Func().GET("/test", testutil.OKResponse)
+	r.GET("/test", http.HandlerFunc(testutil.OKResponse))
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
@@ -41,7 +42,7 @@ func BenchmarkMinimal_TeapotDirect(b *testing.B) {
 
 func BenchmarkMinimal_TeapotQuery(b *testing.B) {
 	r := teapot.New()
-	r.Func().QueryGET("/test", testutil.OKResponse)
+	r.QueryGET("/test", http.HandlerFunc(testutil.OKResponse))
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
@@ -70,7 +71,7 @@ func BenchmarkWithMeta_Chi(b *testing.B) {
 
 func BenchmarkWithMeta_TeapotDirect(b *testing.B) {
 	r := teapot.New()
-	r.Func().GET("/test", testutil.OKResponse).Name("test").Action("s3:Test")
+	r.GET("/test", http.HandlerFunc(testutil.OKResponse)).Name("test").Action("s3:Test")
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()
@@ -84,7 +85,7 @@ func BenchmarkWithMeta_TeapotDirect(b *testing.B) {
 
 func BenchmarkWithMeta_TeapotQuery(b *testing.B) {
 	r := teapot.New()
-	r.Func().QueryGET("/test", testutil.OKResponse).Name("test").Action("s3:Test")
+	r.QueryGET("/test", http.HandlerFunc(testutil.OKResponse)).Name("test").Action("s3:Test")
 
 	req := httptest.NewRequest("GET", "/test", nil)
 	w := httptest.NewRecorder()

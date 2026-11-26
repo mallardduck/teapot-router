@@ -15,15 +15,17 @@ func TestRouteConflict(t *testing.T) {
 	r := teapot.New()
 
 	// Register direct route first
-	r.Func().GET("/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.GET("/{bucket}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("DIRECT"))
-	}).Name("direct")
+	})).
+		Name("direct")
 
 	// Then register query route on same path
 	// This should trigger auto-promotion to dispatcher
-	r.Func().QueryGET("/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/{bucket}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("QUERY"))
-	}).Query("test").Name("query")
+	})).
+		Query("test").Name("query")
 
 	// Test direct route (without query param) - should still work via dispatcher
 	req := httptest.NewRequest("GET", "/mybucket", nil)
@@ -45,14 +47,16 @@ func TestQueryRouteFallback(t *testing.T) {
 	r := teapot.New()
 
 	// Register QueryGET without any query matchers (should be fallback)
-	r.Func().QueryGET("/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/{bucket}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("FALLBACK"))
-	}).Name("fallback")
+	})).
+		Name("fallback")
 
 	// Register QueryGET with query matcher
-	r.Func().QueryGET("/{bucket}", func(w http.ResponseWriter, r *http.Request) {
+	r.QueryGET("/{bucket}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("WITH_QUERY"))
-	}).Query("test").Name("with-query")
+	})).
+		Query("test").Name("with-query")
 
 	// Test without query param (should hit fallback)
 	req := httptest.NewRequest("GET", "/mybucket", nil)

@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"log"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
@@ -20,7 +21,7 @@ func TestDebugLogging(t *testing.T) {
 		r.SetDebugLog(true)
 
 		// Just verify that enabling debug logging doesn't crash
-		r.Func().GET("/test", testutil.StringResponseWriterBuilder("ok"))
+		r.GET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("ok")))
 
 		r.Finalize()
 
@@ -40,10 +41,10 @@ func TestDebugLogging(t *testing.T) {
 		r := teapot.New().SetDebugLog(true)
 
 		// Add a QueryGET which should trigger debug logging for dispatcher creation
-		r.Func().QueryGET("/test", testutil.StringResponseWriterBuilder("query")).Query("foo")
+		r.QueryGET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("query"))).Query("foo")
 
 		// Add a regular GET on same pattern to trigger auto-promotion logging
-		r.Func().GET("/test", testutil.StringResponseWriterBuilder("direct"))
+		r.GET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("direct")))
 
 		// Line 159: if r.debugLog { log.Printf(...) }
 		// Debug logging may or may not produce output depending on implementation
@@ -54,14 +55,14 @@ func TestDebugLogging(t *testing.T) {
 	t.Run("debug logging with complex routing", func(t *testing.T) {
 		r := teapot.New().SetDebugLog(true)
 
-		r.Func().GET("/users", testutil.NoopResponse).Name("users.list")
-		r.Func().POST("/users", testutil.NoopResponse).Name("users.create")
+		r.GET("/users", http.HandlerFunc(testutil.NoopResponse)).Name("users.list")
+		r.POST("/users", http.HandlerFunc(testutil.NoopResponse)).Name("users.create")
 
 		r.NamedGroup("/api", "api", func(sub *teapot.Router) {
-			sub.Func().GET("/test", testutil.NoopResponse)
+			sub.GET("/test", http.HandlerFunc(testutil.NoopResponse))
 		})
 
-		r.Func().QueryGET("/bucket", testutil.NoopResponse).Query("acl")
+		r.QueryGET("/bucket", http.HandlerFunc(testutil.NoopResponse)).Query("acl")
 
 		r.Finalize()
 
@@ -72,12 +73,12 @@ func TestDebugLogging(t *testing.T) {
 	t.Run("debug logging doesn't affect functionality", func(t *testing.T) {
 		// With debug
 		r1 := teapot.New().SetDebugLog(true)
-		r1.Func().GET("/test", testutil.StringResponseWriterBuilder("debug"))
+		r1.GET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("debug")))
 		r1.Finalize()
 
 		// Without debug
 		r2 := teapot.New()
-		r2.Func().GET("/test", testutil.StringResponseWriterBuilder("no-debug"))
+		r2.GET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("no-debug")))
 		r2.Finalize()
 
 		// Both should work identically

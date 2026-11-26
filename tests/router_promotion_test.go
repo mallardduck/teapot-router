@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestDispatcherAutoPromotion(t *testing.T) {
 	t.Run("single GET route uses direct routing", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/test", testutil.StringResponseWriterBuilder("direct"))
+		r.GET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("direct")))
 
 		r.Finalize()
 
@@ -32,7 +33,7 @@ func TestDispatcherAutoPromotion(t *testing.T) {
 		r := teapot.New()
 
 		// Line 266: dispatcherKey := method + ":" + chiPattern
-		r.Func().QueryGET("/test", testutil.StringResponseWriterBuilder("query-full")).QueryValue("type", "full")
+		r.QueryGET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("query-full"))).QueryValue("type", "full")
 
 		r.Finalize()
 
@@ -48,11 +49,11 @@ func TestDispatcherAutoPromotion(t *testing.T) {
 		r := teapot.New()
 
 		// First register a QueryGET (creates dispatcher)
-		r.Func().QueryGET("/test", testutil.StringResponseWriterBuilder("query-full")).QueryValue("type", "full")
+		r.QueryGET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("query-full"))).QueryValue("type", "full")
 
 		// Then add a regular GET (should be added to existing dispatcher)
 		// Line 269: if disp, exists := r.dispatchers[dispatcherKey]
-		r.Func().GET("/test", testutil.StringResponseWriterBuilder("no-query"))
+		r.GET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("no-query")))
 
 		r.Finalize()
 
@@ -72,11 +73,11 @@ func TestDispatcherAutoPromotion(t *testing.T) {
 	t.Run("multiple Query routes on same pattern use dispatcher", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().QueryGET("/object", testutil.StringResponseWriterBuilder("acl")).Query("acl")
+		r.QueryGET("/object", http.HandlerFunc(testutil.StringResponseWriterBuilder("acl"))).Query("acl")
 
-		r.Func().QueryGET("/object", testutil.StringResponseWriterBuilder("tagging")).Query("tagging")
+		r.QueryGET("/object", http.HandlerFunc(testutil.StringResponseWriterBuilder("tagging"))).Query("tagging")
 
-		r.Func().GET("/object", testutil.StringResponseWriterBuilder("get-object"))
+		r.GET("/object", http.HandlerFunc(testutil.StringResponseWriterBuilder("get-object")))
 
 		r.Finalize()
 
@@ -103,9 +104,9 @@ func TestDispatcherAutoPromotion(t *testing.T) {
 
 		// Pattern with wildcard parameter - should be translated to Chi pattern
 		// Line 266: dispatcherKey := method + ":" + chiPattern
-		r.Func().QueryGET("/{bucket}/{key:.*}", testutil.StringResponseWriterBuilder("acl")).Query("acl")
+		r.QueryGET("/{bucket}/{key:.*}", http.HandlerFunc(testutil.StringResponseWriterBuilder("acl"))).Query("acl")
 
-		r.Func().GET("/{bucket}/{key:.*}", testutil.StringResponseWriterBuilder("get"))
+		r.GET("/{bucket}/{key:.*}", http.HandlerFunc(testutil.StringResponseWriterBuilder("get")))
 
 		r.Finalize()
 
@@ -126,7 +127,7 @@ func TestQueryRouteAutoPromotion(t *testing.T) {
 	t.Run("QueryGET with QueryValue matcher", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().QueryGET("/test", testutil.StringResponseWriterBuilder("base")).QueryValue("version", "v2")
+		r.QueryGET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("base"))).QueryValue("version", "v2")
 
 		r.Finalize()
 
@@ -151,7 +152,7 @@ func TestQueryRouteAutoPromotion(t *testing.T) {
 	t.Run("QueryGET with Query existence matcher", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().QueryGET("/test", testutil.StringResponseWriterBuilder("ok")).Query("foo")
+		r.QueryGET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("ok"))).Query("foo")
 
 		routes := r.Routes()
 		assert.Len(t, routes, 1)
@@ -162,7 +163,7 @@ func TestQueryRouteAutoPromotion(t *testing.T) {
 	t.Run("multiple Query calls accumulate", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().QueryGET("/test", testutil.StringResponseWriterBuilder("ok")).QueryValue("foo", "bar").Query("baz")
+		r.QueryGET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("ok"))).QueryValue("foo", "bar").Query("baz")
 
 		routes := r.Routes()
 		assert.Len(t, routes, 1)
@@ -175,9 +176,9 @@ func TestMixedDirectAndQueryRoutes(t *testing.T) {
 	t.Run("direct route then query route on same pattern", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().GET("/bucket", testutil.StringResponseWriterBuilder("list"))
+		r.GET("/bucket", http.HandlerFunc(testutil.StringResponseWriterBuilder("list")))
 
-		r.Func().QueryGET("/bucket", testutil.StringResponseWriterBuilder("location")).Query("location")
+		r.QueryGET("/bucket", http.HandlerFunc(testutil.StringResponseWriterBuilder("location"))).Query("location")
 
 		r.Finalize()
 
@@ -195,9 +196,9 @@ func TestMixedDirectAndQueryRoutes(t *testing.T) {
 	t.Run("query route then direct route on same pattern", func(t *testing.T) {
 		r := teapot.New()
 
-		r.Func().QueryGET("/bucket", testutil.StringResponseWriterBuilder("versioning")).Query("versioning")
+		r.QueryGET("/bucket", http.HandlerFunc(testutil.StringResponseWriterBuilder("versioning"))).Query("versioning")
 
-		r.Func().GET("/bucket", testutil.StringResponseWriterBuilder("list"))
+		r.GET("/bucket", http.HandlerFunc(testutil.StringResponseWriterBuilder("list")))
 
 		r.Finalize()
 
@@ -216,10 +217,10 @@ func TestMixedDirectAndQueryRoutes(t *testing.T) {
 		r := teapot.New()
 
 		// GET with query param
-		r.Func().QueryGET("/resource", testutil.StringResponseWriterBuilder("get-filtered")).QueryValue("filter", "active")
+		r.QueryGET("/resource", http.HandlerFunc(testutil.StringResponseWriterBuilder("get-filtered"))).QueryValue("filter", "active")
 
 		// POST direct (different method, same pattern - should be separate dispatcher)
-		r.Func().POST("/resource", testutil.StringResponseWriterBuilder("post"))
+		r.POST("/resource", http.HandlerFunc(testutil.StringResponseWriterBuilder("post")))
 
 		r.Finalize()
 
@@ -242,9 +243,9 @@ func TestDispatcherKeyGeneration(t *testing.T) {
 
 		// Different methods, same pattern - should create separate dispatchers
 		// Test ARITHMETIC_BASE mutations at router.go:266 (dispatcherKey := method + ":" + chiPattern)
-		r.Func().QueryGET("/test", testutil.StringResponseWriterBuilder("get")).QueryValue("a", "1")
+		r.QueryGET("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("get"))).QueryValue("a", "1")
 
-		r.Func().QueryPOST("/test", testutil.StringResponseWriterBuilder("post")).QueryValue("b", "2")
+		r.QueryPOST("/test", http.HandlerFunc(testutil.StringResponseWriterBuilder("post"))).QueryValue("b", "2")
 
 		r.Finalize()
 
@@ -278,9 +279,9 @@ func TestDispatcherKeyGeneration(t *testing.T) {
 		r := teapot.New()
 
 		// Pattern with wildcard should be translated to Chi's /* pattern
-		r.Func().QueryGET("/{key:.*}", testutil.StringResponseWriterBuilder("acl")).Query("acl")
+		r.QueryGET("/{key:.*}", http.HandlerFunc(testutil.StringResponseWriterBuilder("acl"))).Query("acl")
 
-		r.Func().QueryGET("/{key:.*}", testutil.StringResponseWriterBuilder("tagging")).Query("tagging")
+		r.QueryGET("/{key:.*}", http.HandlerFunc(testutil.StringResponseWriterBuilder("tagging"))).Query("tagging")
 
 		r.Finalize()
 

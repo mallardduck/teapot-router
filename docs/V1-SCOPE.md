@@ -10,7 +10,7 @@ composition, and route introspection. It stays a router. It does not implement a
 
 ## In scope for V1
 
-- **Registration:** `GET`/`POST`/`PUT`/`DELETE`/`HEAD`/`PATCH`/`OPTIONS`, `Handle`, `Func()` variants,
+- **Registration:** `GET`/`POST`/`PUT`/`DELETE`/`HEAD`/`PATCH`/`OPTIONS`, `Handle`,
   `RegisterExternal` (phantom routes).
 - **Named routes:** `Name`, `URL`, `MustURL`, wildcard substitution.
 - **Query, header, and subdomain dispatch:** `Query`, `QueryValue`, `Dispatch` with `Default`/`When`, and `Matchers`
@@ -43,7 +43,7 @@ Breaking changes must land before the v1.0.0 tag. Open questions:
   `FuncDo` take plain functions in both. This is a breaking change for `pkg/dispatch` callers who passed function
   literals to `Default` or `Do`; they now call the `Func` variants.
 - **Decided:** `Resource` takes a controller value and functional options. `ResourceHandlers` and `ResourceHandlerBuilder` are removed. Routes are registered inside a group per resource, so middleware is scoped to that resource.
-- `FuncRouter` and the `Func*` variants overlap with `Handle`.
+- **Decided:** `FuncRouter` (`Router.Func()`) is removed. Callers wrap functions with `http.HandlerFunc`, or use the `Func*` variants on `dispatch` and `DispatchBuilder`.
 
 Record the decision for each item here when it is made.
 

@@ -18,7 +18,8 @@ import (
 //     rather than as a dot-separated suffix, e.g. "canonicalDomain.evil.com")
 //
 // A port suffix on host, if present, is stripped before comparison. Matching
-// is case-insensitive; the returned label is lowercased.
+// is case-insensitive, and one trailing dot (the DNS root label) is ignored on
+// either side. The returned label is lowercased.
 //
 // This is a general host-based routing primitive - e.g. a multi-tenant app
 // keying a tenant off a subdomain, or S3-style virtual-hosted bucket

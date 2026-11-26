@@ -236,8 +236,9 @@ r.Dispatch("GET", "/{key:.*}", func(d *teapot.DispatchBuilder, m teapot.Matchers
 })
 ```
 
-Matching follows `urlbuilder.SubdomainFromHost`: ports are ignored, matching is case-insensitive, and a bare canonical
-domain or an unrelated host does not match.
+Matching follows `urlbuilder.SubdomainFromHost`: ports are ignored, matching is case-insensitive, and one trailing dot
+(the DNS root label) is ignored on either side, so `mybucket.s3.example.com.` and `s3.example.com.` both work. A bare
+canonical domain or an unrelated host does not match. Generated URLs are lowercase and never carry a trailing dot.
 
 ---
 

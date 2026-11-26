@@ -15,7 +15,7 @@ type Builder struct {
 // If canonicalDomain is empty, URLs will be built from request Host header
 func New(canonicalDomain string) *Builder {
 	return &Builder{
-		canonicalDomain: canonicalDomain,
+		canonicalDomain: normalizeHost(canonicalDomain),
 	}
 }
 

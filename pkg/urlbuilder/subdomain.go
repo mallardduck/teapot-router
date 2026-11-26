@@ -28,6 +28,7 @@ import (
 // that would let a client pick the resolved label independently of what was
 // actually signed or authenticated.
 func SubdomainFromHost(host, canonicalDomain string) (label string, ok bool) {
+	canonicalDomain = normalizeHost(canonicalDomain)
 	if canonicalDomain == "" {
 		return "", false
 	}
@@ -36,8 +37,7 @@ func SubdomainFromHost(host, canonicalDomain string) (label string, ok bool) {
 		host = h
 	}
 
-	host = strings.ToLower(host)
-	canonicalDomain = strings.ToLower(canonicalDomain)
+	host = normalizeHost(host)
 
 	if host == canonicalDomain {
 		return "", false
@@ -64,6 +64,7 @@ func SubdomainFromHost(host, canonicalDomain string) (label string, ok bool) {
 // request" fallback the way BuildURL does, since the domain itself must be
 // fixed for the label to resolve at all.
 func (b *Builder) SubdomainURL(label, path string) (url string, ok bool) {
+	label = strings.ToLower(label)
 	if b.canonicalDomain == "" || label == "" {
 		return "", false
 	}
@@ -71,4 +72,16 @@ func (b *Builder) SubdomainURL(label, path string) (url string, ok bool) {
 		path = "/" + path
 	}
 	return fmt.Sprintf("https://%s.%s%s", label, b.canonicalDomain, path), true
+}
+
+// normalizeHost returns the canonical comparison form of a host name: ASCII
+// lowercase, with a single trailing dot removed. The trailing dot is the
+// explicit DNS root label (RFC 1034 §3.1), so "example.com." and
+// "example.com" name the same host. Only one dot is removed: "example.com.."
+// stays malformed and matches nothing.
+//
+// Callers pass a host without its port. The input is otherwise left literal,
+// so malformed values are never repaired into valid ones.
+func normalizeHost(host string) string {
+	return strings.TrimSuffix(strings.ToLower(host), ".")
 }

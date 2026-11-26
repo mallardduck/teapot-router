@@ -191,3 +191,23 @@ func TestDispatcherMixedSpecificity(t *testing.T) {
 		})
 	}
 }
+
+// Routes with equal specificity keep their registration order, so the first
+// registered matching route wins. This pins the stability of sortRoutes.
+func TestDispatcherEqualSpecificityKeepsRegistrationOrder(t *testing.T) {
+	const n = 8
+	d := New(func(b *Builder) {
+		for i := range n {
+			label := string(rune('a' + i))
+			b.When(QueryExists(label)).FuncDo(func(w http.ResponseWriter, _ *http.Request) {
+				_, _ = w.Write([]byte(label))
+			})
+		}
+	})
+
+	// Every route matches: all are QueryExists (specificity 1).
+	req := httptest.NewRequest("GET", "/x?a&b&c&d&e&f&g&h", nil)
+	w := httptest.NewRecorder()
+	d.ServeHTTP(w, req)
+	assert.Equal(t, "a", w.Body.String())
+}

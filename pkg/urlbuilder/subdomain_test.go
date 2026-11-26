@@ -157,3 +157,10 @@ func TestSubdomainURL(t *testing.T) {
 		})
 	}
 }
+
+func TestSubdomainFromHostEmptyLabelRejected(t *testing.T) {
+	// A host that is only the dot-prefixed canonical domain has no label.
+	label, ok := urlbuilder.SubdomainFromHost(".s3.example.com", "s3.example.com")
+	assert.False(t, ok)
+	assert.Empty(t, label)
+}

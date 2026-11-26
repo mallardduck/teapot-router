@@ -443,13 +443,16 @@ r.Dispatch("GET", "", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
 
 ```go
 r.Resource("photos", "/photos", "photo", teapot.ResourceHandlers{
-Index:   listPhotos,  // GET    /photos
-Store:   createPhoto, // POST   /photos
-Show:    showPhoto,   // GET    /photos/{photo}
-Update:  updatePhoto, // PUT    /photos/{photo}
-Destroy: deletePhoto, // DELETE /photos/{photo}
+    Index:   http.HandlerFunc(listPhotos),  // GET    /photos
+    Store:   http.HandlerFunc(createPhoto), // POST   /photos
+    Show:    http.HandlerFunc(showPhoto),   // GET    /photos/{photo}
+    Update:  http.HandlerFunc(updatePhoto), // PUT    /photos/{photo}
+    Destroy: http.HandlerFunc(deletePhoto), // DELETE /photos/{photo}
 })
 ```
+
+Fields take any `http.Handler`, so wrap plain functions with `http.HandlerFunc`. `StoreMethod` must be `POST` or `PUT`,
+and `UpdateMethod` must be `PUT` or `POST`. Leave either empty for the default. Any other value panics at registration.
 
 **URL Builder Package:**
 

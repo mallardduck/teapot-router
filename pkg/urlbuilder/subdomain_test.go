@@ -123,6 +123,14 @@ func TestSubdomainURL(t *testing.T) {
 			wantOK:          true,
 		},
 		{
+			name:            "path without leading slash is separated from host",
+			canonicalDomain: "s3.example.com",
+			label:           "mybucket",
+			path:            "key/with/parts.txt",
+			wantURL:         "https://mybucket.s3.example.com/key/with/parts.txt",
+			wantOK:          true,
+		},
+		{
 			name:            "no canonical domain configured",
 			canonicalDomain: "",
 			label:           "mybucket",

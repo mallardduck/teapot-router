@@ -302,6 +302,12 @@ r.Handle("GET", "/health", healthHandler).Name("health")
 
 This is a more flexible alternative to `GET()`, `POST()`, etc. when you already have an `http.Handler` instance.
 
+For a plain function, use `HandleFunc`, which is shorthand for `Handle` with `http.HandlerFunc`:
+
+```go
+r.HandleFunc("GET", "/health", healthFunc).Name("health")
+```
+
 ---
 
 ## Phantom Routes (External Services)

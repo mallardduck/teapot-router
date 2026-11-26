@@ -10,7 +10,7 @@ composition, and route introspection. It stays a router. It does not implement a
 
 ## In scope for V1
 
-- **Registration:** `GET`/`POST`/`PUT`/`DELETE`/`HEAD`/`PATCH`/`OPTIONS`, `Handle`,
+- **Registration:** `GET`/`POST`/`PUT`/`DELETE`/`HEAD`/`PATCH`/`OPTIONS`, `Handle`, `HandleFunc`,
   `RegisterExternal` (phantom routes).
 - **Named routes:** `Name`, `URL`, `MustURL`, wildcard substitution.
 - **Query, header, and subdomain dispatch:** `Query`, `QueryValue`, `Dispatch` with `Default`/`When`, and `Matchers`
@@ -39,11 +39,12 @@ None. Everything in the V1 scope is built. Open decisions are listed under "API 
 
 Breaking changes must land before the v1.0.0 tag. Open questions:
 
-- **Decided:** `Default` and `Do` take `http.Handler` in both `pkg/teapot` and `pkg/dispatch`. `DefaultFunc` and
-  `DoFunc` take plain functions in both. This is a breaking change for `pkg/dispatch` callers who passed function
-  literals to `Default` or `Do`; they now call the `Func` variants.
+- **Decided:** Handler parameters are `http.Handler`: `Handle`, the verbs, `Mount`, `Use`, `Default`, and `Do`. Plain
+  functions use `Router.HandleFunc(method, pattern, fn)`, and `dispatch` uses `DefaultFunc` and `DoFunc`, in both
+  `pkg/teapot` and `pkg/dispatch`. The `Func` suffix follows `http.ServeMux.HandleFunc`. `FuncDefault` and `FuncDo`
+  from v0.16.0-rc.1 are renamed; this is breaking for RC users.
 - **Decided:** `Resource` takes a controller value and functional options. `ResourceHandlers` and `ResourceHandlerBuilder` are removed. Routes are registered inside a group per resource, so middleware is scoped to that resource.
-- **Decided:** `FuncRouter` (`Router.Func()`) is removed. Callers wrap functions with `http.HandlerFunc`, or use the `Func*` variants on `dispatch` and `DispatchBuilder`.
+- **Decided:** `FuncRouter` (`Router.Func()`) is removed. Callers wrap functions with `http.HandlerFunc`, or use `HandleFunc` and the dispatch `*Func` methods.
 
 Record the decision for each item here when it is made.
 

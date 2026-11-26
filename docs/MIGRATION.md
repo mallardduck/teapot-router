@@ -52,7 +52,7 @@ r.GET("/users", http.HandlerFunc(listUsers))
 ### `dispatch` handlers take `http.Handler`
 
 `dispatch.Builder.Default` and `dispatch.Route.Do` now take `http.Handler`, matching `teapot.Dispatch`. For a function
-value, use the new `DefaultFunc` and `DoFunc`:
+value, use `DefaultFunc` and `DoFunc`, or wrap it with `http.HandlerFunc`:
 
 ```go
 // before
@@ -78,7 +78,7 @@ A router or any other `http.Handler` can now be passed directly, for example `Do
 
 - `Router.RegisterDebugRoute(path, name)`: registers the route listing endpoint.
 - `Matchers.HostHasSubdomain(domain)` for `Dispatch` callbacks.
-- `DefaultFunc` and `DoFunc` on `dispatch`.
+- `Router.HandleFunc(method, pattern, fn)`, and `DefaultFunc` and `DoFunc` on `dispatch`.
 - The HTML route table is sortable by method, pattern, and name.
 - `Only`, `Except`, `Middleware`, `Path`, `Param`, `Names`, and `StoreVerb` options for `Resource`.
 

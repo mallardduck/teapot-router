@@ -78,7 +78,8 @@ func (r *Router) Dispatch(method, pattern string, fn func(d *DispatchBuilder, m 
 				"  route:  %s %s\n"+
 				"  cause:  a Dispatch() or query-multiplexed route already owns this method+pattern\n"+
 				"  help:   consolidate all variants for this route into a single Dispatch() block",
-			method, fullPattern))
+			method, fullPattern,
+		))
 	}
 	if _, exists := r.directRoutes[dispatcherKey]; exists {
 		panic(fmt.Sprintf(
@@ -86,7 +87,8 @@ func (r *Router) Dispatch(method, pattern string, fn func(d *DispatchBuilder, m 
 				"  route:  %s %s\n"+
 				"  cause:  a direct route (GET, POST, etc.) is already registered for this method+pattern\n"+
 				"  help:   remove the direct route, or replace both with a single Dispatch() block",
-			method, fullPattern))
+			method, fullPattern,
+		))
 	}
 
 	db := &DispatchBuilder{

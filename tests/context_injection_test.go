@@ -5,8 +5,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/stretchr/testify/assert"
+
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/mallardduck/teapot-router/internal/testutil"
 	"github.com/mallardduck/teapot-router/pkg/teapot"

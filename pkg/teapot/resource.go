@@ -83,6 +83,19 @@ type (
 	editor interface {
 		Edit(http.ResponseWriter, *http.Request)
 	}
+	headerer interface {
+		Head(http.ResponseWriter, *http.Request)
+	}
+	// replacer handles PUT on the item path: a full replacement.
+	replacer interface {
+		Replace(http.ResponseWriter, *http.Request)
+	}
+	// patcher handles PATCH on the item path: a partial update.
+	patcher interface {
+		Patch(http.ResponseWriter, *http.Request)
+	}
+	// updater handles PUT and PATCH on the item path with one handler. It is
+	// the fallback for any verb that Replace or Patch does not cover.
 	updater interface {
 		Update(http.ResponseWriter, *http.Request)
 	}
@@ -105,7 +118,11 @@ var resourceActions = []resourceAction{
 	{name: "create", methods: []HTTPMethod{HTTPMethod(http.MethodGet)}, suffix: "/create", item: false},
 	{name: "store", methods: nil, suffix: "", item: false}, // method comes from StoreVerb
 	{name: "show", methods: []HTTPMethod{HTTPMethod(http.MethodGet)}, suffix: "", item: true},
+	{name: "head", methods: []HTTPMethod{HTTPMethod(http.MethodHead)}, suffix: "", item: true},
 	{name: "edit", methods: []HTTPMethod{HTTPMethod(http.MethodGet)}, suffix: "/edit", item: true},
+	{name: "replace", methods: []HTTPMethod{PUT}, suffix: "", item: true},
+	{name: "patch", methods: []HTTPMethod{HTTPMethod(http.MethodPatch)}, suffix: "", item: true},
+	// update covers PUT and PATCH; replace and patch take precedence for their verb.
 	{name: "update", methods: []HTTPMethod{PUT, HTTPMethod(http.MethodPatch)}, suffix: "", item: true},
 	{name: "destroy", methods: []HTTPMethod{HTTPMethod(http.MethodDelete)}, suffix: "", item: true},
 }
@@ -113,18 +130,24 @@ var resourceActions = []resourceAction{
 // Resource registers the RESTful routes for controller under the given name.
 //
 // The controller is any value. Each action is registered only if the
-// controller has the matching method: Index, Create, Store, Show, Edit,
-// Update, or Destroy.
+// controller has the matching method: Index, Create, Store, Show, Head, Edit,
+// Replace, Patch, Update, or Destroy.
+//
+// Updates can be handled in two ways:
+//   - Update alone handles both PUT and PATCH.
+//   - Replace (PUT) and Patch (PATCH) handle their verb separately. Update,
+//     if also present, handles any verb they do not cover.
 //
 // Routes created (with the defaults):
-//   - GET    /photos             -> photos.index
-//   - GET    /photos/create      -> photos.create
-//   - POST   /photos             -> photos.store   (StoreVerb changes the method)
-//   - GET    /photos/{photo}     -> photos.show
+//   - GET    /photos              -> photos.index
+//   - GET    /photos/create       -> photos.create
+//   - POST   /photos              -> photos.store   (StoreVerb changes the method)
+//   - GET    /photos/{photo}      -> photos.show
+//   - HEAD   /photos/{photo}      -> photos.head    (only if Head is implemented)
 //   - GET    /photos/{photo}/edit -> photos.edit
-//   - PUT    /photos/{photo}     -> photos.update
-//   - PATCH  /photos/{photo}     -> photos.update
-//   - DELETE /photos/{photo}     -> photos.destroy
+//   - PUT    /photos/{photo}      -> photos.replace, or photos.update
+//   - PATCH  /photos/{photo}      -> photos.patch, or photos.update
+//   - DELETE /photos/{photo}      -> photos.destroy
 //
 // Options refine the defaults. Resource panics on invalid input.
 //
@@ -192,8 +215,7 @@ func (r *Router) Resource(name string, controller any, opts ...ResourceOption) {
 			if !actionEnabled(action.name, cfg) {
 				continue
 			}
-			h, ok := handlers[action.name]
-			if !ok {
+			if _, ok := handlers[action.name]; !ok {
 				continue
 			}
 
@@ -213,10 +235,32 @@ func (r *Router) Resource(name string, controller any, opts ...ResourceOption) {
 			}
 
 			for _, m := range methods {
-				g.Handle(string(m), pattern, h).Name(routeName)
+				// Update gives way to Replace (PUT) and Patch (PATCH) for their
+				// verb whenever those are enabled and implemented.
+				if action.name == "update" && verbOwnedBySplitAction(m, handlers, cfg) {
+					continue
+				}
+				g.Handle(string(m), pattern, handlers[action.name]).Name(routeName)
 			}
 		}
 	})
+}
+
+// verbOwnedBySplitAction reports whether a split action (replace for PUT,
+// patch for PATCH) is enabled and implemented for method m. If so, the
+// generic update action does not register that verb.
+func verbOwnedBySplitAction(m HTTPMethod, handlers map[string]http.Handler, cfg resourceConfig) bool {
+	var split string
+	switch m {
+	case PUT:
+		split = "replace"
+	case HTTPMethod(http.MethodPatch):
+		split = "patch"
+	default:
+		return false
+	}
+	_, ok := handlers[split]
+	return ok && actionEnabled(split, cfg)
 }
 
 // isResourceAction reports whether name is one of the standard actions.
@@ -262,8 +306,17 @@ func resourceHandlers(controller any) map[string]http.Handler {
 	if c, ok := controller.(shower); ok {
 		h["show"] = http.HandlerFunc(c.Show)
 	}
+	if c, ok := controller.(headerer); ok {
+		h["head"] = http.HandlerFunc(c.Head)
+	}
 	if c, ok := controller.(editor); ok {
 		h["edit"] = http.HandlerFunc(c.Edit)
+	}
+	if c, ok := controller.(replacer); ok {
+		h["replace"] = http.HandlerFunc(c.Replace)
+	}
+	if c, ok := controller.(patcher); ok {
+		h["patch"] = http.HandlerFunc(c.Patch)
 	}
 	if c, ok := controller.(updater); ok {
 		h["update"] = http.HandlerFunc(c.Update)

@@ -25,7 +25,10 @@ func (c *fullController) Index(w http.ResponseWriter, _ *http.Request)   { c.hit
 func (c *fullController) Create(w http.ResponseWriter, _ *http.Request)  { c.hit("create", 200, w) }
 func (c *fullController) Store(w http.ResponseWriter, _ *http.Request)   { c.hit("store", 201, w) }
 func (c *fullController) Show(w http.ResponseWriter, _ *http.Request)    { c.hit("show", 200, w) }
+func (c *fullController) Head(w http.ResponseWriter, _ *http.Request)    { c.hit("head", 200, w) }
 func (c *fullController) Edit(w http.ResponseWriter, _ *http.Request)    { c.hit("edit", 200, w) }
+func (c *fullController) Replace(w http.ResponseWriter, _ *http.Request) { c.hit("replace", 200, w) }
+func (c *fullController) Patch(w http.ResponseWriter, _ *http.Request)   { c.hit("patch", 200, w) }
 func (c *fullController) Update(w http.ResponseWriter, _ *http.Request)  { c.hit("update", 200, w) }
 func (c *fullController) Destroy(w http.ResponseWriter, _ *http.Request) { c.hit("destroy", 204, w) }
 
@@ -47,7 +50,9 @@ func (c *showController) Show(w http.ResponseWriter, r *http.Request) {
 }
 
 // TestResourceRESTful pins the default route table for a full controller.
-// HEAD is not a per-resource route; it reaches the Show action by fallback.
+// fullController implements Head, Replace, and Patch, so PUT, PATCH, and HEAD
+// reach those actions. Update is shadowed for those verbs; see
+// resource_verbs_test.go for the Update fallback.
 func TestResourceRESTful(t *testing.T) {
 	r := teapot.New()
 	ctrl := &fullController{}
@@ -64,10 +69,10 @@ func TestResourceRESTful(t *testing.T) {
 		{"POST", "/photos", "store", 201},
 		{"GET", "/photos/123", "show", 200},
 		{"GET", "/photos/123/edit", "edit", 200},
-		{"PUT", "/photos/123", "update", 200},
-		{"PATCH", "/photos/123", "update", 200},
+		{"PUT", "/photos/123", "replace", 200},
+		{"PATCH", "/photos/123", "patch", 200},
 		{"DELETE", "/photos/123", "destroy", 204},
-		{"HEAD", "/photos/123", "show", 200},
+		{"HEAD", "/photos/123", "head", 200},
 	}
 
 	for _, tt := range tests {
@@ -175,7 +180,9 @@ func TestResourceNaming(t *testing.T) {
 		{"posts.index", nil, "/posts"},
 		{"posts.store", nil, "/posts"},
 		{"posts.show", []string{"post", "123"}, "/posts/123"},
-		{"posts.update", []string{"post", "123"}, "/posts/123"},
+		{"posts.head", []string{"post", "123"}, "/posts/123"},
+		{"posts.replace", []string{"post", "123"}, "/posts/123"},
+		{"posts.patch", []string{"post", "123"}, "/posts/123"},
 		{"posts.destroy", []string{"post", "123"}, "/posts/123"},
 	}
 

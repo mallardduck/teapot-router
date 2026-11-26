@@ -246,19 +246,19 @@ func (r *Router) Resource(name string, controller any, opts ...ResourceOption) {
 	})
 }
 
+// splitActionByVerb maps the update verbs to their split action names.
+var splitActionByVerb = map[HTTPMethod]string{
+	PUT:                          "replace",
+	HTTPMethod(http.MethodPatch): "patch",
+}
+
 // verbOwnedBySplitAction reports whether a split action (replace for PUT,
 // patch for PATCH) is enabled and implemented for method m. If so, the
 // generic update action does not register that verb.
 func verbOwnedBySplitAction(m HTTPMethod, handlers map[string]http.Handler, cfg resourceConfig) bool {
-	var split string
-	switch m {
-	case PUT:
-		split = "replace"
-	case HTTPMethod(http.MethodPatch):
-		split = "patch"
-	default:
-		return false
-	}
+	// Only PUT and PATCH reach here, since update covers no other verb.
+	// Any other verb maps to "", which no handler is registered under.
+	split := splitActionByVerb[m]
 	_, ok := handlers[split]
 	return ok && actionEnabled(split, cfg)
 }

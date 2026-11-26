@@ -1,6 +1,9 @@
 package teapot
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+)
 
 // ResourceHandlers defines handlers for RESTful resource operations
 type ResourceHandlers struct {
@@ -40,6 +43,9 @@ type ResourceHandlers struct {
 //   - DELETE /path/{param}      -> name.destroy (Destroy handler)
 //   - HEAD   /path/{param}      -> name.head    (Head handler)
 //
+// Resource panics if StoreMethod is not POST or PUT, or if UpdateMethod is not
+// PUT or POST. An empty value selects the default.
+//
 // Example:
 //
 //	r.Resource("photos", "/photos", "photo", teapot.ResourceHandlers{
@@ -66,6 +72,15 @@ func (r *Router) Resource(name, path, param string, h ResourceHandlers) {
 	updateMethod := h.UpdateMethod
 	if updateMethod == "" {
 		updateMethod = PUT // Default: REST-style PUT for updates
+	}
+
+	// Reject anything else up front. Without this, a typo or unsupported method
+	// would silently drop the route.
+	if storeMethod != POST && storeMethod != PUT {
+		panic(fmt.Sprintf("teapot: Resource %q: StoreMethod must be POST or PUT, got %q", name, storeMethod))
+	}
+	if updateMethod != PUT && updateMethod != POST {
+		panic(fmt.Sprintf("teapot: Resource %q: UpdateMethod must be PUT or POST, got %q", name, updateMethod))
 	}
 
 	// Register routes (only if handler is provided)

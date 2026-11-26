@@ -47,6 +47,10 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Several tags can point at the same commit (e.g. v0.16.0-rc.2 and
+          # v0.16.0 after retagging). GoReleaser would otherwise pick whichever
+          # tag it finds on HEAD, so pin it to the tag that triggered this run.
+          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
 
   publish-release:
     name: Publish release (undraft)

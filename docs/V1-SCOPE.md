@@ -33,11 +33,7 @@ composition, and route introspection. It stays a router. It does not implement a
 
 ## Planned for V1, not yet built
 
-| Item | Where it is documented | Status |
-|---|---|---|
-| Sortable HTML route table | `docs/ROUTES-LISTING.md` | Planned, or remove the claim |
-
-Each of these is marked "planned" in the docs that mention it. Remove the marker when the feature lands.
+None. Every item in the V1 scope is implemented. The open work is tracked in the V1 TODO plan.
 
 ## API review before v1.0
 

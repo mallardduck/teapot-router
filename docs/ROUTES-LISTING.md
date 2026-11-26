@@ -70,7 +70,7 @@ The debug endpoint supports both JSON and HTML:
 
 - Clean table layout
 - Color-coded HTTP methods
-- Sortable by method/pattern/name *(planned, not yet implemented)*
+- Sortable by method/pattern/name (click a column header)
 - Shows route actions for S3 routes
 
 ### Advanced Usage

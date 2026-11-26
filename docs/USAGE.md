@@ -341,9 +341,6 @@ r.GET("/data", dataHandler).Name("api.data")
 
 ## Route Introspection
 
-> **Planned, not yet implemented:** `RegisterDebugRoute` (used in the examples below) is on the V1 list. Until it lands,
-> register the endpoint yourself: `r.GET("/.internal/routes", teapot.NewListRoutesHandler(r, nil)).Name("debug.routes")`.
-
 List all registered routes programmatically or via HTTP:
 
 ```go

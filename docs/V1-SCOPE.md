@@ -35,7 +35,6 @@ composition, and route introspection. It stays a router. It does not implement a
 
 | Item | Where it is documented | Status |
 |---|---|---|
-| `RegisterDebugRoute` convenience method | `docs/USAGE.md`, `docs/ROUTES-LISTING.md` | Planned |
 | Sortable HTML route table | `docs/ROUTES-LISTING.md` | Planned, or remove the claim |
 
 Each of these is marked "planned" in the docs that mention it. Remove the marker when the feature lands.

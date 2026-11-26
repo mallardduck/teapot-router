@@ -5,9 +5,6 @@ commands (like Laravel's `php artisan route:list`).
 
 ## HTTP Debug Endpoint
 
-> **Planned, not yet implemented:** `RegisterDebugRoute` (used in the examples below) is on the V1 list. Until it lands,
-> register the endpoint yourself: `router.GET("/.internal/routes", teapot.NewListRoutesHandler(router, nil)).Name("debug.routes")`.
-
 ### Quick Start
 
 ```go
@@ -73,7 +70,7 @@ The debug endpoint supports both JSON and HTML:
 
 - Clean table layout
 - Color-coded HTTP methods
-- Sortable by method/pattern/name *(planned, not yet implemented)*
+- Sortable by method/pattern/name
 - Shows route actions for S3 routes
 
 ### Advanced Usage
@@ -467,7 +464,7 @@ See [examples/routes-cli/main.go](../examples/routes-cli/main.go) for a complete
 
 - `Routes() []RouteInfo` - Get all registered routes
 - `NewListRoutesHandler(router *Router, opts *ListRoutesOptions) http.HandlerFunc` - HTTP handler for the debug endpoint (`opts` may be nil)
-- `RegisterDebugRoute(path, name string) *RouteBuilder` - Convenience method *(planned, not yet implemented)*
+- `RegisterDebugRoute(path, name string) *RouteBuilder` - Convenience method
 
 ### Formatting Functions
 

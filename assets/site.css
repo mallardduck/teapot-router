@@ -77,6 +77,30 @@ nav.side a {
 nav.side a:hover { background: var(--border); }
 nav.side a[aria-current="page"] { color: var(--accent); font-weight: 600; }
 
+nav.side ul.toc {
+  margin: 0.2rem 0 0.4rem 0.9rem;
+  padding-left: 0.6rem;
+  border-left: 1px solid var(--border);
+}
+nav.side ul.toc a {
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: var(--muted);
+  padding: 0.15rem 0.5rem;
+}
+nav.side ul.toc a:hover { color: var(--fg); }
+
+nav.side .ext-group + .ext-group { margin-top: 1rem; }
+nav.side .ext-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+nav.side .ext a { text-decoration: none; color: var(--accent); }
+nav.side .ext a:hover { text-decoration: underline; }
+
 nav.side .ext {
   margin-top: 1.5rem;
   padding-top: 1rem;
@@ -156,7 +180,8 @@ th { font-weight: 600; }
     border-bottom: 1px solid var(--border);
     padding: 1rem;
   }
-  nav.side ul { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+  nav.side > ul { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+  nav.side ul.toc { display: block; }
   nav.side .ext { display: none; }
   main { padding: 1.5rem 1.1rem 3rem; }
   h1 { font-size: 1.6rem; }

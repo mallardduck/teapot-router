@@ -7,7 +7,7 @@
   --side: #f5f6f8;
   --border: #e2e4e8;
   --accent: #0b6e4f;
-  --code-bg: #f1f3f5;
+  --code-bg: #f6f8fa;
   --code-fg: #1d1f23;
   --max: 46rem;
   --side-w: 15rem;
@@ -21,7 +21,7 @@
     --side: #1d2025;
     --border: #2c3036;
     --accent: #5fd3a8;
-    --code-bg: #1e2227;
+    --code-bg: #161b22;
     --code-fg: #e6e8eb;
   }
 }

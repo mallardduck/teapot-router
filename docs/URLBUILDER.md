@@ -293,5 +293,4 @@ This design allows you to:
 ## See Also
 
 - [Main README](../README.md) - Teapot router overview
-- [Quick Wins Added](../QUICK_WINS_ADDED.md) - All features added
 - [Package Documentation](https://pkg.go.dev/github.com/mallardduck/teapot-router/pkg/urlbuilder)

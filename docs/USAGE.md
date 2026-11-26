@@ -197,6 +197,40 @@ adminRouter.GET("/dashboard", dashHandler).Name("dashboard")
 
 ---
 
+## Subdomain Routing
+
+Some APIs address resources by subdomain (`mybucket.s3.example.com`) as well as by path. Two packages provide the
+building blocks:
+
+- `urlbuilder.SubdomainFromHost(host, canonicalDomain)` returns the leading label when `host` is a strict subdomain of
+  `canonicalDomain`.
+- `dispatch.HostHasSubdomain(canonicalDomain)` is a matcher that is true for those requests, so one process can route
+  subdomain and path requests to different handlers.
+
+```go
+import (
+    "github.com/mallardduck/teapot-router/pkg/dispatch"
+    "github.com/mallardduck/teapot-router/pkg/urlbuilder"
+)
+
+// vhostHandler and pathHandler are http.HandlerFunc values.
+d := dispatch.New(func(b *dispatch.Builder) {
+    b.When(dispatch.HostHasSubdomain("s3.example.com")).Do(vhostHandler)
+    b.Default(pathHandler)
+})
+http.ListenAndServe(":8080", d)
+
+// Inside a handler:
+label, ok := urlbuilder.SubdomainFromHost(r.Host, "s3.example.com") // "mybucket", true
+urls := urlbuilder.New("s3.example.com")
+url, ok := urls.SubdomainURL("mybucket", "/path/to/object.txt")    // https://mybucket.s3.example.com/path/to/object.txt
+```
+
+> `teapot.Matchers` does not expose `HostHasSubdomain` yet, so use the `dispatch` package directly as shown above. See
+> [V1-SCOPE.md](V1-SCOPE.md).
+
+---
+
 ## Mounting Handlers
 
 ### Mounting standard http.Handlers
@@ -295,6 +329,9 @@ r.GET("/data", dataHandler).Name("api.data")
 ---
 
 ## Route Introspection
+
+> **Planned, not yet implemented:** `RegisterDebugRoute` (used in the examples below) is on the V1 list. Until it lands,
+> register the endpoint yourself: `r.GET("/.internal/routes", teapot.NewListRoutesHandler(r, nil)).Name("debug.routes")`.
 
 List all registered routes programmatically or via HTTP:
 

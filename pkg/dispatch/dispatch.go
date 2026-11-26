@@ -125,13 +125,11 @@ func (rt *Route) Do(h http.Handler) {
 }
 
 // FuncDefault is Default for a plain function.
-//
-// STUB: not implemented yet. Registers nothing.
 func (b *Builder) FuncDefault(h func(http.ResponseWriter, *http.Request)) {
+	b.Default(http.HandlerFunc(h))
 }
 
 // FuncDo is Do for a plain function.
-//
-// STUB: not implemented yet. Sets no handler.
 func (rt *Route) FuncDo(h func(http.ResponseWriter, *http.Request)) {
+	rt.Do(http.HandlerFunc(h))
 }

@@ -32,9 +32,9 @@ func (Matchers) HeaderEquals(key, value string) dispatch.Matcher {
 // HostHasSubdomain returns a Matcher that matches when the request's Host header
 // is a subdomain of canonicalDomain.
 //
-// STUB: not implemented yet. Always returns a matcher that never matches.
+// See urlbuilder.SubdomainFromHost for the exact matching rules.
 func (Matchers) HostHasSubdomain(canonicalDomain string) dispatch.Matcher {
-	return dispatch.HostHasSubdomain("")
+	return dispatch.HostHasSubdomain(canonicalDomain)
 }
 
 // DispatchBuilder configures routes for a Dispatch group.

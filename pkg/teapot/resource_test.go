@@ -290,3 +290,18 @@ func TestResourceCustomNames(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "/photos", url)
 }
+
+// TestResourcePathOverride verifies Path replaces the default "/" + name path.
+func TestResourcePathOverride(t *testing.T) {
+	r := teapot.New()
+	r.Resource("photos", readOnlyController{}, teapot.Path("/pictures"))
+
+	req := httptest.NewRequest("GET", "/pictures", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, 200, w.Code, "GET /pictures")
+
+	url, err := r.URL("photos.index")
+	assert.NoError(t, err)
+	assert.Equal(t, "/pictures", url)
+}

@@ -64,5 +64,8 @@ func (b *Builder) SubdomainURL(label, path string) (url string, ok bool) {
 	if b.canonicalDomain == "" || label == "" {
 		return "", false
 	}
+	if path != "" && !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
 	return fmt.Sprintf("https://%s.%s%s", label, b.canonicalDomain, path), true
 }

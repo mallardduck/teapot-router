@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Routing · teapot-router</title>
   <link rel="stylesheet" href="assets/site.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="(prefers-color-scheme: light)">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/styles/github.min.css" media="(prefers-color-scheme: light)">
+  <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
 </head>
 <body>
 <div class="layout">
@@ -47,13 +47,13 @@
 
     <h2 id="named-routes">Named routes</h2>
     <p>Name a route with <code>.Name()</code>, then build its path later with <code>URL</code> or <code>MustURL</code>.</p>
-<pre><code>r.GET("/users/{id}", showUser).Name("users.show")
+<pre><code class="language-go">r.GET("/users/{id}", showUser).Name("users.show")
 
 path := r.MustURL("users.show", "id", "42")       // "/users/42"
 path, err := r.URL("users.show", "id", "42")      // error-returning form</code></pre>
     <p>Parameters are alternating key and value pairs, and each key must match a placeholder in the pattern.
       Wildcards written as <code>{key:.*}</code> match slashes and are substituted the same way:</p>
-<pre><code>r.GET("/{bucket}/{key:.*}", getObject).Name("object.get")
+<pre><code class="language-go">r.GET("/{bucket}/{key:.*}", getObject).Name("object.get")
 
 r.MustURL("object.get", "bucket", "photos", "key", "2024/vacation.jpg")
 // "/photos/2024/vacation.jpg"</code></pre>
@@ -61,7 +61,7 @@ r.MustURL("object.get", "bucket", "photos", "key", "2024/vacation.jpg")
 
     <h2 id="query-dispatch">Query dispatch</h2>
     <p>Routes on the same method and path can differ by query parameters. This is how S3 sub-resources such as <code>?acl</code> work.</p>
-<pre><code>r.GET("/{bucket}", listObjects).Name("bucket.list").Action("s3:ListBucket")
+<pre><code class="language-go">r.GET("/{bucket}", listObjects).Name("bucket.list").Action("s3:ListBucket")
 
 r.GET("/{bucket}", getBucketAcl).Name("bucket.acl").
     Action("s3:GetBucketAcl").
@@ -74,7 +74,7 @@ r.GET("/{bucket}", getVersioning).Name("bucket.versioning").
 
     <h3>Grouped with Dispatch</h3>
     <p>When one path has many variants, <code>Dispatch</code> keeps them in one block:</p>
-<pre><code>r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
+<pre><code class="language-go">r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
     d.DefaultFunc(listObjects).Name("bucket.list").Action("s3:ListBucket")
     d.When(m.QueryEquals("list-type", "2")).DoFunc(listObjectsV2).Name("bucket.list-v2")
     d.When(m.QueryExists("acl")).DoFunc(getBucketAcl).Name("bucket.acl")
@@ -101,7 +101,7 @@ r.GET("/{bucket}", getVersioning).Name("bucket.versioning").
 
     <h2 id="action-context">Action context</h2>
     <p>Each route can carry an action string, which is stored in the request context:</p>
-<pre><code>r.GET("/{bucket}/{key:.*}", getObject).
+<pre><code class="language-go">r.GET("/{bucket}/{key:.*}", getObject).
     Name("object.get").
     Action("s3:GetObject")
 
@@ -115,7 +115,7 @@ func getObject(w http.ResponseWriter, r *http.Request) {
     <p><code>URLParams(r)</code> returns all URL parameters as a map.</p>
 
     <h2 id="direct-handlers-and-external-routes">Direct handlers and external routes</h2>
-<pre><code>r.Handle("GET", "/health", healthHandler).Name("health")
+<pre><code class="language-go">r.Handle("GET", "/health", healthHandler).Name("health")
 r.HandleFunc("GET", "/ping", pingFunc).Name("ping")
 
 // Documented and usable for URL building, but not served locally
@@ -123,7 +123,7 @@ r.RegisterExternal("GET", "https://auth.example.com/login", "auth.login", "auth:
 
     <h2 id="finalize-for-production">Finalize for production</h2>
     <p>Call <code>Finalize()</code> after registering routes. It precomputes handler chains and builds all dispatchers up front, so the first request does no setup. It is optional.</p>
-<pre><code>r.Finalize()
+<pre><code class="language-go">r.Finalize()
 http.ListenAndServe(":8080", r)</code></pre>
 
     <div class="pager">
@@ -132,18 +132,8 @@ http.ListenAndServe(":8080", r)</code></pre>
     </div>
   </main>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
-<script>
-  // Every block is explicitly Go, except blocks where each line is a
-  // "go ..." command, which are shell. Auto-detection is not used.
-  document.querySelectorAll('pre code').forEach(function (el) {
-    var lines = el.textContent.split('
-').filter(function (l) { return l.trim() !== ''; });
-    var shell = lines.length > 0 && lines.every(function (l) { return /^go /.test(l.trim()); });
-    el.className = 'language-' + (shell ? 'bash' : 'go');
-    hljs.highlightElement(el);
-  });
-</script>
+<script src="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/highlight.min.js"></script>
+<script src="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/languages/go.min.js"></script>
+<script>hljs.highlightAll();</script>
 </body>
 </html>

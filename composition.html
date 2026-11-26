@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Composition · teapot-router</title>
   <link rel="stylesheet" href="assets/site.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="(prefers-color-scheme: light)">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/styles/github.min.css" media="(prefers-color-scheme: light)">
+  <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
 </head>
 <body>
 <div class="layout">
@@ -47,7 +47,7 @@
     <p class="lead">Groups, sub-routers, mounting, subdomains, and resources. Middleware itself works as it does in chi.</p>
 
     <h2 id="groups">Groups</h2>
-<pre><code>// Path prefix
+<pre><code class="language-go">// Path prefix
 r.Group("/api/v1", func(r *teapot.Router) {
     r.GET("/users", listUsers).Name("users.list")
 })
@@ -65,28 +65,28 @@ r.MiddlewareGroup(func(r *teapot.Router) {
 
     <h2 id="sub-routers">Sub-routers</h2>
     <p><code>SubRouter(prefix)</code> returns a child router that can also run on its own. Its routes show up in the parent with the prefix added.</p>
-<pre><code>admin := r.SubRouter("/admin")
+<pre><code class="language-go">admin := r.SubRouter("/admin")
 admin.GET("/dashboard", dashHandler).Name("dashboard")
 // "dashboard" is visible in both admin and r, as "/admin/dashboard"</code></pre>
 
     <h2 id="mounting">Mounting</h2>
-<pre><code>r.Mount("/static", http.FileServer(http.Dir("./static")))</code></pre>
+<pre><code class="language-go">r.Mount("/static", http.FileServer(http.Dir("./static")))</code></pre>
     <p>Mounting a <code>*teapot.Router</code> does more. Its existing routes are copied into the parent with the prefix added. Routes added to it later also show up in the parent, because mounting links the two routers.</p>
-<pre><code>api := teapot.New()
+<pre><code class="language-go">api := teapot.New()
 api.GET("/users", listUsers).Name("users.list")
 
 r.Mount("/api/v1", api)
 
 api.GET("/profile", profile).Name("users.profile") // also visible in r</code></pre>
     <p>Names can get a prefix when mounting:</p>
-<pre><code>r.MountNamed("/api/v1", "v1", api)     // "users.list" becomes "v1.users.list"
+<pre><code class="language-go">r.MountNamed("/api/v1", "v1", api)     // "users.list" becomes "v1.users.list"
 
 r.Mount("/api/v2", api).Name("v2")     // same, with the fluent form</code></pre>
     <p>Naming after mounting renames the routes already propagated.</p>
 
     <h2 id="subdomains">Subdomains</h2>
     <p>For APIs that address resources by subdomain (<code>mybucket.s3.example.com</code>) as well as by path, use the <code>dispatch</code> matcher with the <code>urlbuilder</code> helpers:</p>
-<pre><code>d := dispatch.New(func(b *dispatch.Builder) {
+<pre><code class="language-go">d := dispatch.New(func(b *dispatch.Builder) {
     b.When(dispatch.HostHasSubdomain("s3.example.com")).DoFunc(vhostHandler)
     b.DefaultFunc(pathHandler)
 })
@@ -98,7 +98,7 @@ label, ok := urlbuilder.SubdomainFromHost(r.Host, "s3.example.com") // "mybucket
 
     <h2 id="resources">Resources</h2>
     <p>A resource is a controller value. Each standard action is registered only if the controller has that method.</p>
-<pre><code>type PhotoController struct{ db *sql.DB }
+<pre><code class="language-go">type PhotoController struct{ db *sql.DB }
 
 func (c *PhotoController) Index(w http.ResponseWriter, r *http.Request)   { /* list */ }
 func (c *PhotoController) Show(w http.ResponseWriter, r *http.Request)    { /* one */ }
@@ -123,7 +123,7 @@ r.Resource("photos", &PhotoController{db: db})</code></pre>
     </table>
     <p>Update verbs in one of two ways. Implement <code>Update</code> to handle PUT and PATCH the same way. Or implement <code>Replace</code> (a full replacement) and <code>Patch</code> (a partial update) to tell them apart. Implementing only one of them registers only that verb. <code>Head</code> is optional: without it, HEAD requests fall back to the GET route.</p>
     <p>Options:</p>
-<pre><code>r.Resource("photos", &PhotoController{db: db},
+<pre><code class="language-go">r.Resource("photos", &PhotoController{db: db},
     teapot.Only("index", "show"),                       // or teapot.Except("destroy")
     teapot.Middleware(authMiddleware),                  // this resource only
     teapot.Path("/pictures"),                           // replaces /photos
@@ -135,7 +135,7 @@ r.Resource("photos", &PhotoController{db: db})</code></pre>
 
     <h2 id="middleware">Middleware</h2>
     <p>Use chi middleware as you would in chi:</p>
-<pre><code>r.Use(middleware.Logger, middleware.Recoverer)
+<pre><code class="language-go">r.Use(middleware.Logger, middleware.Recoverer)
 
 r.GET("/admin", adminHandler).Name("admin").With(authMiddleware)</code></pre>
     <p>The underlying chi router is available through <code>r.Chi()</code> when you need chi features directly.</p>
@@ -146,18 +146,8 @@ r.GET("/admin", adminHandler).Name("admin").With(authMiddleware)</code></pre>
     </div>
   </main>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
-<script>
-  // Every block is explicitly Go, except blocks where each line is a
-  // "go ..." command, which are shell. Auto-detection is not used.
-  document.querySelectorAll('pre code').forEach(function (el) {
-    var lines = el.textContent.split('
-').filter(function (l) { return l.trim() !== ''; });
-    var shell = lines.length > 0 && lines.every(function (l) { return /^go /.test(l.trim()); });
-    el.className = 'language-' + (shell ? 'bash' : 'go');
-    hljs.highlightElement(el);
-  });
-</script>
+<script src="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/highlight.min.js"></script>
+<script src="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/languages/go.min.js"></script>
+<script>hljs.highlightAll();</script>
 </body>
 </html>

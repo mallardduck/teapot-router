@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>URLs &amp; route listing · teapot-router</title>
   <link rel="stylesheet" href="assets/site.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="(prefers-color-scheme: light)">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/styles/github.min.css" media="(prefers-color-scheme: light)">
+  <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
 </head>
 <body>
 <div class="layout">
@@ -45,7 +45,7 @@
 
     <h2 id="absolute-urls">Absolute URLs</h2>
     <p><code>r.MustURL</code> returns a path. The <code>urlbuilder</code> package turns that into a full URL, using the request for scheme detection and a canonical domain you set:</p>
-<pre><code>import "github.com/mallardduck/teapot-router/pkg/urlbuilder"
+<pre><code class="language-go">import "github.com/mallardduck/teapot-router/pkg/urlbuilder"
 
 urls := urlbuilder.New("s3.example.com")
 
@@ -66,7 +66,7 @@ sub, ok := urls.SubdomainURL("photos", "/2024/a.jpg")
 
     <h2 id="listing-routes">Listing routes</h2>
     <p>Every router can report its routes:</p>
-<pre><code>for _, route := range r.Routes() {
+<pre><code class="language-go">for _, route := range r.Routes() {
     fmt.Printf("%s %s -> %s (%s)\n", route.Method, route.Pattern, route.Name, route.Action)
 }
 
@@ -75,26 +75,26 @@ all := teapot.AggregateRoutes(r, admin)</code></pre>
 
     <h3>Debug endpoint</h3>
     <p>Register an HTTP endpoint that lists routes as JSON or HTML. Put it behind a debug flag, not in production:</p>
-<pre><code>if debug {
+<pre><code class="language-go">if debug {
     r.RegisterDebugRoute("/.internal/routes", "debug.routes")
 }</code></pre>
 
     <h3>Formatters</h3>
     <p>Write a route list in table, JSON, or compact form to any <code>io.Writer</code>:</p>
-<pre><code>teapot.FormatRoutesTable(os.Stdout, routes)
+<pre><code class="language-go">teapot.FormatRoutesTable(os.Stdout, routes)
 teapot.FormatRoutesJSON(os.Stdout, routes)
 teapot.FormatRoutesCompact(os.Stdout, routes)</code></pre>
     <p>Use <code>teapot.FilterRoutes</code> to narrow a list before formatting. Use <code>teapot.NewListRoutesHandler</code> when you need the handler outside <code>RegisterDebugRoute</code>.</p>
 
     <h3>Try it</h3>
     <p>The repository has a runnable example, a mock S3 route table, in <code>examples/routes-cli</code>:</p>
-<pre><code>go run ./examples/routes-cli           # table
+<pre><code class="language-bash">go run ./examples/routes-cli           # table
 go run ./examples/routes-cli --json    # JSON
 go run ./examples/routes-cli --compact # compact</code></pre>
 
     <h2 id="standalone-dispatch">Standalone dispatch</h2>
     <p>The <code>dispatch</code> package routes by query, header, and host without teapot. It is an <code>http.Handler</code>, so it works with the standard library, chi, or any other router:</p>
-<pre><code>import "github.com/mallardduck/teapot-router/pkg/dispatch"
+<pre><code class="language-go">import "github.com/mallardduck/teapot-router/pkg/dispatch"
 
 d := dispatch.New(func(b *dispatch.Builder) {
     b.DefaultFunc(listHandler)
@@ -110,18 +110,8 @@ http.Handle("/api/items", d)</code></pre>
     </div>
   </main>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
-<script>
-  // Every block is explicitly Go, except blocks where each line is a
-  // "go ..." command, which are shell. Auto-detection is not used.
-  document.querySelectorAll('pre code').forEach(function (el) {
-    var lines = el.textContent.split('
-').filter(function (l) { return l.trim() !== ''; });
-    var shell = lines.length > 0 && lines.every(function (l) { return /^go /.test(l.trim()); });
-    el.className = 'language-' + (shell ? 'bash' : 'go');
-    hljs.highlightElement(el);
-  });
-</script>
+<script src="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/highlight.min.js"></script>
+<script src="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/languages/go.min.js"></script>
+<script>hljs.highlightAll();</script>
 </body>
 </html>

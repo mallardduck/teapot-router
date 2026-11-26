@@ -6,8 +6,8 @@
   <title>teapot-router</title>
   <meta name="description" content="Named routes, query dispatch, and S3 action context on top of chi.">
   <link rel="stylesheet" href="assets/site.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="(prefers-color-scheme: light)">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/styles/github.min.css" media="(prefers-color-scheme: light)">
+  <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
 </head>
 <body>
 <div class="layout">
@@ -52,11 +52,11 @@
     </div>
 
     <h2 id="install">Install</h2>
-<pre><code>go get github.com/mallardduck/teapot-router</code></pre>
+<pre><code class="language-bash">go get github.com/mallardduck/teapot-router</code></pre>
 
     <h2 id="a-taste">A taste</h2>
     <p>Register routes with names, then build URLs from those names:</p>
-<pre><code>r := teapot.New()
+<pre><code class="language-go">r := teapot.New()
 
 r.GET("/users", listUsers).Name("users.index")
 r.GET("/users/{id}", showUser).Name("users.show")
@@ -64,7 +64,7 @@ r.GET("/users/{id}", showUser).Name("users.show")
 path := r.MustURL("users.show", "id", "42") // "/users/42"</code></pre>
 
     <p>Route the same path to different handlers based on query parameters, the way S3 does:</p>
-<pre><code>r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
+<pre><code class="language-go">r.Dispatch("GET", "/{bucket}", func(d *teapot.DispatchBuilder, m teapot.Matchers) {
     d.DefaultFunc(listObjects).Name("bucket.list").Action("s3:ListBucket")
     d.When(m.QueryExists("acl")).DoFunc(getBucketAcl).Name("bucket.acl").Action("s3:GetBucketAcl")
 })</code></pre>
@@ -83,18 +83,8 @@ path := r.MustURL("users.show", "id", "42") // "/users/42"</code></pre>
     </div>
   </main>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/go.min.js"></script>
-<script>
-  // Every block is explicitly Go, except blocks where each line is a
-  // "go ..." command, which are shell. Auto-detection is not used.
-  document.querySelectorAll('pre code').forEach(function (el) {
-    var lines = el.textContent.split('
-').filter(function (l) { return l.trim() !== ''; });
-    var shell = lines.length > 0 && lines.every(function (l) { return /^go /.test(l.trim()); });
-    el.className = 'language-' + (shell ? 'bash' : 'go');
-    hljs.highlightElement(el);
-  });
-</script>
+<script src="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/highlight.min.js"></script>
+<script src="https://unpkg.com/@highlightjs/cdn-assets@11.12.0/languages/go.min.js"></script>
+<script>hljs.highlightAll();</script>
 </body>
 </html>

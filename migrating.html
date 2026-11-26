@@ -48,8 +48,8 @@ r.Resource("photos", PhotoController{})</code></pre>
     <ul>
       <li>The path defaults to <code>/</code> plus the name. Use <code>teapot.Path</code> to change it.</li>
       <li>The parameter defaults to the singular of the name. Use <code>teapot.Param</code> to change it.</li>
-      <li><code>UpdateMethod</code> is gone. <code>Update</code> registers both <code>PUT</code> and <code>PATCH</code>.</li>
-      <li><code>Head</code> is gone. See <a href="#head">HEAD fallback</a>.</li>
+      <li><code>UpdateMethod</code> is gone. <code>Update</code> still registers both <code>PUT</code> and <code>PATCH</code>. To give them different handlers, implement <code>Replace</code> (PUT) and <code>Patch</code> (PATCH) instead.</li>
+      <li><code>Head</code> is now an optional method on the controller. Implement it to register an explicit <code>HEAD</code> route. Without it, HEAD requests still fall back to GET. See <a href="#head">HEAD fallback</a>.</li>
       <li><code>StoreVerb</code> must be <code>POST</code> or <code>PUT</code>. Other values panic at registration.</li>
     </ul>
 

@@ -96,10 +96,14 @@ r.Resource("photos", &PhotoController{db: db})</code></pre>
         <tr><td><code>Store</code></td><td><code>POST /photos</code> (<code>StoreVerb</code> can change it)</td><td><code>photos.store</code></td></tr>
         <tr><td><code>Show</code></td><td><code>GET /photos/{photo}</code></td><td><code>photos.show</code></td></tr>
         <tr><td><code>Edit</code></td><td><code>GET /photos/{photo}/edit</code></td><td><code>photos.edit</code></td></tr>
-        <tr><td><code>Update</code></td><td><code>PUT</code> and <code>PATCH /photos/{photo}</code></td><td><code>photos.update</code></td></tr>
+        <tr><td><code>Head</code></td><td><code>HEAD /photos/{photo}</code></td><td><code>photos.head</code></td></tr>
+        <tr><td><code>Replace</code></td><td><code>PUT /photos/{photo}</code></td><td><code>photos.replace</code></td></tr>
+        <tr><td><code>Patch</code></td><td><code>PATCH /photos/{photo}</code></td><td><code>photos.patch</code></td></tr>
+        <tr><td><code>Update</code></td><td><code>PUT</code> and <code>PATCH /photos/{photo}</code>, for any verb not covered by <code>Replace</code> or <code>Patch</code></td><td><code>photos.update</code></td></tr>
         <tr><td><code>Destroy</code></td><td><code>DELETE /photos/{photo}</code></td><td><code>photos.destroy</code></td></tr>
       </tbody>
     </table>
+    <p>Update verbs in one of two ways. Implement <code>Update</code> to handle PUT and PATCH the same way. Or implement <code>Replace</code> (a full replacement) and <code>Patch</code> (a partial update) to tell them apart. Implementing only one of them registers only that verb. <code>Head</code> is optional: without it, HEAD requests fall back to the GET route.</p>
     <p>Options:</p>
 <pre><code>r.Resource("photos", &PhotoController{db: db},
     teapot.Only("index", "show"),                       // or teapot.Except("destroy")
